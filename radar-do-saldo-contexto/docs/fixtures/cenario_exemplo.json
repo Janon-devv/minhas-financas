@@ -1,0 +1,176 @@
+{
+  "hoje": "2026-10-13",
+  "fuso": "America/Sao_Paulo",
+  "configuracao": {
+    "saldo_ancora_centavos": 250000,
+    "data_ancora": "2026-10-13",
+    "diario_previsto_centavos": 4000,
+    "saldo_conforto_centavos": 50000,
+    "contar_entradas_incertas": false,
+    "ja_guardado_centavos": 100000,
+    "horizonte_ate": "2028-12-31"
+  },
+  "cartoes": [
+    {
+      "nome": "Principal",
+      "dia_fechamento": 3,
+      "dia_vencimento": 10
+    }
+  ],
+  "tags": [
+    "Casa",
+    "Alimentação",
+    "Transporte",
+    "Saúde",
+    "Assinaturas",
+    "Lazer",
+    "Estudos",
+    "Compras",
+    "Reserva"
+  ],
+  "lancamentos": [
+    {
+      "data": "2026-10-14",
+      "descricao": "Tênis",
+      "tipo": "Cartão",
+      "valor_centavos": 8990,
+      "vezes": 4,
+      "cartao": "Principal",
+      "certeza": null,
+      "tag": "Compras",
+      "cai_na_conta_em": "2026-11-10",
+      "ultima_vez": "2027-02-10"
+    },
+    {
+      "data": "2026-10-15",
+      "descricao": "Internet",
+      "tipo": "Saída",
+      "valor_centavos": 11000,
+      "vezes": null,
+      "cartao": null,
+      "certeza": null,
+      "tag": "Casa",
+      "cai_na_conta_em": "2026-10-15",
+      "ultima_vez": "sem fim"
+    },
+    {
+      "data": "2026-10-18",
+      "descricao": "Streaming",
+      "tipo": "Saída",
+      "valor_centavos": 4000,
+      "vezes": null,
+      "cartao": null,
+      "certeza": null,
+      "tag": "Assinaturas",
+      "cai_na_conta_em": "2026-10-18",
+      "ultima_vez": "sem fim"
+    },
+    {
+      "data": "2026-10-20",
+      "descricao": "Freela",
+      "tipo": "Entrada",
+      "valor_centavos": 60000,
+      "vezes": 1,
+      "cartao": null,
+      "certeza": "Incerta",
+      "tag": null,
+      "cai_na_conta_em": "2026-10-20",
+      "ultima_vez": "2026-10-20"
+    },
+    {
+      "data": "2026-10-25",
+      "descricao": "Academia",
+      "tipo": "Saída",
+      "valor_centavos": 9900,
+      "vezes": null,
+      "cartao": null,
+      "certeza": null,
+      "tag": "Saúde",
+      "cai_na_conta_em": "2026-10-25",
+      "ultima_vez": "sem fim"
+    },
+    {
+      "data": "2026-11-05",
+      "descricao": "Salário",
+      "tipo": "Entrada",
+      "valor_centavos": 420000,
+      "vezes": null,
+      "cartao": null,
+      "certeza": "Certa",
+      "tag": null,
+      "cai_na_conta_em": "2026-11-05",
+      "ultima_vez": "sem fim"
+    },
+    {
+      "data": "2026-11-06",
+      "descricao": "Reserva de emergência",
+      "tipo": "Economia",
+      "valor_centavos": 40000,
+      "vezes": null,
+      "cartao": null,
+      "certeza": null,
+      "tag": "Reserva",
+      "cai_na_conta_em": "2026-11-06",
+      "ultima_vez": "sem fim"
+    },
+    {
+      "data": "2026-11-10",
+      "descricao": "Aluguel",
+      "tipo": "Saída",
+      "valor_centavos": 130000,
+      "vezes": null,
+      "cartao": null,
+      "certeza": null,
+      "tag": "Casa",
+      "cai_na_conta_em": "2026-11-10",
+      "ultima_vez": "sem fim"
+    }
+  ],
+  "diario_real": [
+    {
+      "data": "2026-10-13",
+      "valor_centavos": 5000
+    }
+  ],
+  "simulacao": {
+    "descricao": "Notebook novo",
+    "valor_total_centavos": 190000,
+    "parcelas": 1,
+    "primeira_parcela": "2026-11-10"
+  },
+  "esperado": {
+    "cartoes_resumo": {
+      "saldo_hoje": 245000,
+      "pode_gastar_hoje": 82100,
+      "menor_saldo_a_frente": 132100,
+      "data_menor_saldo_a_frente": "2026-11-04",
+      "primeiro_dia_abaixo_conforto": "nunca",
+      "guardado_ate_hoje": 100000
+    },
+    "mes_2026_10": {
+      "entradas": 0,
+      "saidas": 24900,
+      "cartao": 0,
+      "diario": 77000,
+      "economias": 0,
+      "performance": -101900,
+      "custo_de_vida": 101900,
+      "economizado_pct": 0,
+      "diario_medio": 5000,
+      "dias_com_diario_real": 1,
+      "entradas_incertas_fora": 60000,
+      "saldo_fim": 148100,
+      "menor_saldo": 148100,
+      "data_menor_saldo": "2026-10-31"
+    },
+    "simulacao": {
+      "menor_sem": 132100,
+      "data_menor_sem": "2026-11-04",
+      "menor_com": 38210,
+      "data_menor_com": "2026-12-04",
+      "primeiro_dia_abaixo_conforto": "2026-12-02",
+      "folga": -11790,
+      "veredito": "cabe_mas_aperta"
+    }
+  }
+}

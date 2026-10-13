@@ -1,0 +1,968 @@
+/* Minhas Finanças: paleta e componentes. Mobile first, pensado para o Safari do iPhone. */
+
+:root {
+    --topo: #134E4A;
+    --acento: #0F766E;
+    --texto: #1F2933;
+    --secundario: #6B7280;
+    --linha: #E5E7EB;
+    --cartao: #F8FAFC;
+    --fundo: #FFFFFF;
+
+    /*
+        Contorno de campo de formulario e componente de interface, nao enfeite: a WCAG pede
+        3:1 contra o fundo. A linha decorativa de tabela continua clara de proposito.
+        #868E9B da 3,30:1 sobre o branco; #E5E7EB daria 1,24:1.
+    */
+    --borda-campo: #868E9B;
+
+    /* #6B7280 sobre #E5E7EB da 3,90:1 e reprova. Este da 6,10:1. */
+    --pilula-neutra-texto: #4B5563;
+
+    --ok-forte: #15803D;
+    --ok-fundo: #DCFCE7;
+    --ok-texto: #166534;
+
+    --atencao-fundo: #FEF3C7;
+    --atencao-texto: #92400E;
+
+    --negativo-fundo: #FEE2E2;
+    --negativo-texto: #B91C1C;
+
+    --entrada-fundo: #DCFCE7;
+    --entrada-texto: #166534;
+    --saida-fundo: #FEE2E2;
+    --saida-texto: #991B1B;
+    --cartaotipo-fundo: #EDE9FE;
+    --cartaotipo-texto: #5B21B6;
+    --economia-fundo: #DBEAFE;
+    --economia-texto: #1E40AF;
+    --diario-fundo: #FEF3C7;
+    --diario-texto: #92400E;
+
+    --hoje: #D1FAE5;
+
+    --raio: 12px;
+    --sombra: 0 1px 2px rgba(31, 41, 51, 0.06);
+    --altura-nav: 58px;
+
+    /* Micro-interacoes entre 150ms e 300ms: abaixo disso nao se percebe, acima atrasa. */
+    --transicao: 180ms ease-out;
+
+    /* Alvo de toque minimo (44pt no iOS, 48dp no Android). */
+    --alvo-toque: 44px;
+}
+
+/*
+    Quem pediu menos movimento no sistema recebe menos movimento. Vale para o iPhone
+    em Ajustes > Acessibilidade > Movimento.
+*/
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html {
+    -webkit-text-size-adjust: 100%;
+}
+
+body {
+    margin: 0;
+    min-height: 100dvh;
+    background: var(--fundo);
+    color: var(--texto);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size: 16px;
+    line-height: 1.45;
+    -webkit-tap-highlight-color: transparent;
+}
+
+h1, h2, h3 {
+    margin: 0;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+}
+
+h1 {
+    font-size: 1.25rem;
+}
+
+h2 {
+    font-size: 1.0rem;
+}
+
+h3 {
+    font-size: 0.9rem;
+}
+
+a {
+    color: var(--acento);
+}
+
+/* ---------- Estrutura ---------- */
+
+.topo {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: var(--topo);
+    color: #fff;
+    padding: calc(env(safe-area-inset-top) + 0.7rem) 1rem 0.7rem;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.topo .marca-nome {
+    font-size: 1.05rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+}
+
+/*
+    Visivel so para leitor de tela. Serve para dar um h1 proprio a cada pagina sem
+    repetir o titulo na tela, para quem navega saber onde chegou.
+*/
+.so-leitor {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.topo .data-hoje {
+    font-size: 0.8rem;
+    opacity: 0.85;
+    white-space: nowrap;
+}
+
+.conteudo {
+    padding: 1rem;
+    padding-bottom: calc(var(--altura-nav) + env(safe-area-inset-bottom) + 1.5rem);
+    max-width: 920px;
+    margin: 0 auto;
+}
+
+.nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 30;
+    display: flex;
+    background: #fff;
+    border-top: 1px solid var(--linha);
+    padding-bottom: env(safe-area-inset-bottom);
+}
+
+.nav a {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    height: var(--altura-nav);
+    font-size: 0.68rem;
+    text-decoration: none;
+    color: var(--secundario);
+}
+
+.nav a.active {
+    color: var(--acento);
+    font-weight: 600;
+    box-shadow: inset 0 2px 0 var(--acento);
+}
+
+.nav .icone {
+    font-size: 1.1rem;
+    line-height: 1;
+}
+
+/* ---------- Cartoes ---------- */
+
+.cartao {
+    background: var(--cartao);
+    border: 1px solid var(--linha);
+    border-radius: var(--raio);
+    padding: 0.9rem 1rem;
+    box-shadow: var(--sombra);
+}
+
+.cartao + .cartao,
+.cartao + .bloco,
+.bloco + .cartao,
+.bloco + .bloco {
+    margin-top: 0.75rem;
+}
+
+.bloco {
+    border: 1px solid var(--linha);
+    border-radius: var(--raio);
+    overflow: hidden;
+}
+
+.bloco > header {
+    padding: 0.7rem 1rem;
+    background: var(--cartao);
+    border-bottom: 1px solid var(--linha);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+.bloco > .corpo {
+    padding: 0.9rem 1rem;
+}
+
+.destaque {
+    border-left: 3px solid var(--acento);
+}
+
+.rotulo {
+    font-size: 0.75rem;
+    color: var(--secundario);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.numero {
+    font-size: 1.7rem;
+    font-weight: 650;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+}
+
+.numero.medio {
+    font-size: 1.25rem;
+}
+
+.ajuda {
+    font-size: 0.8rem;
+    color: var(--secundario);
+}
+
+.dinheiro {
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.grade2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+}
+
+.grade2 > * {
+    margin: 0 !important;
+}
+
+@media (max-width: 380px) {
+    .grade2 {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ---------- Pilulas e farol ---------- */
+
+.pilula {
+    display: inline-block;
+    padding: 0.12rem 0.45rem;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.pilula.entrada { background: var(--entrada-fundo); color: var(--entrada-texto); }
+.pilula.saida { background: var(--saida-fundo); color: var(--saida-texto); }
+.pilula.cartao { background: var(--cartaotipo-fundo); color: var(--cartaotipo-texto); }
+.pilula.economia { background: var(--economia-fundo); color: var(--economia-texto); }
+.pilula.diario { background: var(--diario-fundo); color: var(--diario-texto); }
+.pilula.neutra { background: var(--linha); color: var(--pilula-neutra-texto); }
+
+.farol {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.12rem 0.5rem;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 600;
+}
+
+.farol.ok { background: var(--ok-fundo); color: var(--ok-texto); }
+.farol.atencao { background: var(--atencao-fundo); color: var(--atencao-texto); }
+.farol.negativo { background: var(--negativo-fundo); color: var(--negativo-texto); }
+
+.valor-ok { color: var(--ok-forte); }
+.valor-atencao { color: var(--atencao-texto); }
+.valor-negativo { color: var(--negativo-texto); }
+
+/* ---------- Tabelas ---------- */
+
+.tabela {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+}
+
+.tabela th {
+    text-align: left;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--secundario);
+    font-weight: 600;
+    padding: 0.4rem 0.5rem;
+    border-bottom: 1px solid var(--linha);
+    background: var(--cartao);
+    position: sticky;
+    top: 0;
+}
+
+.tabela td {
+    padding: 0.45rem 0.5rem;
+    border-bottom: 1px solid var(--linha);
+    vertical-align: middle;
+}
+
+.tabela td.num,
+.tabela th.num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.tabela tr.hoje td {
+    background: var(--hoje);
+}
+
+.tabela tr.fim-de-semana td:first-child {
+    color: var(--secundario);
+}
+
+.rolagem {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.lista {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.lista > li {
+    padding: 0.6rem 1rem;
+    border-bottom: 1px solid var(--linha);
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+.lista > li:last-child {
+    border-bottom: 0;
+}
+
+.lista .principal {
+    flex: 1;
+    min-width: 0;
+}
+
+.lista .principal .titulo {
+    font-weight: 550;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.lista .principal .sub {
+    font-size: 0.76rem;
+    color: var(--secundario);
+}
+
+.riscado .titulo {
+    text-decoration: line-through;
+    color: var(--secundario);
+}
+
+/* ---------- Formularios ---------- */
+
+.campo-grupo {
+    margin-bottom: 0.8rem;
+}
+
+.campo-grupo > label {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+}
+
+.campo-grupo .dica {
+    font-size: 0.75rem;
+    color: var(--secundario);
+    margin-top: 0.2rem;
+}
+
+/* 16px evita o zoom automatico do Safari quando o campo recebe foco. */
+.campo,
+select.campo,
+textarea.campo {
+    width: 100%;
+    font-size: 16px;
+    font-family: inherit;
+    color: var(--texto);
+    background: #fff;
+    padding: 0.55rem 0.65rem;
+    border: 1px solid var(--borda-campo);
+    border-radius: 10px;
+    appearance: none;
+    /* 44px de altura minima: o dedo precisa acertar sem mira. */
+    min-height: 44px;
+    transition: border-color var(--transicao), box-shadow var(--transicao);
+}
+
+.campo:focus {
+    border-color: var(--acento);
+}
+
+/* O anel de foco e o que permite usar o app pelo teclado. Nunca remover sem substituir. */
+.campo:focus-visible,
+.btn:focus-visible,
+.nav a:focus-visible,
+.clicavel:focus-visible,
+.toque-diario:focus-visible,
+a:focus-visible {
+    outline: 2px solid var(--acento);
+    outline-offset: 1px;
+}
+
+/*
+    Linhas e itens clicaveis: sem isto eles so funcionam no mouse e no dedo.
+    Com role, tabindex e tecla Enter, funcionam tambem no teclado e no leitor de tela.
+*/
+.clicavel {
+    cursor: pointer;
+    transition: background-color var(--transicao);
+}
+
+tr.clicavel > td:first-child,
+li.clicavel {
+    min-height: var(--alvo-toque);
+}
+
+li.clicavel {
+    align-items: center;
+}
+
+/* Botao que envolve o valor do diario na tabela, para ele ser tocavel e focavel. */
+.toque-diario {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    min-height: var(--alvo-toque);
+    min-width: var(--alvo-toque);
+    padding: 0 0.25rem;
+    border: 0;
+    background: none;
+    font: inherit;
+    font-variant-numeric: tabular-nums;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: background-color var(--transicao);
+}
+
+.toque-diario.previsto {
+    color: var(--secundario);
+    font-style: italic;
+}
+
+.toque-diario.registrado {
+    color: #1E40AF;
+    font-weight: 600;
+}
+
+.toque-diario:hover {
+    background: var(--linha);
+}
+
+.campo.dinheiro-campo {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.campo.erro {
+    border-color: var(--negativo-texto);
+}
+
+.linha-campos {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.linha-campos > * {
+    flex: 1;
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    font-family: inherit;
+    padding: 0.6rem 0.9rem;
+    border-radius: 10px;
+    border: 1px solid transparent;
+    background: var(--acento);
+    color: #fff;
+    cursor: pointer;
+    text-decoration: none;
+    min-height: var(--alvo-toque);
+    transition: background-color var(--transicao), filter var(--transicao), transform var(--transicao);
+}
+
+/*
+    Resposta ao toque. Escala no transform nao desloca o que esta em volta,
+    diferente de mexer em largura, altura ou margem.
+*/
+.btn:active:not(:disabled) {
+    transform: scale(0.97);
+}
+
+.btn.secundario {
+    background: #fff;
+    color: var(--texto);
+    border-color: var(--linha);
+}
+
+.btn.perigo {
+    background: #fff;
+    color: var(--negativo-texto);
+    border-color: var(--negativo-fundo);
+}
+
+.btn.largo {
+    width: 100%;
+}
+
+.btn.pequeno {
+    font-size: 0.78rem;
+    padding: 0.3rem 0.65rem;
+    /* Continua compacto na horizontal, mas sem perder o alvo de toque na vertical. */
+    min-height: var(--alvo-toque);
+    border-radius: 8px;
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+.acoes {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-top: 0.75rem;
+}
+
+.acoes.fim {
+    justify-content: flex-end;
+}
+
+/* ---------- Avisos ---------- */
+
+.aviso {
+    border-radius: var(--raio);
+    padding: 0.7rem 0.9rem;
+    font-size: 0.85rem;
+    border: 1px solid transparent;
+}
+
+.aviso.info { background: var(--cartao); border-color: var(--linha); }
+.aviso.atencao { background: var(--atencao-fundo); color: var(--atencao-texto); }
+.aviso.ruim { background: var(--negativo-fundo); color: var(--negativo-texto); }
+.aviso.bom { background: var(--ok-fundo); color: var(--ok-texto); }
+
+.aviso + .aviso,
+.aviso + .cartao,
+.cartao + .aviso,
+.bloco + .aviso,
+.aviso + .bloco {
+    margin-top: 0.75rem;
+}
+
+.vazio {
+    text-align: center;
+    color: var(--secundario);
+    font-size: 0.88rem;
+    padding: 1.5rem 1rem;
+}
+
+/* ---------- Progresso ---------- */
+
+.barra {
+    height: 8px;
+    border-radius: 999px;
+    background: var(--linha);
+    overflow: hidden;
+}
+
+.barra > span {
+    display: block;
+    height: 100%;
+    background: var(--acento);
+}
+
+.barra.cheia > span {
+    background: var(--ok-forte);
+}
+
+/* ---------- Modal ---------- */
+
+.fundo-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    background: rgba(31, 41, 51, 0.45);
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+}
+
+.modal {
+    background: #fff;
+    width: 100%;
+    max-width: 560px;
+    max-height: 92dvh;
+    overflow-y: auto;
+    border-radius: 16px 16px 0 0;
+    padding: 1rem 1rem calc(1rem + env(safe-area-inset-bottom));
+}
+
+.modal > header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.8rem;
+}
+
+@media (min-width: 640px) {
+    .fundo-modal {
+        align-items: center;
+    }
+
+    .modal {
+        border-radius: 16px;
+        max-height: 85dvh;
+    }
+}
+
+/* ---------- Grafico ---------- */
+
+.grafico {
+    width: 100%;
+    height: 160px;
+    display: block;
+}
+
+.grafico .linha-saldo {
+    fill: none;
+    stroke: var(--acento);
+    stroke-width: 2;
+    stroke-linejoin: round;
+}
+
+.grafico .linha-simulada {
+    fill: none;
+    stroke: var(--negativo-texto);
+    stroke-width: 2;
+    stroke-dasharray: 1 0;
+    stroke-linejoin: round;
+}
+
+.grafico .linha-conforto {
+    stroke: var(--atencao-texto);
+    stroke-width: 1;
+    stroke-dasharray: 4 3;
+}
+
+.grafico .linha-zero {
+    stroke: var(--negativo-texto);
+    stroke-width: 1;
+}
+
+.legenda {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    font-size: 0.72rem;
+    color: var(--secundario);
+    margin-top: 0.4rem;
+}
+
+.legenda span::before {
+    content: "";
+    display: inline-block;
+    width: 10px;
+    height: 2px;
+    margin-right: 0.3rem;
+    vertical-align: middle;
+    background: currentColor;
+}
+
+.legenda .s-saldo { color: var(--acento); }
+.legenda .s-conforto { color: var(--atencao-texto); }
+.legenda .s-compra { color: var(--negativo-texto); }
+
+/* ---------- Erro do Blazor ---------- */
+
+#blazor-error-ui {
+    display: none;
+    position: fixed;
+    bottom: calc(var(--altura-nav) + env(safe-area-inset-bottom));
+    left: 0;
+    right: 0;
+    z-index: 50;
+    background: var(--atencao-fundo);
+    color: var(--atencao-texto);
+    padding: 0.7rem 1rem;
+    font-size: 0.85rem;
+    box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.1);
+}
+
+#blazor-error-ui .reload {
+    color: inherit;
+    font-weight: 600;
+}
+
+#blazor-error-ui .dismiss {
+    cursor: pointer;
+    float: right;
+}
+
+/* ---------- Blocos que mudam de forma entre celular e PC ---------- */
+
+/* Quatro indicadores: 2 por linha no celular, 4 em linha no PC. */
+.painel-cartoes {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+}
+
+.painel-cartoes > * {
+    margin: 0 !important;
+}
+
+/* Pares de indicadores dentro de um bloco. */
+.grade-indicadores {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem 1rem;
+}
+
+/* Empilha no celular, vira duas colunas no PC. */
+.colunas > * + * {
+    margin-top: 0.75rem;
+}
+
+.grade-metas > * + * {
+    margin-top: 0.75rem;
+}
+
+.marca {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    min-width: 0;
+}
+
+.assinatura {
+    font-size: 0.78rem;
+    opacity: 0.75;
+    white-space: nowrap;
+}
+
+/*
+    Esconder so abaixo do breakpoint, em vez de redefinir display no PC: assim o elemento
+    mantem o display natural dele (flex num item de menu, table-cell numa celula).
+*/
+@media (max-width: 899px) {
+    .so-desktop {
+        display: none !important;
+    }
+}
+
+@media (max-width: 379px) {
+    .painel-cartoes,
+    .grade-indicadores {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ---------- PC: a navegacao sai de baixo e vira coluna lateral ---------- */
+
+@media (min-width: 900px) {
+    :root {
+        --altura-topo: 58px;
+        --largura-lateral: 232px;
+    }
+
+    .topo {
+        height: var(--altura-topo);
+        padding: 0 1.5rem;
+        align-items: center;
+    }
+
+    .topo .marca-nome {
+        font-size: 1.1rem;
+    }
+
+    .nav {
+        top: var(--altura-topo);
+        bottom: 0;
+        right: auto;
+        width: var(--largura-lateral);
+        flex-direction: column;
+        border-top: 0;
+        border-right: 1px solid var(--linha);
+        padding: 0.75rem 0 0;
+    }
+
+    .nav a {
+        flex: 0 0 auto;
+        height: auto;
+        flex-direction: row;
+        justify-content: flex-start;
+        gap: 0.65rem;
+        padding: 0.65rem 1.25rem;
+        font-size: 0.9rem;
+    }
+
+    .nav a:hover {
+        background: var(--cartao);
+        color: var(--texto);
+    }
+
+    .nav a.active {
+        background: var(--cartao);
+        box-shadow: inset 3px 0 0 var(--acento);
+    }
+
+    .conteudo {
+        margin-left: var(--largura-lateral);
+        margin-right: auto;
+        max-width: 1120px;
+        padding: 1.5rem 2rem 3rem;
+    }
+
+    /* O primeiro acesso nao tem navegacao: centraliza numa coluna estreita. */
+    .conteudo.limpo {
+        margin-left: auto;
+        max-width: 580px;
+    }
+
+    #blazor-error-ui {
+        bottom: 0;
+        left: var(--largura-lateral);
+    }
+
+    .colunas {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+        align-items: start;
+    }
+
+    .colunas > * + * {
+        margin-top: 0;
+    }
+
+    .grade-metas {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.75rem;
+        align-items: start;
+    }
+
+    .grade-metas > * {
+        margin-top: 0 !important;
+    }
+
+    .painel-cartoes {
+        grid-template-columns: repeat(4, 1fr);
+    }
+
+    .grade-indicadores {
+        grid-template-columns: repeat(4, 1fr);
+    }
+
+    .so-celular {
+        display: none !important;
+    }
+
+    .modal {
+        max-width: 620px;
+    }
+
+    .btn:hover:not(:disabled) {
+        filter: brightness(1.08);
+    }
+
+    .tabela tr[style*="cursor:pointer"]:hover td,
+    .lista > li[style*="cursor:pointer"]:hover {
+        background: var(--cartao);
+    }
+
+    /* Com mais espaco, os numeros podem respirar. */
+    .tabela td,
+    .tabela th {
+        padding: 0.55rem 0.75rem;
+    }
+}
+
+/* ---------- Telas bem largas: aproveita para alargar os blocos ---------- */
+
+@media (min-width: 1400px) {
+    .conteudo {
+        max-width: 1280px;
+    }
+}
+
+/* ---------- Acabamento visto na tela ---------- */
+
+/*
+    O Blazor foca o h1 a cada navegacao para o leitor de tela anunciar a pagina. O anel de
+    foco ali e ruido: ninguem esta interagindo com o titulo. Elementos com tabindex -1 so
+    recebem foco por programa, entao apagar o anel deles nao tira nada de quem usa teclado.
+*/
+[tabindex="-1"]:focus {
+    outline: none;
+}
+
+@media (min-width: 900px) {
+    /* Botao de acao principal esticado por 1100px parece quebrado. No celular, largura total. */
+    .btn.largo {
+        width: auto;
+        min-width: 260px;
+    }
+}

@@ -1,0 +1,247 @@
+@page "/resumo"
+@inject PlanejamentoService Servico
+@inject IRelogio Relogio
+
+<PageTitle>Resumo | Minhas Finanças</PageTitle>
+
+<h1 class="so-leitor">Resumo do mês</h1>
+
+@if (_dados is null || _projecao is null)
+{
+    <p class="vazio">Carregando...</p>
+}
+else
+{
+    var conforto = _dados.Configuracao.SaldoConfortoCentavos;
+    var mes = _projecao.Mes(_mes.Year, _mes.Month);
+
+    <div class="bloco">
+        <header>
+            <button type="button" class="btn secundario pequeno" @onclick="() => Mover(-1)" disabled="@(!PodeVoltar)"
+                    aria-label="Mês anterior">
+                <Icone Nome="voltar" Tamanho="16" />
+            </button>
+            <h2 style="flex:1; text-align:center">@Formato.MesAno(_mes.Year, _mes.Month)</h2>
+            <button type="button" class="btn secundario pequeno" @onclick="() => Mover(1)" disabled="@(!PodeAvancar)"
+                    aria-label="Mês seguinte">
+                <span style="transform:rotate(180deg); display:inline-flex"><Icone Nome="voltar" Tamanho="16" /></span>
+            </button>
+        </header>
+    </div>
+
+    @if (mes is null)
+    {
+        <p class="vazio">Este mês está fora da projeção.</p>
+    }
+    else
+    {
+        <div class="painel-cartoes" style="margin-top:0.75rem">
+            <div class="cartao">
+                <div class="rotulo">Performance</div>
+                <div class="numero medio @(mes.PerformanceCentavos < 0 ? "valor-negativo" : "valor-ok")">
+                    @Formato.Moeda(mes.PerformanceCentavos)
+                </div>
+                <div class="ajuda">O que entrou menos tudo que saiu, inclusive o que você guardou.</div>
+            </div>
+            <div class="cartao">
+                <div class="rotulo">Custo de vida</div>
+                <div class="numero medio">@Formato.Moeda(mes.CustoDeVidaCentavos)</div>
+                <div class="ajuda">Contas, cartão e diário. Economia não entra.</div>
+            </div>
+            <div class="cartao">
+                <div class="rotulo">Saldo no fim do mês</div>
+                <div class="numero medio @Formato.ClasseValor(mes.SaldoFimCentavos ?? 0, conforto)">
+                    @Formato.Moeda(mes.SaldoFimCentavos)
+                </div>
+                <div class="ajuda">Em @Formato.Data(mes.UltimoDia)</div>
+            </div>
+            <div class="cartao">
+                <div class="rotulo">Menor saldo do mês</div>
+                <div class="numero medio @Formato.ClasseValor(mes.MenorSaldoCentavos ?? 0, conforto)">
+                    @Formato.Moeda(mes.MenorSaldoCentavos)
+                </div>
+                <div class="ajuda">
+                    @if (mes.DataMenorSaldo is DateOnly dataMenorCartao)
+                    {
+                        <text>Em @Formato.Data(dataMenorCartao) &middot; </text>
+                    }
+                    <FarolTag Farol="mes.Farol" />
+                </div>
+            </div>
+        </div>
+
+        @* No PC: detalhamento de um lado, gráfico e tags do outro. *@
+        <div class="colunas" style="margin-top:0.75rem">
+
+        <div class="bloco">
+            <header><h2>Como foi o mês</h2></header>
+            <table class="tabela">
+                <tbody>
+                    <tr>
+                        <td>Entradas</td>
+                        <td class="num valor-ok">@Formato.Moeda(mes.EntradasCentavos)</td>
+                    </tr>
+                    <tr>
+                        <td>Saídas</td>
+                        <td class="num">@Formato.Moeda(mes.SaidasCentavos)</td>
+                    </tr>
+                    <tr>
+                        <td>Cartão</td>
+                        <td class="num">@Formato.Moeda(mes.CartaoCentavos)</td>
+                    </tr>
+                    <tr>
+                        <td>Diário</td>
+                        <td class="num">@Formato.Moeda(mes.DiarioCentavos)</td>
+                    </tr>
+                    <tr>
+                        <td>Economias</td>
+                        <td class="num">@Formato.Moeda(mes.EconomiasCentavos)</td>
+                    </tr>
+                    <tr>
+                        <td>Economizado</td>
+                        <td class="num">@Formato.Porcento(mes.EconomizadoFracao)</td>
+                    </tr>
+                    <tr>
+                        <td>
+                            Diário médio
+                            <div class="ajuda">Só nos dias já vividos do mês</div>
+                        </td>
+                        <td class="num">
+                            @(mes.DiarioMedioCentavos is long media ? Formato.Moeda(media) : "-")
+                            <div class="ajuda">@mes.DiasComDiarioReal dia(s) registrado(s)</div>
+                        </td>
+                    </tr>
+                    @if (mes.EntradasIncertasForaCentavos > 0)
+                    {
+                        <tr>
+                            <td>
+                                Entradas incertas de fora
+                                <div class="ajuda">Não entraram no saldo projetado</div>
+                            </td>
+                            <td class="num">@Formato.Moeda(mes.EntradasIncertasForaCentavos)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div>
+
+        @* ---------- Grafico do mes ---------- *@
+        <div class="bloco">
+            <header><h2>Saldo dia a dia</h2></header>
+            <div class="corpo">
+                <GraficoSaldo Serie="SerieDoMes()" Conforto="conforto" />
+            </div>
+        </div>
+
+        @* ---------- Saidas por tag ---------- *@
+        <div class="bloco" style="margin-top:0.75rem">
+            <header><h2>Para onde foi o dinheiro</h2></header>
+            @if (mes.SaidasPorTag.Count == 0)
+            {
+                <p class="vazio">Nenhuma saída neste mês.</p>
+            }
+            else
+            {
+                <div class="corpo">
+                    @foreach (var tag in mes.SaidasPorTag)
+                    {
+                        <div style="margin-bottom:0.7rem">
+                            <div style="display:flex; justify-content:space-between; gap:0.5rem; font-size:0.85rem">
+                                <span>@tag.Nome</span>
+                                <span class="dinheiro">
+                                    @Formato.Moeda(tag.ValorCentavos)
+                                    <span class="ajuda">@Formato.Porcento(tag.Fracao)</span>
+                                </span>
+                            </div>
+                            <div class="barra" style="margin-top:0.2rem">
+                                <span style="width:@((tag.Fracao * 100).ToString("N1", CultureInfo.InvariantCulture))%"></span>
+                            </div>
+                        </div>
+                    }
+                    <p class="ajuda" style="margin:0">
+                        Conta Saída, Cartão e Economia. O diário não tem tag: ele aparece como diário.
+                    </p>
+                </div>
+            }
+        </div>
+
+        </div>
+        </div>
+    }
+
+    @* ---------- Horizonte de 12 meses ---------- *@
+    <div class="bloco rolagem" style="margin-top:0.75rem">
+        <header><h2>Próximos 12 meses</h2></header>
+        <table class="tabela">
+            <thead>
+                <tr>
+                    <th>Mês</th>
+                    <th class="num">Entra</th>
+                    <th class="num">Sai</th>
+                    <th class="num">Guarda</th>
+                    <th class="num">Fim</th>
+                    <th class="num">Menor</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var linha in _projecao.Meses.Take(12))
+                {
+                    <tr class="clicavel @(linha.Ano == _mes.Year && linha.Mes == _mes.Month ? "hoje" : "")"
+                        @onclick="() => _mes = new DateOnly(linha.Ano, linha.Mes, 1)"
+                        @onkeydown="evento => TeclaNoMes(evento, linha.Ano, linha.Mes)"
+                        tabindex="0" role="button"
+                        aria-label="Abrir @Formato.MesAno(linha.Ano, linha.Mes)">
+                        <td>@Formato.MesAnoCurto(linha.Ano, linha.Mes)</td>
+                        <td class="num">@Formato.Numero(linha.EntradasCentavos)</td>
+                        <td class="num">@Formato.Numero(linha.SaidasECartaoCentavos + linha.DiarioCentavos)</td>
+                        <td class="num">@Formato.Numero(linha.EconomiasCentavos)</td>
+                        <td class="num">@Formato.Numero(linha.SaldoFimCentavos ?? 0)</td>
+                        <td class="num @Formato.ClasseValor(linha.MenorSaldoCentavos ?? 0, _dados.Configuracao.SaldoConfortoCentavos)">
+                            @Formato.Numero(linha.MenorSaldoCentavos ?? 0)
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        <p class="ajuda" style="padding:0.5rem 1rem; margin:0">
+            Valores sem o R$. A coluna Sai inclui contas, cartão e diário. Toque no mês para abrir os detalhes.
+        </p>
+    </div>
+}
+
+@code {
+    private DadosPlanejamento? _dados;
+    private ResultadoProjecao? _projecao;
+    private DateOnly _mes;
+
+    private bool PodeVoltar => _projecao is not null && _mes > MinhasFinancas.Domain.Calendario.PrimeiroDiaDoMes(_projecao.Inicio);
+
+    private bool PodeAvancar => _projecao is not null && _mes < MinhasFinancas.Domain.Calendario.PrimeiroDiaDoMes(_projecao.Fim);
+
+    protected override async Task OnInitializedAsync()
+    {
+        _dados = await Servico.CarregarAsync();
+        _projecao = Servico.Projetar(_dados, null, Relogio.Hoje);
+        _mes = MinhasFinancas.Domain.Calendario.PrimeiroDiaDoMes(
+            MinhasFinancas.Domain.Calendario.Maior(Relogio.Hoje, _projecao.Inicio));
+    }
+
+    private void Mover(int meses) => _mes = _mes.AddMonths(meses);
+
+    /// <summary>Enter abre o mes escolhido na lista do horizonte.</summary>
+    private void TeclaNoMes(KeyboardEventArgs evento, int ano, int mes)
+    {
+        if (evento.Key == "Enter")
+        {
+            _mes = new DateOnly(ano, mes, 1);
+        }
+    }
+
+    private List<PontoGrafico> SerieDoMes() =>
+        (_projecao?.Dias ?? [])
+        .Where(dia => dia.Data.Year == _mes.Year && dia.Data.Month == _mes.Month)
+        .Select(dia => new PontoGrafico(dia.Data, dia.SaldoCentavos))
+        .ToList();
+}

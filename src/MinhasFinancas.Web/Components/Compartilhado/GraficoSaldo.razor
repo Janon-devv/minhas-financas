@@ -1,0 +1,156 @@
+@*
+    Grafico de linha do saldo, em SVG puro: nenhuma biblioteca, nenhum JavaScript.
+    preserveAspectRatio=none deixa a largura esticar; vector-effect mantem a espessura
+    da linha constante, senao ela ficaria achatada junto com o desenho.
+*@
+
+@if (Serie.Count >= 2)
+{
+    @* O rotulo conta o que o grafico mostra, nao so o periodo: quem usa leitor de tela
+       precisa do mesmo recado que quem olha a curva. *@
+    <svg class="grafico" viewBox="0 0 @Largura @Altura" preserveAspectRatio="none" role="img"
+         aria-label="@Resumo()">
+
+        @if (_mostrarZero)
+        {
+            <line class="linha-zero" x1="0" y1="@Coordenada(0)" x2="@Largura" y2="@Coordenada(0)"
+                  vector-effect="non-scaling-stroke" />
+        }
+
+        @if (_mostrarConforto)
+        {
+            <line class="linha-conforto" x1="0" y1="@Coordenada(Conforto)" x2="@Largura" y2="@Coordenada(Conforto)"
+                  vector-effect="non-scaling-stroke" />
+        }
+
+        @if (SerieComparacao is { Count: >= 2 })
+        {
+            <polyline class="linha-simulada" points="@Pontos(SerieComparacao)" vector-effect="non-scaling-stroke" />
+        }
+
+        <polyline class="linha-saldo" points="@Pontos(Serie)" vector-effect="non-scaling-stroke" />
+    </svg>
+
+    <div class="legenda">
+        <span class="s-saldo">saldo projetado</span>
+        @if (_mostrarConforto)
+        {
+            <span class="s-conforto">conforto @Formato.Moeda(Conforto)</span>
+        }
+        @if (SerieComparacao is { Count: >= 2 })
+        {
+            <span class="s-compra">com a compra</span>
+        }
+        <span style="margin-left:auto">de @Formato.Moeda(_minimo) a @Formato.Moeda(_maximo)</span>
+    </div>
+}
+else
+{
+    <p class="vazio">Sem dias suficientes para desenhar o gráfico.</p>
+}
+
+@code {
+    private const int Largura = 600;
+    private const int Altura = 160;
+    private const int Margem = 10;
+
+    private long _minimo;
+    private long _maximo;
+    private bool _mostrarZero;
+    private bool _mostrarConforto;
+
+    [Parameter]
+    public IReadOnlyList<PontoGrafico> Serie { get; set; } = [];
+
+    [Parameter]
+    public IReadOnlyList<PontoGrafico>? SerieComparacao { get; set; }
+
+    [Parameter]
+    public long Conforto { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        if (Serie.Count == 0)
+        {
+            return;
+        }
+
+        var valores = Serie.Select(p => p.Centavos).ToList();
+
+        if (SerieComparacao is not null)
+        {
+            valores.AddRange(SerieComparacao.Select(p => p.Centavos));
+        }
+
+        valores.Add(Conforto);
+        valores.Add(0);
+
+        _minimo = valores.Min();
+        _maximo = valores.Max();
+
+        if (_minimo == _maximo)
+        {
+            _minimo -= 100;
+            _maximo += 100;
+        }
+
+        _mostrarZero = _minimo < 0;
+        _mostrarConforto = Conforto > 0;
+    }
+
+    /// <summary>Descricao em texto do que a curva mostra, para leitor de tela.</summary>
+    private string Resumo()
+    {
+        if (Serie.Count == 0)
+        {
+            return "Gráfico sem dados.";
+        }
+
+        var menor = Serie.MinBy(ponto => ponto.Centavos)!;
+
+        var texto = $"Saldo projetado de {Formato.Data(Serie[0].Data)} a {Formato.Data(Serie[^1].Data)}. " +
+                    $"Começa em {Formato.Moeda(Serie[0].Centavos)} e termina em {Formato.Moeda(Serie[^1].Centavos)}. " +
+                    $"O menor saldo do período é {Formato.Moeda(menor.Centavos)}, em {Formato.Data(menor.Data)}.";
+
+        if (Conforto > 0 && menor.Centavos < Conforto)
+        {
+            texto += $" Isso fica abaixo do saldo de conforto de {Formato.Moeda(Conforto)}.";
+        }
+
+        if (SerieComparacao is { Count: > 0 })
+        {
+            var menorCom = SerieComparacao.MinBy(ponto => ponto.Centavos)!;
+            texto += $" Com a compra, o menor saldo passa a ser {Formato.Moeda(menorCom.Centavos)}, " +
+                     $"em {Formato.Data(menorCom.Data)}.";
+        }
+
+        return texto;
+    }
+
+    private double Y(long centavos)
+    {
+        var faixa = (double)(_maximo - _minimo);
+        var proporcao = (centavos - _minimo) / faixa;
+        return Math.Round(Altura - Margem - (proporcao * (Altura - (2 * Margem))), 2);
+    }
+
+    /// <summary>
+    /// Coordenada pronta para ir num atributo de SVG. Precisa de ponto decimal: a aplicacao roda
+    /// em pt-BR, e se a virgula vazar para o atributo o navegador descarta o valor e desenha em zero.
+    /// </summary>
+    private string Coordenada(long centavos) =>
+        Y(centavos).ToString(CultureInfo.InvariantCulture);
+
+    private string Pontos(IReadOnlyList<PontoGrafico> serie)
+    {
+        if (serie.Count < 2)
+        {
+            return "";
+        }
+
+        var passo = (double)Largura / (serie.Count - 1);
+
+        return string.Join(" ", serie.Select((ponto, i) =>
+            string.Create(CultureInfo.InvariantCulture, $"{Math.Round(i * passo, 2)},{Y(ponto.Centavos)}")));
+    }
+}

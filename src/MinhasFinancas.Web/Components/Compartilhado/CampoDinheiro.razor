@@ -1,0 +1,51 @@
+@* Campo de dinheiro em centavos. inputmode=decimal abre o teclado numerico no iPhone. *@
+
+<input @key="_chave"
+       type="text"
+       inputmode="decimal"
+       enterkeyhint="done"
+       class="campo dinheiro-campo"
+       placeholder="0,00"
+       value="@_texto"
+       id="@Id"
+       @onchange="Alterou" />
+
+@code {
+    private string _texto = "";
+    private int _chave;
+    private long _ultimoValor = long.MinValue;
+
+    [Parameter]
+    public long Valor { get; set; }
+
+    [Parameter]
+    public EventCallback<long> ValorChanged { get; set; }
+
+    [Parameter]
+    public string? Id { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        // So reescreve o texto quando o valor vem de fora, para nao atropelar a digitacao.
+        if (Valor != _ultimoValor)
+        {
+            _ultimoValor = Valor;
+            _texto = Formato.ParaCampo(Valor);
+        }
+    }
+
+    private async Task Alterou(ChangeEventArgs evento)
+    {
+        var digitado = evento.Value?.ToString();
+        var valor = Formato.TentarDinheiro(digitado, out var centavos) ? centavos : 0;
+
+        _ultimoValor = valor;
+        _texto = Formato.ParaCampo(valor);
+
+        // Troca a chave para o campo receber o texto normalizado mesmo quando o Blazor
+        // acharia que nada mudou (por exemplo: digitou "abc" e o normalizado continua "0,00").
+        _chave++;
+
+        await ValorChanged.InvokeAsync(valor);
+    }
+}

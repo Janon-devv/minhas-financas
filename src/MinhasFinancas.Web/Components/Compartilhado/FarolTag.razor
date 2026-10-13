@@ -1,0 +1,8 @@
+@* Situacao do saldo. Sempre com texto, nunca so cor. *@
+
+<span class="farol @Formato.ClasseFarol(Farol)">@Formato.TextoFarol(Farol)</span>
+
+@code {
+    [Parameter]
+    public Farol Farol { get; set; }
+}

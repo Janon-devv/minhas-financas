@@ -1,0 +1,8 @@
+@* Pilula do tipo de lancamento, com texto alem da cor. *@
+
+<span class="pilula @Formato.ClasseTipo(Tipo)">@Formato.TextoTipo(Tipo)</span>
+
+@code {
+    [Parameter]
+    public TipoLancamento Tipo { get; set; }
+}

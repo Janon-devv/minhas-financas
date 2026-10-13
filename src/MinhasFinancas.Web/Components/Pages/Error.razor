@@ -1,0 +1,33 @@
+@page "/Error"
+@using System.Diagnostics
+
+<PageTitle>Erro | Minhas Finanças</PageTitle>
+
+<h1>Algo deu errado</h1>
+
+<div class="aviso ruim" style="margin-top:0.75rem">
+    Não consegui processar essa ação. Seus dados continuam salvos no banco local.
+</div>
+
+@if (ShowRequestId)
+{
+    <p class="ajuda">
+        Código desta ocorrência: <code>@RequestId</code>
+    </p>
+}
+
+<div class="acoes">
+    <a class="btn" href="">Voltar para a tela Hoje</a>
+</div>
+
+@code {
+    [CascadingParameter]
+    private HttpContext? HttpContext { get; set; }
+
+    private string? RequestId { get; set; }
+
+    private bool ShowRequestId => !string.IsNullOrEmpty(RequestId);
+
+    protected override void OnInitialized() =>
+        RequestId = Activity.Current?.Id ?? HttpContext?.TraceIdentifier;
+}

@@ -1,0 +1,26 @@
+@* Folha que sobe de baixo no celular e vira caixa centrada no desktop. *@
+
+<div class="fundo-modal" @onclick="Fechar">
+    <div class="modal" @onclick:stopPropagation="true">
+        <header>
+            <h2>@Titulo</h2>
+            <button type="button" class="btn secundario pequeno" @onclick="Fechar" aria-label="Fechar">
+                <Icone Nome="fechar" Tamanho="16" />
+            </button>
+        </header>
+        @ChildContent
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public string Titulo { get; set; } = "";
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    [Parameter]
+    public EventCallback AoFechar { get; set; }
+
+    private Task Fechar() => AoFechar.InvokeAsync();
+}

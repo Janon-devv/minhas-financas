@@ -1,0 +1,200 @@
+@page "/comecar"
+@layout LayoutLimpo
+@inject PlanejamentoService Servico
+@inject IRelogio Relogio
+@inject NavigationManager Nav
+
+<PageTitle>Começar | Minhas Finanças</PageTitle>
+
+@if (_cfg is null)
+{
+    <p class="vazio">Carregando...</p>
+}
+else if (_passo == 1)
+{
+    <h1>Planeje seu saldo antes de gastar</h1>
+    <p class="ajuda" style="margin-top:0.4rem">
+        São quatro perguntas. Depois o app projeta seu saldo dia a dia e avisa qual é o pior dia que vem.
+    </p>
+
+    <div class="cartao" style="margin-top:1rem">
+        <div class="campo-grupo">
+            <label for="saldo">Quanto tem na conta agora?</label>
+            <CampoDinheiro Valor="_cfg.SaldoAncoraCentavos" ValorChanged="v => _cfg.SaldoAncoraCentavos = v" Id="saldo" />
+            <div class="dica">
+                É o saldo no <strong>início</strong> do dia de hoje, antes dos gastos de hoje.
+                Se o banco já mostra um gasto de hoje, não registre esse gasto de novo no diário.
+                Pode ser negativo.
+            </div>
+        </div>
+
+        <div class="campo-grupo">
+            <label for="data">A partir de qual dia?</label>
+            <CampoData Valor="_cfg.DataAncora" ValorChanged="v => _cfg.DataAncora = v ?? Relogio.Hoje" Id="data" />
+            <div class="dica">Normalmente hoje, @Formato.Data(Relogio.Hoje).</div>
+        </div>
+    </div>
+
+    <div class="acoes fim">
+        <button type="button" class="btn" @onclick="() => _passo = 2">Continuar</button>
+    </div>
+}
+else if (_passo == 2)
+{
+    <h1>Quanto você gasta por dia, de miudeza?</h1>
+    <p class="ajuda" style="margin-top:0.4rem">
+        Lanche, transporte, mercado de passagem. Nada que já esteja no plano de contas.
+    </p>
+
+    <div class="cartao" style="margin-top:1rem">
+        <div class="campo-grupo">
+            <label for="diario">Diário previsto</label>
+            <CampoDinheiro Valor="_cfg.DiarioPrevistoCentavos" ValorChanged="v => _cfg.DiarioPrevistoCentavos = v" Id="diario" />
+            <div class="dica">
+                Na dúvida, erre pra mais: é melhor o app ser pessimista do que te prometer dinheiro que não existe.
+                Todo dia sem registro vai usar esse valor.
+            </div>
+        </div>
+    </div>
+
+    <div class="acoes">
+        <button type="button" class="btn secundario" @onclick="() => _passo = 1">Voltar</button>
+        <button type="button" class="btn" @onclick="() => _passo = 3">Continuar</button>
+    </div>
+}
+else if (_passo == 3)
+{
+    <h1>Qual saldo te deixa tranquilo?</h1>
+    <p class="ajuda" style="margin-top:0.4rem">
+        Abaixo desse valor o app acende o alerta, mesmo sem ficar negativo.
+    </p>
+
+    <div class="cartao" style="margin-top:1rem">
+        <div class="campo-grupo">
+            <label for="conforto">Saldo de conforto</label>
+            <CampoDinheiro Valor="_cfg.SaldoConfortoCentavos" ValorChanged="v => _cfg.SaldoConfortoCentavos = v" Id="conforto" />
+            <div class="dica">Pode ser zero, se você preferir só o alerta de saldo negativo.</div>
+        </div>
+
+        <div class="campo-grupo">
+            <label for="guardado">Já tem algo guardado?</label>
+            <CampoDinheiro Valor="_cfg.JaGuardadoCentavos" ValorChanged="v => _cfg.JaGuardadoCentavos = v" Id="guardado" />
+            <div class="dica">
+                Só para acompanhar o quanto você vem economizando. Não entra no saldo da conta corrente.
+            </div>
+        </div>
+    </div>
+
+    <div class="acoes">
+        <button type="button" class="btn secundario" @onclick="() => _passo = 2">Voltar</button>
+        <button type="button" class="btn" @onclick="SalvarAsync" disabled="@_salvando">
+            @(_salvando ? "Salvando..." : "Concluir")
+        </button>
+    </div>
+
+    @if (_erros.Count > 0)
+    {
+        <div class="aviso ruim" role="alert">
+            @foreach (var erro in _erros)
+            {
+                <div>@erro</div>
+            }
+        </div>
+    }
+}
+else
+{
+    <h1>Pronto</h1>
+
+    @if (_projecao is not null)
+    {
+        var agora = _projecao.Agora;
+
+        <div class="cartao destaque" style="margin-top:0.75rem">
+            <div class="rotulo">Menor saldo à frente</div>
+            @if (agora.MenorSaldoAFrenteCentavos is long menor)
+            {
+                <div class="numero @Formato.ClasseValor(menor, _cfg.SaldoConfortoCentavos)">@Formato.Moeda(menor)</div>
+                <div class="ajuda">em @Formato.Data(agora.DataMenorSaldoAFrente!.Value)</div>
+            }
+        </div>
+
+        <div class="aviso info">
+            Esse número só considera o diário previsto, porque você ainda não cadastrou nada.
+            Cadastre o que entra e o que sai e ele fica realista.
+        </div>
+    }
+
+    <div class="bloco" style="margin-top:0.75rem">
+        <header><h2>Próximos passos</h2></header>
+        <ul class="lista">
+            <li>
+                <div class="principal">
+                    <div class="titulo">Cadastre o que entra</div>
+                    <div class="sub">Salário e outras receitas, com o dia que caem na conta</div>
+                </div>
+                <a class="btn pequeno" href="plano?novo=1">Abrir</a>
+            </li>
+            <li>
+                <div class="principal">
+                    <div class="titulo">Cadastre as contas fixas</div>
+                    <div class="sub">Aluguel, internet, assinaturas, academia</div>
+                </div>
+                <a class="btn pequeno secundario" href="plano?novo=1">Abrir</a>
+            </li>
+            <li>
+                <div class="principal">
+                    <div class="titulo">Cadastre seus cartões</div>
+                    <div class="sub">Dia de fechamento e de vencimento, para o app saber quando a fatura sai</div>
+                </div>
+                <a class="btn pequeno secundario" href="ajustes">Abrir</a>
+            </li>
+        </ul>
+    </div>
+
+    <div class="acoes">
+        <a class="btn largo" href="">Ir para a tela Hoje</a>
+    </div>
+}
+
+@code {
+    private Configuracao? _cfg;
+    private ResultadoProjecao? _projecao;
+    private int _passo = 1;
+    private bool _salvando;
+    private List<string> _erros = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        _cfg = await Servico.ObterConfiguracaoAsync();
+
+        if (_cfg.DataAncora == default)
+        {
+            _cfg.DataAncora = Relogio.Hoje;
+        }
+    }
+
+    private async Task SalvarAsync()
+    {
+        if (_cfg is null)
+        {
+            return;
+        }
+
+        _erros = Validacao.Configuracao(_cfg);
+
+        if (_erros.Count > 0)
+        {
+            return;
+        }
+
+        _salvando = true;
+        _cfg.ConfiguracaoConcluida = true;
+
+        await Servico.SalvarConfiguracaoAsync(_cfg, "Primeiro acesso");
+        _projecao = await Servico.ProjetarAsync();
+
+        _salvando = false;
+        _passo = 4;
+    }
+}

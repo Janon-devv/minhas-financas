@@ -1,0 +1,514 @@
+@page "/ajustes"
+@inject PlanejamentoService Servico
+@inject BackupService Backup
+@inject IRelogio Relogio
+@inject InfoApp Info
+
+<PageTitle>Ajustes | Minhas Finanças</PageTitle>
+
+<h1 class="so-leitor">Ajustes</h1>
+
+@if (_cfg is null || _dados is null)
+{
+    <p class="vazio">Carregando...</p>
+}
+else
+{
+    @* No PC: os seus numeros de um lado, os cadastros e o backup do outro. *@
+    <div class="colunas">
+
+    <div>
+    @* ---------- Conferencia com o banco ---------- *@
+    <div class="bloco">
+        <header><h2>Conferência com o banco</h2></header>
+        <div class="corpo">
+            <div class="rotulo">O app diz que hoje você tem</div>
+            <div class="numero medio">@Formato.Moeda(_saldoProjetadoHoje)</div>
+
+            <div class="campo-grupo" style="margin-top:0.8rem">
+                <label for="saldo-real">E o banco diz quanto?</label>
+                <CampoDinheiro Valor="_saldoReal" ValorChanged="v => _saldoReal = v" Id="saldo-real" />
+            </div>
+
+            @if (_saldoProjetadoHoje is long projetado)
+            {
+                var diferenca = _saldoReal - projetado;
+
+                @if (diferenca == 0)
+                {
+                    <div class="aviso bom">Bateu. Nada a fazer.</div>
+                }
+                else
+                {
+                    <div class="aviso atencao">
+                        Diferença de @Formato.Moeda(diferenca).
+                        @if (diferenca < 0)
+                        {
+                            <text>Você tem menos do que o app esperava: provavelmente algum gasto não foi registrado.</text>
+                        }
+                        else
+                        {
+                            <text>Você tem mais do que o app esperava: talvez uma entrada tenha vindo antes ou o diário foi menor.</text>
+                        }
+                    </div>
+                    <div class="acoes">
+                        <button type="button" class="btn" @onclick="Recalibrar">
+                            Usar @Formato.Moeda(_saldoReal) como saldo de hoje
+                        </button>
+                    </div>
+                    <p class="ajuda" style="margin-top:0.4rem">
+                        Recalibrar não apaga nada. Lançamentos e diários continuam guardados por data;
+                        o que ficou antes de hoje só deixa de contar no saldo.
+                    </p>
+                }
+            }
+
+            @if (_mensagem is not null)
+            {
+                <div class="aviso bom" role="status" aria-live="polite" style="margin-top:0.6rem">@_mensagem</div>
+            }
+        </div>
+    </div>
+
+    @* ---------- Parametros ---------- *@
+    <div class="bloco" style="margin-top:0.75rem">
+        <header><h2>Seus números</h2></header>
+        <div class="corpo">
+            <div class="linha-campos">
+                <div class="campo-grupo">
+                    <label for="saldo-ancora">Saldo de partida</label>
+                    <CampoDinheiro Valor="_cfg.SaldoAncoraCentavos" ValorChanged="v => _cfg.SaldoAncoraCentavos = v" Id="saldo-ancora" />
+                </div>
+                <div class="campo-grupo">
+                    <label for="data-ancora">A partir de</label>
+                    <CampoData Valor="_cfg.DataAncora" ValorChanged="v => _cfg.DataAncora = v ?? Relogio.Hoje" Id="data-ancora" />
+                </div>
+            </div>
+
+            <div class="campo-grupo">
+                <label for="diario-previsto">Diário previsto</label>
+                <CampoDinheiro Valor="_cfg.DiarioPrevistoCentavos" ValorChanged="v => _cfg.DiarioPrevistoCentavos = v" Id="diario-previsto" />
+                <div class="dica">Usado em todo dia sem registro, inclusive nos que já passaram.</div>
+            </div>
+
+            <div class="campo-grupo">
+                <label for="conforto">Saldo de conforto</label>
+                <CampoDinheiro Valor="_cfg.SaldoConfortoCentavos" ValorChanged="v => _cfg.SaldoConfortoCentavos = v" Id="conforto" />
+            </div>
+
+            <div class="campo-grupo">
+                <label for="guardado">Já guardado</label>
+                <CampoDinheiro Valor="_cfg.JaGuardadoCentavos" ValorChanged="v => _cfg.JaGuardadoCentavos = v" Id="guardado" />
+            </div>
+
+            <div class="campo-grupo">
+                <label for="horizonte">Horizonte</label>
+                <select id="horizonte" class="campo" @bind="_cfg.HorizonteMeses">
+                    <option value="12">12 meses</option>
+                    <option value="24">24 meses</option>
+                    <option value="36">36 meses</option>
+                    <option value="60">60 meses</option>
+                </select>
+                <div class="dica">Até onde a projeção vai, contando de hoje.</div>
+            </div>
+
+            <div class="campo-grupo">
+                <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400">
+                    <input type="checkbox" @bind="_cfg.ContarEntradasIncertas"
+                           style="width:1.1rem; height:1.1rem" />
+                    Contar entradas incertas no saldo
+                </label>
+                <div class="dica">
+                    Desligado, o app é pessimista: entrada marcada como incerta não aparece no saldo,
+                    só no resumo do mês.
+                </div>
+            </div>
+
+            <div class="acoes">
+                <button type="button" class="btn" @onclick="SalvarConfiguracao" disabled="@_salvando">
+                    @(_salvando ? "Salvando..." : "Salvar")
+                </button>
+            </div>
+
+            @if (_erros.Count > 0)
+            {
+                <div class="aviso ruim" role="alert" style="margin-top:0.6rem">
+                    @foreach (var erro in _erros)
+                    {
+                        <div>@erro</div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+
+    </div>
+
+    <div>
+    @* ---------- Cartoes ---------- *@
+    <div class="bloco">
+        <header>
+            <h2>Cartões</h2>
+            <button type="button" class="btn pequeno" @onclick="() => AbrirCartao(null)">
+                <Icone Nome="mais" Tamanho="16" /> Novo
+            </button>
+        </header>
+
+        @if (_dados.Cartoes.Count == 0)
+        {
+            <p class="vazio">
+                Nenhum cartão. Cadastre para o app calcular sozinho em que dia a fatura sai da conta.
+            </p>
+        }
+        else
+        {
+            <ul class="lista">
+                @foreach (var cartao in _dados.Cartoes)
+                {
+                    <li>
+                        <div class="principal">
+                            <div class="titulo">@cartao.Nome</div>
+                            <div class="sub">Fecha dia @cartao.DiaFechamento, vence dia @cartao.DiaVencimento</div>
+                        </div>
+                        <button type="button" class="btn secundario pequeno"
+                                aria-label="Editar o cartão @cartao.Nome"
+                                @onclick="() => AbrirCartao(cartao)">
+                            <Icone Nome="editar" Tamanho="14" />
+                        </button>
+                    </li>
+                }
+            </ul>
+        }
+    </div>
+
+    @* ---------- Tags ---------- *@
+    <div class="bloco" style="margin-top:0.75rem">
+        <header><h2>Tags</h2></header>
+        <div class="corpo">
+            <div class="linha-campos">
+                <input class="campo" placeholder="Casa, Alimentação, Transporte" @bind="_novaTag" />
+                <button type="button" class="btn" style="flex:0 0 auto" @onclick="AdicionarTag">Adicionar</button>
+            </div>
+        </div>
+
+        @if (_dados.Tags.Count > 0)
+        {
+            <ul class="lista">
+                @foreach (var tag in _dados.Tags)
+                {
+                    <li>
+                        <div class="principal">
+                            <div class="titulo">@tag.Nome</div>
+                        </div>
+                        <button type="button" class="btn perigo pequeno" @onclick="() => ExcluirTag(tag.Id)">
+                            Excluir
+                        </button>
+                    </li>
+                }
+            </ul>
+        }
+    </div>
+
+    @* ---------- Backup ---------- *@
+    <div class="bloco" style="margin-top:0.75rem">
+        <header><h2>Backup</h2></header>
+        <div class="corpo">
+            <a class="btn largo" href="backup/baixar" target="_blank">Baixar backup em JSON</a>
+            <p class="ajuda" style="margin-top:0.5rem">
+                Guarde esse arquivo antes de confiar o seu controle financeiro ao app.
+                Ele tem tudo: configuração, lançamentos, diários, cartões, tags e metas.
+            </p>
+
+            <hr style="border:0; border-top:1px solid var(--linha); margin:1rem 0" />
+
+            <label class="rotulo" for="arquivo">Restaurar de um arquivo</label>
+            <InputFile id="arquivo" class="campo" accept=".json" OnChange="ArquivoEscolhido" />
+
+            @if (_restauracao is not null)
+            {
+                @if (_restauracao.Erros.Count > 0)
+                {
+                    <div class="aviso ruim" role="alert" style="margin-top:0.6rem">
+                        <strong>Esse arquivo não serve:</strong>
+                        @foreach (var erro in _restauracao.Erros)
+                        {
+                            <div>@erro</div>
+                        }
+                    </div>
+                }
+                else if (_restauracao.BackupDoQueExistia is not null)
+                {
+                    <div class="aviso bom" style="margin-top:0.6rem">
+                        Restaurado. O que existia antes foi salvo em
+                        <code style="font-size:0.75rem">@_restauracao.BackupDoQueExistia</code>
+                    </div>
+                }
+                else
+                {
+                    <div class="aviso atencao" style="margin-top:0.6rem">
+                        <strong>O arquivo tem:</strong>
+                        @foreach (var item in _restauracao.Resumo)
+                        {
+                            <div>@item</div>
+                        }
+                        <p style="margin:0.5rem 0 0">
+                            Restaurar substitui tudo que está no app hoje. Não existe mesclagem:
+                            o que está aqui agora sai e entra o que está no arquivo.
+                        </p>
+                        <div class="acoes">
+                            <button type="button" class="btn perigo" @onclick="ConfirmarRestauracao">
+                                Substituir tudo
+                            </button>
+                            <button type="button" class="btn secundario" @onclick="() => { _restauracao = null; _jsonParaRestaurar = null; }">
+                                Cancelar
+                            </button>
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+
+    @* ---------- Sobre ---------- *@
+    <div class="bloco" style="margin-top:0.75rem">
+        <header><h2>Sobre</h2></header>
+        <div class="corpo">
+            <div class="rotulo">Onde ficam seus dados</div>
+            <p style="font-size:0.78rem; word-break:break-all; margin:0.2rem 0 0.8rem">
+                <code>@Info.CaminhoBanco</code>
+            </p>
+
+            <div class="rotulo">Versão</div>
+            <p style="margin:0.2rem 0 0.8rem">@Info.Versao</p>
+
+            @if (_ancoras.Count > 0)
+            {
+                <div class="rotulo">Conferências anteriores</div>
+                <table class="tabela" style="margin-top:0.3rem">
+                    <tbody>
+                        @foreach (var ancora in _ancoras.Take(8))
+                        {
+                            <tr>
+                                <td>
+                                    @Formato.Data(ancora.Data)
+                                    <div class="ajuda">@ancora.Observacao</div>
+                                </td>
+                                <td class="num">@Formato.Moeda(ancora.SaldoCentavos)</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        </div>
+    </div>
+
+    </div>
+    </div>
+}
+
+@if (_cartaoEditando is not null)
+{
+    <Modal Titulo="@(_cartaoEditando.Id == 0 ? "Novo cartão" : "Editar cartão")" AoFechar="() => _cartaoEditando = null">
+        <div class="campo-grupo">
+            <label for="nome-cartao">Nome</label>
+            <input id="nome-cartao" class="campo" @bind="_cartaoEditando.Nome" placeholder="Principal" />
+        </div>
+
+        <div class="linha-campos">
+            <div class="campo-grupo">
+                <label for="fechamento">Dia que fecha</label>
+                <input id="fechamento" type="number" inputmode="numeric" min="1" max="31" class="campo"
+                       @bind="_cartaoEditando.DiaFechamento" />
+            </div>
+            <div class="campo-grupo">
+                <label for="vencimento">Dia que vence</label>
+                <input id="vencimento" type="number" inputmode="numeric" min="1" max="31" class="campo"
+                       @bind="_cartaoEditando.DiaVencimento" />
+            </div>
+        </div>
+
+        <div class="dica">
+            Compra feita no próprio dia do fechamento já entra na fatura seguinte.
+        </div>
+
+        @if (_errosCartao.Count > 0)
+        {
+            <div class="aviso ruim" role="alert" style="margin-top:0.6rem">
+                @foreach (var erro in _errosCartao)
+                {
+                    <div>@erro</div>
+                }
+            </div>
+        }
+
+        <div class="acoes">
+            <button type="button" class="btn" @onclick="SalvarCartao">Salvar</button>
+            <button type="button" class="btn secundario" @onclick="() => _cartaoEditando = null">Cancelar</button>
+            @if (_cartaoEditando.Id != 0)
+            {
+                <button type="button" class="btn perigo" style="margin-left:auto" @onclick="ExcluirCartao">
+                    Excluir
+                </button>
+            }
+        </div>
+    </Modal>
+}
+
+@code {
+    private Configuracao? _cfg;
+    private DadosPlanejamento? _dados;
+    private List<AncoraHistorico> _ancoras = [];
+    private long? _saldoProjetadoHoje;
+    private long _saldoReal;
+    private string? _mensagem;
+    private List<string> _erros = [];
+
+    private Cartao? _cartaoEditando;
+    private List<string> _errosCartao = [];
+    private string _novaTag = "";
+    private bool _salvando;
+
+    private ResultadoRestauracao? _restauracao;
+    private string? _jsonParaRestaurar;
+
+    protected override async Task OnInitializedAsync() => await CarregarAsync();
+
+    private async Task CarregarAsync()
+    {
+        _dados = await Servico.CarregarAsync();
+        _cfg = _dados.Configuracao;
+        _ancoras = await Servico.ObterHistoricoAncorasAsync();
+
+        var projecao = Servico.Projetar(_dados, null, Relogio.Hoje);
+        _saldoProjetadoHoje = projecao.Agora.SaldoHojeCentavos;
+        _saldoReal = _saldoProjetadoHoje ?? 0;
+    }
+
+    private async Task SalvarConfiguracao()
+    {
+        if (_cfg is null)
+        {
+            return;
+        }
+
+        _erros = Validacao.Configuracao(_cfg);
+
+        if (_erros.Count > 0)
+        {
+            return;
+        }
+
+        _salvando = true;
+
+        try
+        {
+            await Servico.SalvarConfiguracaoAsync(_cfg, "Ajuste manual");
+            _mensagem = "Salvo.";
+            await CarregarAsync();
+        }
+        finally
+        {
+            _salvando = false;
+        }
+    }
+
+    private async Task Recalibrar()
+    {
+        await Servico.RecalibrarAsync(_saldoReal, Relogio.Hoje);
+        _mensagem = $"Saldo de hoje passou a ser {Formato.Moeda(_saldoReal)}.";
+        await CarregarAsync();
+    }
+
+    private void AbrirCartao(Cartao? original)
+    {
+        _errosCartao = [];
+
+        _cartaoEditando = original is null
+            ? new Cartao { Nome = "", DiaFechamento = 1, DiaVencimento = 10 }
+            : new Cartao
+            {
+                Id = original.Id,
+                Nome = original.Nome,
+                DiaFechamento = original.DiaFechamento,
+                DiaVencimento = original.DiaVencimento
+            };
+    }
+
+    private async Task SalvarCartao()
+    {
+        if (_cartaoEditando is null)
+        {
+            return;
+        }
+
+        _errosCartao = Validacao.Cartao(_cartaoEditando);
+
+        if (_errosCartao.Count > 0)
+        {
+            return;
+        }
+
+        await Servico.SalvarCartaoAsync(_cartaoEditando);
+        _cartaoEditando = null;
+        await CarregarAsync();
+    }
+
+    private async Task ExcluirCartao()
+    {
+        if (_cartaoEditando is { Id: > 0 } cartao)
+        {
+            var impedimento = await Servico.ExcluirCartaoAsync(cartao.Id);
+
+            if (impedimento is not null)
+            {
+                _errosCartao = [impedimento];
+                return;
+            }
+
+            _cartaoEditando = null;
+            await CarregarAsync();
+        }
+    }
+
+    private async Task AdicionarTag()
+    {
+        if (string.IsNullOrWhiteSpace(_novaTag))
+        {
+            return;
+        }
+
+        await Servico.SalvarTagAsync(new Tag { Nome = _novaTag.Trim() });
+        _novaTag = "";
+        await CarregarAsync();
+    }
+
+    private async Task ExcluirTag(int id)
+    {
+        await Servico.ExcluirTagAsync(id);
+        await CarregarAsync();
+    }
+
+    private async Task ArquivoEscolhido(InputFileChangeEventArgs evento)
+    {
+        _restauracao = null;
+        _jsonParaRestaurar = null;
+
+        using var leitor = new StreamReader(evento.File.OpenReadStream(maxAllowedSize: 32 * 1024 * 1024));
+        _jsonParaRestaurar = await leitor.ReadToEndAsync();
+
+        // Primeiro so confere e mostra o que vem no arquivo.
+        _restauracao = await Backup.RestaurarAsync(_jsonParaRestaurar, confirmar: false);
+    }
+
+    private async Task ConfirmarRestauracao()
+    {
+        if (_jsonParaRestaurar is null)
+        {
+            return;
+        }
+
+        _restauracao = await Backup.RestaurarAsync(_jsonParaRestaurar, confirmar: true);
+        _jsonParaRestaurar = null;
+        await CarregarAsync();
+    }
+}

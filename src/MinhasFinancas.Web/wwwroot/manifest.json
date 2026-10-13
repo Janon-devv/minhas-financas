@@ -1,0 +1,25 @@
+{
+  "name": "Minhas Finanças | Raul Janon",
+  "short_name": "Finanças",
+  "description": "Projeção do saldo dia a dia, para ver o aperto antes de ele chegar.",
+  "lang": "pt-BR",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FFFFFF",
+  "theme_color": "#134E4A",
+  "icons": [
+    {
+      "src": "icone-180.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    },
+    {
+      "src": "icone-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

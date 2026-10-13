@@ -1,0 +1,20 @@
+# .NET
+bin/
+obj/
+*.user
+.vs/
+
+# Banco de dados local e backups
+*.db
+*.db-shm
+*.db-wal
+backups/
+
+# Logs
+*.log
+
+# Playwright CLI (screenshots e snapshots de verificacao)
+.playwright-cli/
+
+# Planilha pessoal de planejamento (fica so no disco)
+*.xlsx

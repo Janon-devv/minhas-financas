@@ -1,0 +1,449 @@
+@page "/plano"
+@inject PlanejamentoService Servico
+@inject IRelogio Relogio
+
+<PageTitle>Plano de Contas | Minhas Finanças</PageTitle>
+
+<h1 class="so-leitor">Plano de Contas</h1>
+
+@if (_dados is null)
+{
+    <p class="vazio">Carregando...</p>
+}
+else
+{
+    <div class="bloco">
+        <header>
+            <h2>Plano de Contas</h2>
+            <button type="button" class="btn pequeno" @onclick="() => Abrir(null)">
+                <Icone Nome="mais" Tamanho="16" /> Novo
+            </button>
+        </header>
+
+        <div class="corpo">
+            <div class="linha-campos">
+                <div>
+                    <label class="rotulo" for="filtro-tipo">Tipo</label>
+                    <select id="filtro-tipo" class="campo" @bind="_filtroTipo">
+                        <option value="">Todos</option>
+                        @foreach (var tipo in Enum.GetValues<TipoLancamento>())
+                        {
+                            <option value="@tipo">@Formato.TextoTipo(tipo)</option>
+                        }
+                    </select>
+                </div>
+                <div>
+                    <label class="rotulo" for="filtro-tag">Tag</label>
+                    <select id="filtro-tag" class="campo" @bind="_filtroTag">
+                        <option value="">Todas</option>
+                        <option value="0">Sem tag</option>
+                        @foreach (var tag in _dados.Tags)
+                        {
+                            <option value="@tag.Id">@tag.Nome</option>
+                        }
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    var cartoes = _dados.Cartoes.ToDictionary(c => c.Id);
+    var ancora = _dados.Configuracao.DataAncora;
+    var linhas = MontarLinhas(cartoes);
+
+    @if (linhas.Count == 0)
+    {
+        <p class="vazio">
+            Nada cadastrado ainda. Comece pelo que entra todo mês e pelas contas fixas.
+        </p>
+    }
+    else
+    {
+        <ul class="lista bloco" style="margin-top:0.75rem">
+            @foreach (var linha in linhas)
+            {
+                var l = linha.Lancamento;
+                var passou = linha.UltimaVez is DateOnly ultima && ultima < ancora;
+                var cartaoInvalido = l.Tipo == TipoLancamento.Cartao &&
+                                     (l.CartaoId is null || !cartoes.ContainsKey(l.CartaoId.Value));
+
+                <li class="clicavel @(passou ? "riscado" : "")" @onclick="() => Abrir(l)"
+                    @onkeydown="evento => TeclaNoItem(evento, l)" tabindex="0" role="button"
+                    aria-label="Editar @l.Descricao, @Formato.TextoTipo(l.Tipo) de @Formato.Moeda(l.ValorCentavos)">
+                    <div class="principal">
+                        <div class="titulo">@l.Descricao</div>
+                        <div class="sub">
+                            <Pilula Tipo="l.Tipo" />
+                            @if (l.Tipo == TipoLancamento.Entrada && l.Certeza == Certeza.Incerta)
+                            {
+                                <span class="pilula neutra">incerta</span>
+                            }
+                            @if (l.TagId is int tagId && _dados.Tags.FirstOrDefault(t => t.Id == tagId) is Tag tag)
+                            {
+                                <span class="pilula neutra">@tag.Nome</span>
+                            }
+                            <br />
+                            Cai na conta em @Formato.Data(linha.CaiEm)
+                            &middot; @(linha.UltimaVez is DateOnly u ? "última em " + Formato.Data(u) : "sem fim")
+                            @if (passou)
+                            {
+                                <text> &middot; já passou da âncora</text>
+                            }
+                        </div>
+                        @if (cartaoInvalido)
+                        {
+                            <div class="aviso atencao" style="margin-top:0.3rem; padding:0.3rem 0.5rem; font-size:0.75rem">
+                                Sem cartão válido. Está contando na data da compra.
+                            </div>
+                        }
+                    </div>
+                    <div class="dinheiro @(l.Tipo == TipoLancamento.Entrada ? "valor-ok" : "")">
+                        @Formato.Moeda(l.ValorCentavos)
+                        <div class="ajuda" style="text-align:right">@Formato.TextoVezes(l.Vezes)</div>
+                    </div>
+                </li>
+            }
+        </ul>
+    }
+
+    <p class="ajuda" style="margin-top:0.5rem">
+        O valor é de cada ocorrência, não o total. Riscado quer dizer que todas as ocorrências ficaram
+        antes do seu saldo de partida, então já estão dentro dele.
+    </p>
+}
+
+@if (_editando is not null)
+{
+    <Modal Titulo="@(_editando.Id == 0 ? "Novo lançamento" : "Editar lançamento")" AoFechar="Fechar">
+        <div class="campo-grupo">
+            <label for="descricao">Descrição</label>
+            <input id="descricao" class="campo" @bind="_editando.Descricao" placeholder="Aluguel, salário, internet" />
+        </div>
+
+        <div class="campo-grupo">
+            <label for="tipo">Tipo</label>
+            <select id="tipo" class="campo" value="@_editando.Tipo" @onchange="TrocarTipo">
+                @foreach (var tipo in Enum.GetValues<TipoLancamento>())
+                {
+                    <option value="@tipo">@Formato.TextoTipo(tipo)</option>
+                }
+            </select>
+            <div class="dica">@DicaDoTipo(_editando.Tipo)</div>
+        </div>
+
+        <div class="linha-campos">
+            <div class="campo-grupo">
+                <label for="valor">Valor de cada vez</label>
+                <CampoDinheiro Valor="_editando.ValorCentavos" ValorChanged="v => _editando.ValorCentavos = v" Id="valor" />
+            </div>
+            <div class="campo-grupo">
+                <label for="data">
+                    @(_editando.Tipo == TipoLancamento.Cartao ? "Data da compra" : "Dia que cai na conta")
+                </label>
+                <CampoData Valor="_editando.Data" ValorChanged="v => _editando.Data = v ?? Relogio.Hoje" Id="data" />
+            </div>
+        </div>
+
+        <div class="campo-grupo">
+            <label for="repeticao">Repetição</label>
+            <select id="repeticao" class="campo" value="@_repeticao" @onchange="TrocarRepeticao">
+                <option value="uma">Uma vez só</option>
+                <option value="sem-fim">Todo mês, sem fim</option>
+                <option value="contado">Um número de vezes</option>
+            </select>
+            @if (_repeticao == "contado")
+            {
+                <input type="number" inputmode="numeric" min="1" max="360" class="campo" style="margin-top:0.4rem"
+                       @bind="_vezes" />
+                <div class="dica">Uma ocorrência por mês, @_vezes vez(es).</div>
+            }
+        </div>
+
+        @if (_editando.Tipo == TipoLancamento.Cartao)
+        {
+            <div class="campo-grupo">
+                <label for="cartao">Cartão</label>
+                @if (_dados!.Cartoes.Count == 0)
+                {
+                    <div class="aviso atencao">
+                        Você ainda não cadastrou cartões. Cadastre em Ajustes para o app saber
+                        em que dia a fatura sai da conta.
+                    </div>
+                }
+                else
+                {
+                    <select id="cartao" class="campo" @bind="_cartaoId">
+                        <option value="0">Escolha o cartão</option>
+                        @foreach (var cartao in _dados.Cartoes)
+                        {
+                            <option value="@cartao.Id">
+                                @cartao.Nome (fecha @cartao.DiaFechamento, vence @cartao.DiaVencimento)
+                            </option>
+                        }
+                    </select>
+                    @if (_cartaoId > 0 && _dados.Cartoes.FirstOrDefault(c => c.Id == _cartaoId) is Cartao escolhido)
+                    {
+                        <div class="dica">
+                            Sai da conta em
+                            @Formato.Data(RegrasCartao.DataEfetiva(_editando.Data, escolhido)).
+                        </div>
+                    }
+                }
+            </div>
+        }
+
+        @if (_editando.Tipo == TipoLancamento.Entrada)
+        {
+            <div class="campo-grupo">
+                <label for="certeza">Certeza</label>
+                <select id="certeza" class="campo" @bind="_certeza">
+                    <option value="Certa">Certa</option>
+                    <option value="Incerta">Incerta</option>
+                </select>
+                <div class="dica">
+                    Entrada incerta fica fora do saldo projetado por padrão, para a previsão não
+                    contar com dinheiro que talvez não venha.
+                </div>
+            </div>
+        }
+
+        @if (_editando.Tipo == TipoLancamento.Economia && _dados!.Metas.Any(m => m.ArquivadaEm is null))
+        {
+            <div class="campo-grupo">
+                <label for="meta">Meta (opcional)</label>
+                <select id="meta" class="campo" @bind="_metaId">
+                    <option value="0">Sem meta</option>
+                    @foreach (var meta in _dados.Metas.Where(m => m.ArquivadaEm is null))
+                    {
+                        <option value="@meta.Id">@meta.Nome</option>
+                    }
+                </select>
+            </div>
+        }
+
+        <div class="campo-grupo">
+            <label for="tag">Tag (opcional)</label>
+            <select id="tag" class="campo" @bind="_tagId">
+                <option value="0">Sem tag</option>
+                @foreach (var tag in _dados!.Tags)
+                {
+                    <option value="@tag.Id">@tag.Nome</option>
+                }
+            </select>
+        </div>
+
+        <div class="campo-grupo">
+            <label for="obs">Observação (opcional)</label>
+            <input id="obs" class="campo" @bind="_editando.Obs" />
+        </div>
+
+        @if (_erros.Count > 0)
+        {
+            <div class="aviso ruim" role="alert">
+                @foreach (var erro in _erros)
+                {
+                    <div>@erro</div>
+                }
+            </div>
+        }
+
+        <div class="acoes">
+            <button type="button" class="btn" @onclick="SalvarAsync" disabled="@_salvando">
+                @(_salvando ? "Salvando..." : "Salvar")
+            </button>
+            <button type="button" class="btn secundario" @onclick="Fechar">Cancelar</button>
+            @if (_editando.Id != 0)
+            {
+                <button type="button" class="btn perigo" style="margin-left:auto" @onclick="ExcluirAsync">
+                    Excluir
+                </button>
+            }
+        </div>
+    </Modal>
+}
+
+@code {
+    private DadosPlanejamento? _dados;
+    private Lancamento? _editando;
+    private List<string> _erros = [];
+
+    private string _filtroTipo = "";
+    private string _filtroTag = "";
+
+    private string _repeticao = "uma";
+    private int _vezes = 2;
+    private int _cartaoId;
+    private int _tagId;
+    private int _metaId;
+    private string _certeza = "Certa";
+    private bool _salvando;
+
+    [SupplyParameterFromQuery(Name = "novo")]
+    public string? Novo { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CarregarAsync();
+
+        if (Novo == "1")
+        {
+            Abrir(null);
+        }
+    }
+
+    private async Task CarregarAsync() => _dados = await Servico.CarregarAsync();
+
+    private sealed record LinhaPlano(Lancamento Lancamento, DateOnly CaiEm, DateOnly? UltimaVez);
+
+    private List<LinhaPlano> MontarLinhas(Dictionary<int, Cartao> cartoes) =>
+        (_dados?.Lancamentos ?? [])
+        .Where(l => string.IsNullOrEmpty(_filtroTipo) || l.Tipo.ToString() == _filtroTipo)
+        .Where(l => string.IsNullOrEmpty(_filtroTag) ||
+                    (_filtroTag == "0" ? l.TagId is null : l.TagId?.ToString() == _filtroTag))
+        .Select(l =>
+        {
+            var efetiva = Ocorrencias.DataEfetiva(l, cartoes);
+            return new LinhaPlano(l, efetiva, Ocorrencias.UltimaVez(efetiva, l.Vezes));
+        })
+        .OrderBy(linha => linha.CaiEm)
+        .ToList();
+
+    private void Abrir(Lancamento? original)
+    {
+        _erros = [];
+
+        if (original is null)
+        {
+            _editando = new Lancamento
+            {
+                Data = Relogio.Hoje,
+                Tipo = TipoLancamento.Saida,
+                Vezes = 1
+            };
+
+            _repeticao = "uma";
+            _vezes = 2;
+            _cartaoId = 0;
+            _tagId = 0;
+            _metaId = 0;
+            _certeza = "Certa";
+            return;
+        }
+
+        // Copia, para cancelar nao deixar a lista com dados meio editados.
+        _editando = new Lancamento
+        {
+            Id = original.Id,
+            Data = original.Data,
+            Descricao = original.Descricao,
+            Tipo = original.Tipo,
+            ValorCentavos = original.ValorCentavos,
+            Vezes = original.Vezes,
+            CartaoId = original.CartaoId,
+            Certeza = original.Certeza,
+            TagId = original.TagId,
+            MetaId = original.MetaId,
+            Obs = original.Obs
+        };
+
+        _repeticao = original.Vezes switch
+        {
+            null => "sem-fim",
+            1 => "uma",
+            _ => "contado"
+        };
+
+        _vezes = original.Vezes ?? 2;
+        _cartaoId = original.CartaoId ?? 0;
+        _tagId = original.TagId ?? 0;
+        _metaId = original.MetaId ?? 0;
+        _certeza = (original.Certeza ?? Certeza.Certa).ToString();
+    }
+
+    private void Fechar()
+    {
+        _editando = null;
+        _erros = [];
+    }
+
+    /// <summary>Enter abre o lancamento para edicao, para quem navega pelo teclado.</summary>
+    private void TeclaNoItem(KeyboardEventArgs evento, Lancamento lancamento)
+    {
+        if (evento.Key == "Enter")
+        {
+            Abrir(lancamento);
+        }
+    }
+
+    private void TrocarTipo(ChangeEventArgs evento)
+    {
+        if (_editando is not null && Enum.TryParse<TipoLancamento>(evento.Value?.ToString(), out var tipo))
+        {
+            _editando.Tipo = tipo;
+        }
+    }
+
+    private void TrocarRepeticao(ChangeEventArgs evento) => _repeticao = evento.Value?.ToString() ?? "uma";
+
+    private static string DicaDoTipo(TipoLancamento tipo) => tipo switch
+    {
+        TipoLancamento.Entrada => "Dinheiro que entra na conta: salário, freela, reembolso.",
+        TipoLancamento.Saida => "Conta que sai direto da conta: aluguel, internet, boleto.",
+        TipoLancamento.Cartao => "Compra no cartão. Informe a data da compra: o app calcula o vencimento da fatura. " +
+                                 "Não lance a fatura inteira como Saída também, senão conta duas vezes.",
+        _ => "Dinheiro que você separa para guardar. Sai da conta mas continua sendo seu."
+    };
+
+    private async Task SalvarAsync()
+    {
+        if (_editando is null || _dados is null)
+        {
+            return;
+        }
+
+        _editando.Vezes = _repeticao switch
+        {
+            "sem-fim" => null,
+            "contado" => Math.Max(1, _vezes),
+            _ => 1
+        };
+
+        _editando.CartaoId = _editando.Tipo == TipoLancamento.Cartao && _cartaoId > 0 ? _cartaoId : null;
+        _editando.TagId = _tagId > 0 ? _tagId : null;
+        _editando.MetaId = _editando.Tipo == TipoLancamento.Economia && _metaId > 0 ? _metaId : null;
+        _editando.Certeza = _editando.Tipo == TipoLancamento.Entrada
+            ? Enum.Parse<Certeza>(_certeza)
+            : null;
+
+        _erros = Validacao.Lancamento(_editando, _dados.Cartoes);
+
+        if (_erros.Count > 0)
+        {
+            return;
+        }
+
+        // Trava o botao: dois toques seguidos criariam dois lancamentos iguais.
+        _salvando = true;
+
+        try
+        {
+            await Servico.SalvarLancamentoAsync(_editando);
+            Fechar();
+            await CarregarAsync();
+        }
+        finally
+        {
+            _salvando = false;
+        }
+    }
+
+    private async Task ExcluirAsync()
+    {
+        if (_editando is { Id: > 0 })
+        {
+            await Servico.ExcluirLancamentoAsync(_editando.Id);
+            Fechar();
+            await CarregarAsync();
+        }
+    }
+}

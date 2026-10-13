@@ -1,0 +1,252 @@
+@page "/"
+@inject PlanejamentoService Servico
+@inject IRelogio Relogio
+@inject NavigationManager Nav
+
+<PageTitle>Hoje | Minhas Finanças</PageTitle>
+
+@if (_dados is null || _projecao is null)
+{
+    <p class="vazio">Carregando...</p>
+}
+else
+{
+    var agora = _projecao.Agora;
+    var conforto = _dados.Configuracao.SaldoConfortoCentavos;
+
+    <h1 class="rotulo">Como está o seu saldo</h1>
+
+    <div class="cartao destaque" style="margin-top:0.5rem">
+        <div class="rotulo">Saldo hoje</div>
+        @if (agora.SaldoHojeCentavos is long saldoHoje)
+        {
+            <div class="numero @Formato.ClasseValor(saldoHoje, conforto)">@Formato.Moeda(saldoHoje)</div>
+            <div class="ajuda">Projetado para o fim do dia, já contando o diário.</div>
+        }
+        else
+        {
+            <div class="numero">sem saldo</div>
+            <div class="ajuda">
+                Seu saldo começa em @Formato.Data(_dados.Configuracao.DataAncora), que ainda não chegou.
+            </div>
+        }
+    </div>
+
+    <div class="painel-cartoes" style="margin-top:0.75rem">
+        <div class="cartao">
+            <div class="rotulo">Pode gastar hoje</div>
+            <div class="numero medio">@Formato.Moeda(agora.PodeGastarHojeCentavos)</div>
+            <div class="ajuda">O que sobra acima do conforto no pior dia à frente.</div>
+        </div>
+
+        <div class="cartao">
+            <div class="rotulo">Menor saldo à frente</div>
+            @if (agora.MenorSaldoAFrenteCentavos is long menor)
+            {
+                <div class="numero medio @Formato.ClasseValor(menor, conforto)">@Formato.Moeda(menor)</div>
+                <div class="ajuda">
+                    em @Formato.Data(agora.DataMenorSaldoAFrente!.Value)
+                    @if (Formato.QuandoRelativo(agora.DataMenorSaldoAFrente.Value, Relogio.Hoje) is string quando)
+                    {
+                        <text>(@quando)</text>
+                    }
+                    <br /><FarolTag Farol="agora.Farol" />
+                </div>
+            }
+            else
+            {
+                <div class="numero medio">nao calculado</div>
+            }
+        </div>
+
+        <a class="cartao" href="metas" style="text-decoration:none; color:inherit">
+            <div class="rotulo">Guardado até hoje</div>
+            <div class="numero medio">@Formato.Moeda(agora.GuardadoAteHojeCentavos)</div>
+            <div class="ajuda">Ver metas</div>
+        </a>
+
+        <a class="cartao" href="simulador" style="text-decoration:none; color:inherit">
+            <div class="rotulo">Pensando em comprar?</div>
+            <div class="numero medio">Simular</div>
+            <div class="ajuda">Ver se cabe antes de gastar</div>
+        </a>
+    </div>
+
+    @if (_dados.Lancamentos.Count == 0)
+    {
+        @* Sem nada cadastrado a projecao so tem o diario, entao ela sempre cai.
+           Mostrar o numero (ele esta no cartao acima) mas explicar que falta metade da historia. *@
+        <div class="aviso info">
+            <strong>Falta cadastrar o que entra e o que sai.</strong>
+            Por enquanto a projeção só tem o seu gasto diário previsto de
+            @Formato.Moeda(_dados.Configuracao.DiarioPrevistoCentavos), por isso o saldo só desce.
+            Cadastre o salário e as contas fixas para esses números virarem realidade.
+            <div class="acoes">
+                <a class="btn pequeno" href="plano?novo=1">Cadastrar o que entra</a>
+                <a class="btn pequeno secundario" href="ajustes">Ajustar o diário</a>
+            </div>
+        </div>
+    }
+    else if (agora.MenorSaldoAFrenteCentavos is long pior && pior < 0)
+    {
+        <div class="aviso ruim">
+            <strong>Vem saldo negativo.</strong>
+            Em @Formato.Data(agora.DataMenorSaldoAFrente!.Value) a projeção chega a @Formato.Moeda(pior).
+            Dá tempo de mexer em algo até lá.
+        </div>
+    }
+    else if (agora.PrimeiroDiaAbaixoConforto is DateOnly aperto)
+    {
+        <div class="aviso atencao">
+            <strong>Aperto chegando.</strong>
+            Em @Formato.Data(aperto) o saldo fica abaixo do seu conforto de @Formato.Moeda(conforto).
+        </div>
+    }
+    else if (conforto > 0)
+    {
+        <div class="aviso bom">
+            Nenhum dia abaixo do conforto até @Formato.Data(_projecao.Fim). Tranquilo.
+        </div>
+    }
+
+    @foreach (var aviso in _projecao.Avisos)
+    {
+        <div class="aviso atencao">@aviso</div>
+    }
+
+    @* No PC o check-in e os proximos dias ficam lado a lado; no celular, um embaixo do outro. *@
+    <div class="colunas" style="margin-top:0.75rem">
+
+    @* ---------- Check-in do dia ---------- *@
+    <div class="bloco">
+        <header>
+            <h2>Quanto gastei hoje?</h2>
+            @if (_diarioDeHojeERegistrado)
+            {
+                <span class="pilula diario">registrado</span>
+            }
+            else
+            {
+                <span class="pilula neutra">usando o previsto</span>
+            }
+        </header>
+        <div class="corpo">
+            <div class="linha-campos">
+                <CampoDinheiro Valor="_diarioHoje" ValorChanged="v => _diarioHoje = v" Id="diario-hoje" />
+                <button type="button" class="btn" style="flex:0 0 auto" @onclick="SalvarDiario">Salvar</button>
+            </div>
+            <p class="ajuda" style="margin:0.5rem 0 0">
+                Vale o gasto miúdo do dia: lanche, transporte, mercado de passagem.
+                Zero também conta como resposta.
+                @if (!_diarioDeHojeERegistrado)
+                {
+                    <text>Sem registro, o dia usa o previsto de @Formato.Moeda(_dados.Configuracao.DiarioPrevistoCentavos).</text>
+                }
+            </p>
+            @if (_diarioDeHojeERegistrado)
+            {
+                <div class="acoes">
+                    <button type="button" class="btn secundario pequeno" @onclick="VoltarParaPrevisao">
+                        Voltar para a previsão
+                    </button>
+                </div>
+            }
+            @if (_mensagemDiario is not null)
+            {
+                <div class="aviso bom" role="status" aria-live="polite" style="margin-top:0.6rem">@_mensagemDiario</div>
+            }
+        </div>
+    </div>
+
+    @* ---------- Proximos dias ---------- *@
+    <div class="bloco">
+        <header>
+            <h2>Próximos 7 dias</h2>
+            <a class="btn secundario pequeno" href="calendario">Ver calendário</a>
+        </header>
+
+        @{
+            var limite = Relogio.Hoje.AddDays(6);
+            var proximos = _projecao.Dias
+                .Where(d => d.Data >= Relogio.Hoje && d.Data <= limite && d.TemMovimento)
+                .ToList();
+        }
+
+        @if (proximos.Count == 0)
+        {
+            <p class="vazio">Nenhum movimento programado nos próximos 7 dias, só o diário.</p>
+        }
+        else
+        {
+            <ul class="lista">
+                @foreach (var dia in proximos)
+                {
+                    @foreach (var movimento in dia.Movimentos)
+                    {
+                        <li>
+                            <div class="principal">
+                                <div class="titulo">@movimento.Descricao</div>
+                                <div class="sub">
+                                    @Formato.DataCurta(dia.Data), @Formato.Quando(dia.Data, Relogio.Hoje)
+                                    &middot; <Pilula Tipo="movimento.Tipo" />
+                                </div>
+                            </div>
+                            <div class="dinheiro @(movimento.Tipo == TipoLancamento.Entrada ? "valor-ok" : "")">
+                                @(movimento.Tipo == TipoLancamento.Entrada ? "+" : "-")@Formato.Numero(movimento.ValorCentavos)
+                            </div>
+                        </li>
+                    }
+                }
+            </ul>
+        }
+    </div>
+
+    </div>
+
+    <div class="acoes">
+        <a class="btn largo" href="plano?novo=1">
+            <Icone Nome="mais" Tamanho="18" /> Novo lançamento
+        </a>
+    </div>
+}
+
+@code {
+    private DadosPlanejamento? _dados;
+    private ResultadoProjecao? _projecao;
+    private long _diarioHoje;
+    private bool _diarioDeHojeERegistrado;
+    private string? _mensagemDiario;
+
+    protected override async Task OnInitializedAsync() => await CarregarAsync();
+
+    private async Task CarregarAsync()
+    {
+        _dados = await Servico.CarregarAsync();
+
+        if (!_dados.Configuracao.ConfiguracaoConcluida)
+        {
+            Nav.NavigateTo("comecar");
+            return;
+        }
+
+        _projecao = Servico.Projetar(_dados, null, Relogio.Hoje);
+
+        var registro = _dados.Diarios.FirstOrDefault(d => d.Data == Relogio.Hoje);
+        _diarioDeHojeERegistrado = registro is not null;
+        _diarioHoje = registro?.ValorCentavos ?? _dados.Configuracao.DiarioPrevistoCentavos;
+    }
+
+    private async Task SalvarDiario()
+    {
+        await Servico.RegistrarDiarioAsync(Relogio.Hoje, _diarioHoje);
+        _mensagemDiario = $"Diário de hoje registrado em {Formato.Moeda(_diarioHoje)}.";
+        await CarregarAsync();
+    }
+
+    private async Task VoltarParaPrevisao()
+    {
+        await Servico.VoltarParaPrevisaoAsync(Relogio.Hoje);
+        _mensagemDiario = "Hoje voltou a usar o diário previsto.";
+        await CarregarAsync();
+    }
+}

@@ -1,0 +1,46 @@
+@* Campo de data. O type=date abre o seletor nativo do iPhone e troca sempre em yyyy-MM-dd. *@
+
+<input @key="_chave"
+       type="date"
+       class="campo"
+       value="@_texto"
+       id="@Id"
+       @onchange="Alterou" />
+
+@code {
+    private string _texto = "";
+    private int _chave;
+    private DateOnly? _ultimoValor;
+    private bool _primeiraVez = true;
+
+    [Parameter]
+    public DateOnly? Valor { get; set; }
+
+    [Parameter]
+    public EventCallback<DateOnly?> ValorChanged { get; set; }
+
+    [Parameter]
+    public string? Id { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        if (_primeiraVez || Valor != _ultimoValor)
+        {
+            _primeiraVez = false;
+            _ultimoValor = Valor;
+            _texto = Formato.ParaCampo(Valor);
+        }
+    }
+
+    private async Task Alterou(ChangeEventArgs evento)
+    {
+        var digitado = evento.Value?.ToString();
+        DateOnly? valor = Formato.TentarData(digitado, out var data) ? data : null;
+
+        _ultimoValor = valor;
+        _texto = Formato.ParaCampo(valor);
+        _chave++;
+
+        await ValorChanged.InvokeAsync(valor);
+    }
+}
