@@ -43,6 +43,16 @@ using (var escopo = app.Services.CreateScope())
 {
     var fabrica = escopo.ServiceProvider.GetRequiredService<IDbContextFactory<FinancasDbContext>>();
     await using var db = await fabrica.CreateDbContextAsync();
+
+    // Copia o banco antes de migrar. Migracao roda sozinha aqui, sem ninguem confirmar,
+    // e algumas delas reconstroem tabela inteira no SQLite. A copia custa um arquivo e
+    // uma vez por migracao; perder o historico de lancamentos nao tem desfazer.
+    if (File.Exists(caminhoBanco) && (await db.Database.GetPendingMigrationsAsync()).Any())
+    {
+        var copia = $"{caminhoBanco}.antes-de-migrar-{DateTime.Now:yyyyMMdd-HHmmss}";
+        File.Copy(caminhoBanco, copia, overwrite: false);
+    }
+
     await db.Database.MigrateAsync();
 }
 

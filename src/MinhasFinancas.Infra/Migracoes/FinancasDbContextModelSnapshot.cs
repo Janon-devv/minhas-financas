@@ -52,6 +52,9 @@ namespace MinhasFinancas.Infra.Migracoes
                     b.Property<int>("DiaVencimento")
                         .HasColumnType("INTEGER");
 
+                    b.Property<decimal>("JurosRotativoMensal")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Nome")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -62,6 +65,42 @@ namespace MinhasFinancas.Infra.Migracoes
                         .IsUnique();
 
                     b.ToTable("Cartoes");
+                });
+
+            modelBuilder.Entity("MinhasFinancas.Domain.Modelo.Carteira", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateOnly>("DataAncora")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("DiarioPrevistoCentavos")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Nome")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Ordem")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("SaldoAncoraCentavos")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("SaldoConfortoCentavos")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Tipo")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Nome")
+                        .IsUnique();
+
+                    b.ToTable("Carteiras");
                 });
 
             modelBuilder.Entity("MinhasFinancas.Domain.Modelo.Configuracao", b =>
@@ -77,6 +116,11 @@ namespace MinhasFinancas.Infra.Migracoes
 
                     b.Property<DateOnly>("DataAncora")
                         .HasColumnType("TEXT");
+
+                    b.Property<bool>("DiarioPrevistoAtivo")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(true);
 
                     b.Property<long>("DiarioPrevistoCentavos")
                         .HasColumnType("INTEGER");
@@ -100,15 +144,86 @@ namespace MinhasFinancas.Infra.Migracoes
 
             modelBuilder.Entity("MinhasFinancas.Domain.Modelo.DiarioReal", b =>
                 {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("CarteiraId")
+                        .HasColumnType("INTEGER");
+
                     b.Property<DateOnly>("Data")
                         .HasColumnType("TEXT");
 
                     b.Property<long>("ValorCentavos")
                         .HasColumnType("INTEGER");
 
-                    b.HasKey("Data");
+                    b.HasKey("Id");
+
+                    b.HasIndex("CarteiraId", "Data")
+                        .IsUnique();
 
                     b.ToTable("DiariosReais");
+                });
+
+            modelBuilder.Entity("MinhasFinancas.Domain.Modelo.FaturaCartao", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("CartaoId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateOnly>("Fechamento")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Obs")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("PagoCentavos")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateOnly?>("PagoEm")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("TotalInformadoCentavos")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateOnly>("Vencimento")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CartaoId", "Vencimento")
+                        .IsUnique();
+
+                    b.ToTable("Faturas");
+                });
+
+            modelBuilder.Entity("MinhasFinancas.Domain.Modelo.GanhoVariavel", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Ano")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Mes")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Obs")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("ValorCentavos")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Ano", "Mes")
+                        .IsUnique();
+
+                    b.ToTable("GanhosVariaveis");
                 });
 
             modelBuilder.Entity("MinhasFinancas.Domain.Modelo.Lancamento", b =>
@@ -118,6 +233,9 @@ namespace MinhasFinancas.Infra.Migracoes
                         .HasColumnType("INTEGER");
 
                     b.Property<int?>("CartaoId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("CarteiraId")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("Certeza")
@@ -136,6 +254,12 @@ namespace MinhasFinancas.Infra.Migracoes
 
                     b.Property<string>("Obs")
                         .HasColumnType("TEXT");
+
+                    b.Property<int>("PapelNaFatura")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Periodicidade")
+                        .HasColumnType("INTEGER");
 
                     b.Property<int?>("TagId")
                         .HasColumnType("INTEGER");
@@ -194,11 +318,50 @@ namespace MinhasFinancas.Infra.Migracoes
                     b.ToTable("Metas");
                 });
 
+            modelBuilder.Entity("MinhasFinancas.Domain.Modelo.SituacaoOcorrencia", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateOnly>("Data")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("LancamentoId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Obs")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("Pago")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateOnly?>("PagoEm")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("Pulada")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long?>("ValorCentavos")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LancamentoId", "Data")
+                        .IsUnique();
+
+                    b.ToTable("Situacoes");
+                });
+
             modelBuilder.Entity("MinhasFinancas.Domain.Modelo.Tag", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("Cor")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Nome")
                         .IsRequired()

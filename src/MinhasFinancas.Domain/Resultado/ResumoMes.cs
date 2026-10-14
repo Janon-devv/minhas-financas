@@ -10,7 +10,15 @@ public sealed record ResumoMes
 
     public required int Mes { get; init; }
 
+    /// <summary>Entradas projetadas do mes MAIS o ganho variavel registrado nele (R17).</summary>
     public long EntradasCentavos { get; init; }
+
+    /// <summary>
+    /// A parte das entradas que veio do ganho variavel registrado (R17). Fica separada porque o
+    /// resto das entradas e projecao e esta e numero digitado: somar sem mostrar a composicao
+    /// deixaria o dono sem como reconstruir o total.
+    /// </summary>
+    public long GanhoVariavelCentavos { get; init; }
 
     /// <summary>Apenas o tipo Saida.</summary>
     public long SaidasCentavos { get; init; }

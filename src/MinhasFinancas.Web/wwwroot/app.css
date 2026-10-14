@@ -291,12 +291,92 @@ a {
     white-space: nowrap;
 }
 
+/* Grupo de pilulas numa linha. O Razor nao deixa espaco entre um componente e a marcacao
+   seguinte, e sem isto as pilulas saem coladas ("Saidanao pago"). */
+/* Indice de secoes da tela de lancar. Rola na horizontal no celular: quebrar em duas linhas
+   empurraria o conteudo para baixo justamente na tela em que o dono quer chegar rapido. */
+.atalhos-secao {
+    margin-bottom: 0.75rem;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    scrollbar-width: none;
+}
+
+.atalhos-secao::-webkit-scrollbar { display: none; }
+
+.atalhos-secao > a { white-space: nowrap; }
+
+.pilulas {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    vertical-align: middle;
+}
+
 .pilula.entrada { background: var(--entrada-fundo); color: var(--entrada-texto); }
 .pilula.saida { background: var(--saida-fundo); color: var(--saida-texto); }
 .pilula.cartao { background: var(--cartaotipo-fundo); color: var(--cartaotipo-texto); }
 .pilula.economia { background: var(--economia-fundo); color: var(--economia-texto); }
 .pilula.diario { background: var(--diario-fundo); color: var(--diario-texto); }
 .pilula.neutra { background: var(--linha); color: var(--pilula-neutra-texto); }
+
+/*
+    Paleta das tags. Nomes fixos, nao cor livre: cada par foi medido e fica entre 6,3:1 e 8,0:1,
+    e a cor do texto serve tambem de preenchimento da barra do Resumo (>= 7:1 sobre o branco).
+    A pilula do tipo continua escrita por extenso ao lado, entao a cor da tag nunca e a unica
+    pista do que a linha significa.
+*/
+.pilula.tag-rosa     { background: #FCE7F3; color: #9D174D; }
+.pilula.tag-laranja  { background: #FFEDD5; color: #9A3412; }
+.pilula.tag-ambar    { background: #FEF3C7; color: #92400E; }
+.pilula.tag-verde    { background: #DCFCE7; color: #166534; }
+.pilula.tag-turquesa { background: #CCFBF1; color: #115E59; }
+.pilula.tag-azul     { background: #DBEAFE; color: #1E40AF; }
+.pilula.tag-indigo   { background: #E0E7FF; color: #3730A3; }
+.pilula.tag-roxo     { background: #EDE9FE; color: #5B21B6; }
+
+.barra > span.tag-rosa     { background: #9D174D; }
+.barra > span.tag-laranja  { background: #9A3412; }
+.barra > span.tag-ambar    { background: #92400E; }
+.barra > span.tag-verde    { background: #166534; }
+.barra > span.tag-turquesa { background: #115E59; }
+.barra > span.tag-azul     { background: #1E40AF; }
+.barra > span.tag-indigo   { background: #3730A3; }
+.barra > span.tag-roxo     { background: #5B21B6; }
+
+/* Escolha da cor de uma tag: quadradinhos de 44px, que e o alvo de toque. */
+.cores {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+
+.cores input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.cores label {
+    width: var(--alvo-toque);
+    height: var(--alvo-toque);
+    border-radius: var(--raio);
+    border: 2px solid transparent;
+    cursor: pointer;
+    display: block;
+}
+
+/* O escolhido ganha contorno escuro: so a borda colorida nao se distingue da vizinha. */
+.cores input:checked + label {
+    border-color: var(--texto);
+    box-shadow: inset 0 0 0 2px var(--fundo);
+}
+
+.cores input:focus-visible + label {
+    outline: 3px solid var(--acento);
+    outline-offset: 2px;
+}
 
 .farol {
     display: inline-flex;
@@ -416,6 +496,19 @@ a {
     margin-bottom: 0.25rem;
 }
 
+/*
+    Rotulo com caixa de marcar. A caixa desenhada tem 17px, bem abaixo do alvo de toque, entao
+    quem recebe o toque e a linha inteira do rotulo: por isso o min-height aqui e nao na caixa.
+*/
+.campo-opcao {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 400;
+    min-height: var(--alvo-toque);
+    cursor: pointer;
+}
+
 .campo-grupo .dica {
     font-size: 0.75rem;
     color: var(--secundario);
@@ -504,8 +597,26 @@ li.clicavel {
     background: var(--linha);
 }
 
+/* O R$ fica dentro do contorno, a esquerda, e o numero comeca depois dele. Alinhado a
+   direita o campo de dinheiro brigava com o de data ao lado dele no mesmo linha-campos. */
+.campo-dinheiro {
+    position: relative;
+    display: block;
+}
+
+.campo-dinheiro-prefixo {
+    position: absolute;
+    left: 0.65rem;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 16px;
+    color: var(--secundario);
+    pointer-events: none;
+}
+
 .campo.dinheiro-campo {
-    text-align: right;
+    text-align: left;
+    padding-left: 2.15rem;
     font-variant-numeric: tabular-nums;
 }
 
@@ -619,6 +730,16 @@ li.clicavel {
 }
 
 /* ---------- Progresso ---------- */
+
+/* Cabecalho do guia do primeiro acesso: "Passo 4 de 6" de um lado, a saida do outro. */
+.progresso {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.4rem;
+    min-height: var(--alvo-toque);
+}
 
 .barra {
     height: 8px;

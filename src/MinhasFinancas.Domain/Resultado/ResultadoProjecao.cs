@@ -1,4 +1,18 @@
+using MinhasFinancas.Domain.Modelo;
+
 namespace MinhasFinancas.Domain.Resultado;
+
+/// <summary>
+/// A projecao de uma carteira que nao e a conta corrente (R13). Mesma forma do resultado
+/// principal, so que com o saldo e o farol daquela bolsa de dinheiro.
+/// </summary>
+public sealed record ProjecaoCarteira(
+    Carteira Carteira,
+    IReadOnlyList<DiaProjetado> Dias,
+    ResumoAgora Agora)
+{
+    public DiaProjetado? Dia(DateOnly data) => Dias.FirstOrDefault(d => d.Data == data);
+}
 
 public sealed record ResultadoProjecao
 {
@@ -11,6 +25,12 @@ public sealed record ResultadoProjecao
     public IReadOnlyList<ResumoMes> Meses { get; init; } = [];
 
     public ResultadoSimulacao? Simulacao { get; init; }
+
+    /// <summary>
+    /// As carteiras alem da conta corrente. Vazia quando nao ha nenhuma, e ai tudo nesta classe
+    /// e a conta corrente, como sempre foi.
+    /// </summary>
+    public IReadOnlyList<ProjecaoCarteira> Carteiras { get; init; } = [];
 
     /// <summary>Problemas de cadastro encontrados durante a projecao, para a UI mostrar sem travar nada.</summary>
     public IReadOnlyList<string> Avisos { get; init; } = [];

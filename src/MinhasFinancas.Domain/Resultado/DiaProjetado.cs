@@ -8,7 +8,9 @@ public sealed record MovimentoDoDia(
     long ValorCentavos,
     int? TagId,
     int? CartaoId,
-    int? MetaId);
+    int? MetaId,
+    bool Pago = false,
+    bool Atrasada = false);
 
 /// <summary>Uma linha do calendario (R4, R5, R6).</summary>
 public sealed record DiaProjetado

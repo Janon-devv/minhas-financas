@@ -55,7 +55,8 @@ Usuário: uma pessoa (o dono), uso pessoal. Idioma pt-BR, moeda BRL, fuso Americ
 | Diário | Gasto miúdo do cotidiano (lanche, mercado de passagem, transporte avulso). Não vai no Plano de Contas; é um valor por dia. |
 | Diário previsto | Valor padrão por dia, configurável. Na dúvida, o usuário erra pra mais. |
 | Diário real | Valor que o usuário registrou para uma data específica. Pode ser 0 ("não gastei nada"). |
-| Plano de Contas | Lista de lançamentos programados: Entrada, Saída, Cartão, Economia, com data, valor e repetição. |
+| Plano de Contas | Lista de lançamentos programados: Entrada, Saída, Cartão, Economia, com data, valor e repetição. É o nome do **conceito**; a tela que o mostra se chama Lançamentos, e também guarda o ganho variável e as faturas. |
+| Ganho variável | Renda que muda todo mês (aplicativo de corrida, freela). Não é lançamento: é um campo por mês, preenchido com o que já entrou (R17). |
 | Saldo de conforto | Limite pessoal. Abaixo dele o farol fica amarelo. |
 | Farol | Situação de um saldo: `ok` (>= conforto), `atencao` (entre 0 e conforto), `negativo` (< 0). |
 | Horizonte | Até onde a projeção vai. Padrão no app: 24 meses à frente de hoje (configurável). |
@@ -70,6 +71,7 @@ Dinheiro sempre em **centavos (inteiro)**. Datas sempre **datas locais** (sem ho
 | saldo_ancora_centavos | int | pode ser negativo |
 | data_ancora | date | obrigatório |
 | diario_previsto_centavos | int | >= 0 |
+| diario_previsto_ativo | bool | padrão `true`. Desligado, dia sem registro vale 0 (R4) |
 | saldo_conforto_centavos | int | >= 0 |
 | contar_entradas_incertas | bool | padrão `false` |
 | ja_guardado_centavos | int | só para acompanhamento de economias |
@@ -77,11 +79,33 @@ Dinheiro sempre em **centavos (inteiro)**. Datas sempre **datas locais** (sem ho
 
 Guarde também um **histórico de âncoras** (data, saldo, criado_em) para auditoria da conferência.
 
+### Carteira
+`id, nome (único), tipo (Banco | Beneficio), saldo_ancora_centavos, data_ancora,`
+`diario_previsto_centavos (int ou null), saldo_conforto_centavos, ordem`.
+Só existem aqui as carteiras **além** da conta corrente (R13).
+
 ### Cartao
-`id, nome (único), dia_fechamento (1..31), dia_vencimento (1..31)`
+`id, nome (único), dia_fechamento (1..31), dia_vencimento (1..31),`
+`juros_rotativo_mensal (decimal, padrão 0)`.
+Os juros só entram na conta quando uma fatura passa do vencimento sem ser paga (R15). Zero
+quer dizer "não sei": o app não inventa taxa.
+
+### FaturaCartao
+| Campo | Tipo | Regra |
+|---|---|---|
+| cartao_id | fk | |
+| vencimento | date | **Identifica o ciclo.** É o dia em que o dinheiro sai da conta. |
+| fechamento | date | Só informativo: ajuda a saber se a compra de hoje cai nessa fatura. |
+| total_informado_centavos | int ou null | `null` = calcule pela soma dos itens. Informado, ele manda (R14). Continua editável à mão. |
+| pago_centavos | int >= 0 | Pagamento parcial acumula aqui. |
+| pago_em | date ou null | |
+| obs | text | |
+
+Único por `(cartao_id, vencimento)`: duas faturas do mesmo ciclo fariam a projeção descontar a
+mesma dívida duas vezes. Ciclo **sem** fatura cadastrada continua na R1 (R16).
 
 ### Tag
-`id, nome (único)`. Opcional por lançamento.
+`id, nome (único), cor`. Opcional por lançamento. A cor é um **nome da paleta** (rosa, laranja, âmbar, verde, turquesa, azul, índigo, roxo), não um hexadecimal livre: cada nome tem par de fundo e texto já medido em pelo menos 4,5:1. Vazio cai na pílula neutra.
 
 ### Lancamento (Plano de Contas)
 | Campo | Tipo | Regra |
@@ -90,14 +114,28 @@ Guarde também um **histórico de âncoras** (data, saldo, criado_em) para audit
 | descricao | text | |
 | tipo | enum | `Entrada`, `Saida`, `Cartao`, `Economia` |
 | valor_centavos | int > 0 | Valor de **cada** ocorrência (parcela), não o total. |
-| vezes | int ou null | 1 = uma vez; N = N ocorrências mensais; `null` = todo mês sem fim. (A planilha usava 999 para "sem fim".) |
+| vezes | int ou null | 1 = uma vez; N = N ocorrências; `null` = sem fim. (A planilha usava 999 para "sem fim".) |
+| periodicidade | enum | `Mensal` (padrão) ou `Semanal`. Define o intervalo entre as ocorrências (R2). |
 | cartao_id | fk ou null | Obrigatório se tipo = Cartao. |
+| papel_na_fatura | enum | Só para Cartão: `NovoLancamento` (padrão, soma ao total da fatura) ou `Detalhamento` (só descreve o total já informado). Ver R14. |
+| carteira_id | fk ou null | De qual carteira sai o dinheiro. `null` = conta corrente (R13). |
 | certeza | enum ou null | Só para Entrada: `Certa` (padrão) ou `Incerta`. |
 | tag_id | fk ou null | |
 | obs | text | |
 
+### GanhoVariavel
+`id, ano, mes, valor_centavos (>= 0), obs`. Único por `(ano, mes)`: uma linha por mês, porque a
+tela preenche um campo só e dois registros do mesmo mês dobrariam o ganho sem ninguém ver (R17).
+
+### SituacaoOcorrencia
+`id, lancamento_id, data (a prevista, que identifica a ocorrência), pago, pulada, pago_em, valor_centavos, obs`.
+Único por `(lancamento_id, data)`. Só existe quando a ocorrência foge do padrão (R12).
+Apagar o lançamento apaga as situações dele, senão um id reaproveitado herda pagamentos alheios.
+
 ### DiarioReal
-`data (PK), valor_centavos (>= 0)`. Ausência de registro = usa o previsto. Registro com 0 = "não gastei nada".
+`id (PK), data, carteira_id (null = conta corrente), valor_centavos (>= 0)`.
+Único por `(carteira_id, data)`. A chave é própria, e não a data, porque com carteiras o
+mesmo dia tem um diário por carteira e o SQLite não aceita chave composta com coluna anulável. Ausência de registro = usa o previsto. Registro com 0 = "não gastei nada".
 No app existe a ação explícita **"voltar para previsão"** (apaga o registro). Isso resolve uma limitação da planilha, onde apagar a célula virava 0.
 
 ### Simulacao (pode ser só estado de tela)
@@ -105,7 +143,11 @@ No app existe a ação explícita **"voltar para previsão"** (apaga o registro)
 
 ## 6. Regras do motor de projeção
 
-O motor é uma **função pura**: `projetar(configuracao, cartoes, lancamentos, diarios_reais, hoje, simulacao?) -> resultado`.
+O motor é uma **função pura**: `projetar(configuracao, cartoes, lancamentos, diarios_reais, hoje,`
+`carteiras?, situacoes?, faturas?, ganhos_variaveis?, simulacao?) -> resultado`. Os cinco
+últimos são opcionais, e ausentes significam exatamente o comportamento das R1 a R11: sem carteira
+além da conta corrente, toda ocorrência no padrão (R12), cada compra de cartão saindo sozinha
+(R16) e nenhum ganho variável registrado (R17).
 Recalcula o horizonte inteiro a cada mudança (são ~730 dias × poucas centenas de lançamentos: trivial). Não persistir valores calculados.
 
 ### R1. Data efetiva de uma compra no cartão (vencimento da fatura)
@@ -121,6 +163,14 @@ Compra no próprio dia do fechamento vai para a fatura seguinte.
 Para os demais tipos: `data_efetiva = data`.
 
 ### R2. Ocorrências (repetição e parcelas)
+A repetição tem **periodicidade**: `Mensal` (padrão) ou `Semanal`.
+- Mensal: uma ocorrência por mês, sempre derivada da data original (ver o caso do dia 31 abaixo).
+- Semanal: de 7 em 7 dias a partir da data original, atravessando a virada de mês. Um mês rende
+  4 ou 5 ocorrências conforme o calendário, que é justamente o motivo de existir: compra de
+  mercado não cabe num valor mensal fixo.
+- Semanal **não vale para `Cartao`**: a data efetiva de um lançamento de cartão é o vencimento
+  da fatura (R1), e compras semanais caem na **mesma** fatura, não numa fatura por semana.
+
 ```
 para k = 0, 1, 2, ... enquanto (vezes == null ou k < vezes):
     mes_k = mes(data_efetiva) + k
@@ -143,9 +193,17 @@ Saida(d)    = soma das ocorrências de Saida
 Cartao(d)   = soma das ocorrências de Cartao (pelo vencimento)
 Economia(d) = soma das ocorrências de Economia
 S(d)        = Saida(d) + Cartao(d) + Economia(d)
-D(d)        = diario_real(d) se existir registro (inclusive 0), senão diario_previsto
+D(d)        = diario_real(d) se existir registro (inclusive 0)
+              senão diario_previsto, quando diario_previsto_ativo
+              senão 0
 ```
-Atenção: dia que **já passou** sem registro usa o previsto (conservador). Não é zero.
+Atenção: com a contagem ligada, dia que **já passou** sem registro usa o previsto (conservador).
+Não é zero.
+
+A contagem existe porque gasto miúdo nem sempre é diário: quem faz compra da semana e marmita
+gasta em blocos, não um pouco por dia. Para esse caso, descontar um valor todo dia não é
+pessimismo, é erro: inventa saída que não existe e some com o saldo. Desligada, o previsto
+continua guardado como referência, e só desce do saldo o que for registrado de fato.
 
 ### R5. Saldo do dia
 ```
@@ -158,17 +216,20 @@ Dias antes da âncora não têm saldo (exibir vazio).
 `negativo` se saldo < 0; `atencao` se saldo < conforto; senão `ok`.
 
 ### R7. Painel "Agora" (referência: hoje)
-- **Saldo hoje** = saldo(hoje).
+- **Saldo hoje** = saldo(hoje). Quando a âncora é **hoje + 1**, que é o estado normal logo depois
+  de conferir com o banco, saldo(hoje) é o próprio saldo âncora: o saldo do início de amanhã é o
+  mesmo do fim de hoje. Não é aproximação, é a mesma grandeza. Com a âncora mais de um dia à
+  frente, não há saldo de hoje para mostrar.
 - **Menor saldo à frente** = mínimo de saldo(d) para d em [hoje, fim do horizonte] e a **data mais cedo** em que ele acontece.
 - **Pode gastar hoje** = max(0, menor saldo à frente - conforto).
 - **Primeiro dia abaixo do conforto** = menor d >= hoje com saldo(d) < conforto, ou "nunca".
 - **Guardado até hoje** = ja_guardado + soma de Economia(d) para d em [âncora, hoje].
-- **Conferência**: usuário digita o saldo real do banco; diferença = real - saldo(hoje). Se != 0, oferecer **Recalibrar** (nova âncora = saldo real, data = hoje).
+- **Conferência**: usuário digita o saldo que o banco mostra agora; diferença = real - saldo(hoje). Se != 0, oferecer **Recalibrar**. O número do banco já inclui os gastos do dia, e a âncora é o saldo do **início** de um dia: logo a nova âncora é (saldo real, **hoje + 1**), não hoje. Gravar na data de hoje faria o motor descontar o diário de hoje outra vez, e a conferência nunca fecharia.
 
 ### R8. Indicadores do mês M
 Considere só dias d do mês com d >= âncora.
 ```
-Entradas       = soma E(d)
+Entradas       = soma E(d) + ganho_variavel(M)   (R17)
 Saidas         = soma Saida(d)
 Cartao         = soma Cartao(d)
 Diario         = soma D(d)               (real onde existe, previsto no resto)
@@ -204,21 +265,169 @@ Resultado, olhando de hoje até o fim do horizonte:
 
 Se for no cartão, o usuário informa como primeira parcela a data de vencimento da fatura (melhoria futura: calcular via R1).
 
+### R12. Situação de cada ocorrência (pago, em aberto, atrasado)
+Um lançamento é a **regra** ("aluguel todo dia 5"). Pago e atrasado são propriedades de **uma
+ocorrência** dela, não da regra. Por isso a situação é registrada por `(lancamento, data_prevista)`.
+
+```
+sit(l, d)   = registro da ocorrência de l prevista para d, ou nada
+
+pulada(l, d): não aconteceu e não vai acontecer (academia trancada, mês sem a compra).
+              Sai da projeção e da lista, sem mexer nas outras ocorrências do lançamento.
+              É diferente de paga (dinheiro que saiu) e de em aberto (dívida).
+
+valor(l, d) = sit(l, d).valor_centavos, se informado
+              senão valor_centavos de l
+
+conta(l, d) = sit(l, d).pago_em, se pago          (o dia em que saiu de verdade)
+              data_ancora,       se sit(l, d) existe e não é pago e d < data_ancora
+              d,                 caso contrário
+
+A ocorrência fica FORA da projeção quando:
+  - é paga e conta(l, d) < data_ancora          (já está dentro do saldo de partida)
+  - não tem registro e d < data_ancora          (padrão: o extrato já a contabilizou)
+```
+
+O padrão (sem registro nenhum) é exatamente o comportamento das R3 a R5: nada muda para quem
+nunca abrir essa parte do app.
+
+**Por que o app não adivinha atraso.** O saldo da âncora é o número que o banco mostra, e ele
+não diz quais contas já saíram dele. Uma conta que venceu antes da âncora e não foi paga tem o
+dinheiro ainda na conta: o saldo está certo, mas a saída não aparece na projeção, e o app passa
+a mostrar mais dinheiro do que existe. Só o dono sabe, então o app pergunta em vez de supor.
+
+**Conta que varia** (luz, água) usa `valor_centavos` da ocorrência: vale só naquele mês, e os
+meses seguintes continuam no previsto do lançamento.
+
+**Conta recorrente é marcada mês a mês.** A chave da situação inclui a data prevista, então
+pagar o aluguel de outubro não diz nada sobre o de novembro: a ocorrência do mês seguinte
+nasce sem registro, isto é, não paga. É o comportamento desejado, não um efeito colateral.
+
+### R13. Carteiras
+Dinheiro em bolsas separadas: conta corrente, vale-alimentação, vale-transporte. O saldo de uma
+não cobre o da outra, porque o dinheiro também não passa de uma para a outra.
+
+```
+carteiras   = [conta corrente] + carteiras cadastradas, na ordem definida
+```
+
+A **conta corrente não é uma linha de banco**: ela é a própria `Configuracao` (saldo âncora, data,
+diário previsto, conforto), sintetizada como carteira de id 0. Guardar o saldo do banco em dois
+lugares criaria duas verdades para o mesmo número, e a conferência com o extrato (R7) passaria a
+depender de qual delas foi gravada por último.
+
+```
+carteira(l) = l.carteira_id, ou a conta corrente quando null
+```
+
+Cada carteira é projetada **pelas mesmas R3 a R6**, com os lançamentos dela, o diário dela e a
+âncora dela. São projeções independentes: somar os saldos num número só esconderia exatamente o
+aperto que o app existe para mostrar, já que benefício não paga aluguel.
+
+- Carteira com `diario_previsto_centavos` null **não tem diário**: dia sem registro vale zero, e
+  ela não aparece no check-in diário.
+- Cada carteira tem o **próprio conforto e o próprio farol**.
+- `Cartao` sempre sai da conta corrente: a fatura é debitada lá.
+- Economia, meta e "já guardado" são da conta corrente.
+- Sem nenhuma carteira cadastrada sobra só a conta corrente, com exatamente os números da
+  `Configuracao`: é isso que mantém um cenário sem carteira produzindo os mesmos centavos.
+
+### R14. Total efetivo da fatura
+Cadastrar compra por compra é um trabalho que ninguém mantém por muito tempo, e uma fatura pela
+metade mente mais do que nenhuma. Então a fatura pode ser cadastrada de três jeitos: só o total
+que o banco mostra, só os itens, ou os dois ao mesmo tempo.
+
+```
+itens(f)        = parcelas de lançamentos Cartao que caem no ciclo de f (R1 define o ciclo)
+acrescentado(f) = soma dos itens(f) com papel_na_fatura = NovoLancamento
+detalhado(f)    = soma dos itens(f) com papel_na_fatura = Detalhamento
+
+total(f) = total_informado is null
+           ? acrescentado(f) + detalhado(f)
+           : total_informado + acrescentado(f)
+
+devedor(f) = max(0, total(f) - pago_centavos)
+```
+
+Sem total informado os itens são a única fonte, e aí **todos** contam, inclusive o detalhamento:
+não existe total para ele estar dentro. Com total informado, detalhamento não soma de novo,
+porque o número digitado já o inclui. É isso que resolve a dupla contagem que a seção 7 proíbe.
+
+A tela mostra a conta **aberta**, não só o resultado: informado, acrescentado (com quantos
+lançamentos), detalhado (com quantos itens), total efetivo, pago e falta pagar. Um total errado
+sem a decomposição visível vira desconfiança no app inteiro.
+
+### R15. Saída na conta e atraso
+No vencimento da fatura sai `devedor(f)`: enquanto não foi paga, a projeção assume pagamento
+integral, que é a hipótese conservadora. O que já foi pago sai no `pago_em`, e não no vencimento,
+porque já saiu de verdade. Pagamento parcial é a regra, não a exceção.
+
+```
+meses_atraso(f) = devedor(f) > 0 e vencimento(f) < hoje ? meses cheios de vencimento até hoje : 0
+juros(f)        = devedor(f) x ((1 + juros_rotativo_mensal) ^ meses_atraso(f) - 1)
+a_sair(f)       = devedor(f) + juros(f)
+```
+
+Atraso de 40 dias conta 1 mês, não 2. Os juros incidem sobre o que **sobrou**, não sobre o total,
+e o arredondamento acontece uma vez no fim.
+
+Fatura vencida e não paga **antes da âncora** não desaparece: ela vem para o primeiro dia
+projetado com os juros do atraso. Deixá-la no passado a tiraria da projeção e a dívida sumiria da
+tela, que é o oposto do que o app existe para fazer.
+
+### R16. Ciclo sem fatura cadastrada
+Mantém a R1: cada compra sai sozinha na data de vencimento calculada dela. Com fatura cadastrada
+para o ciclo, as compras daquele ciclo **não** descontam em separado; quem desconta é o total da
+fatura. Fatura é da conta corrente: nenhuma carteira de benefício tem fatura.
+
+### R17. Ganho variável do mês
+Renda que muda todo mês (aplicativo de corrida, freela) não cabe em `Lancamento`: não tem valor
+fixo para repetir, e cadastrar um lançamento novo a cada mês é trabalho que ninguém mantém. Então
+o mês tem um **campo esperando**, e basta preencher.
+
+```
+ganho_variavel(M) = valor registrado para o mês M, ou 0 quando não há registro
+Entradas(M)       = soma E(d) do R8  +  ganho_variavel(M)
+```
+
+É registro do que **já caiu** na conta. Por isso **não entra na projeção de saldo**: o saldo
+âncora veio do extrato e já contém esse dinheiro, então somá-lo de novo mostraria dinheiro que
+não existe. Ele responde outra pergunta, a do R8: quanto este mês rendeu.
+
+- **Mês sem registro vale zero**, e o app não chuta média nenhuma. O que não é certo fica fora,
+  como manda a seção 4. O preço é que o "menor saldo à frente" ignora um ganho que quase sempre
+  vem; o preço do contrário seria mostrar dinheiro que pode não vir.
+- **Zero é resposta válida** ("este mês não rendeu nada") e é diferente de não ter registro. Por
+  isso existe a ação explícita de apagar o registro, igual ao diário real.
+- A **média dos meses preenchidos** aparece na tela só como referência, e mês em branco não entra
+  na conta dela: "ainda não respondi" não é "ganhei nada".
+- Ganho variável é da **conta corrente**. Carteira de benefício não tem renda variável.
+- A tela mostra **a composição**: o total das entradas e, abaixo, quanto dele veio do ganho
+  variável. O resto das entradas é projeção e esta parte é número digitado; somar sem dizer
+  deixaria o dono sem como reconstruir o total.
+
 ## 7. Regras de uso que o app deve ensinar
 - Gasto miúdo pago no cartão: lançar como Cartão no Plano e **não** somar de novo no Diário.
 - Não lançar a fatura inteira como Saída se as compras já estão como Cartão (dupla contagem).
-- Saldo âncora é o saldo **antes** dos movimentos do dia da âncora. Se o banco já mostra um gasto de hoje, não registre esse gasto de novo no diário de hoje (ou recalibre com data de amanhã). Explicar isso no onboarding.
+  Para fatura existe a tela de Faturas, com a conciliação da R14: informe o total que o banco
+  mostra, e marque como **detalhamento** os itens que só descrevem esse total.
+- Saldo âncora é o saldo **antes** dos movimentos do dia da âncora. Se o banco já mostra um gasto de hoje, não registre esse gasto de novo no diário de hoje. A conferência já trata disso sozinha, ancorando em hoje + 1. Explicar isso no onboarding.
 - Recalibrar não apaga nada: diários reais e lançamentos continuam guardados por data; o que fica antes da nova âncora só deixa de contar.
 
 ## 8. Telas e fluxos (mobile first)
 
-1. **Onboarding (wizard)**: saldo de hoje → diário previsto → saldo de conforto → cartões → primeiras contas fixas (salário, aluguel, assinaturas) → pronto. Ao final mostrar o "menor saldo à frente".
-2. **Hoje (tela inicial)**: cartões grandes com Saldo hoje, Pode gastar hoje, Menor saldo à frente (com data) e farol. Campo rápido **"Quanto gastei hoje?"** (check-in diário, aceita 0). Próximos 7 dias de movimentos. Alerta do próximo aperto.
+1. **Onboarding (wizard)**: saldo de hoje → diário previsto (com o liga/desliga da contagem) →
+   saldo de conforto → o que entra → contas fixas → cartões → pronto. Cada etapa de cadastro
+   acontece dentro do próprio guia, mostra "Passo N de 6", confirma o que foi salvo e pode ser
+   pulada; há saída do guia a qualquer momento. **Não mostrar projeção no fim**: sem lançamento
+   cadastrado o "menor saldo à frente" é só o saldo de partida menos o diário vezes o horizonte,
+   um número assustador que não informa nada. A projeção aparece na tela Hoje, com contexto.
+2. **Hoje (tela inicial)**: cartões grandes com Saldo hoje, Pode gastar hoje, Menor saldo à frente (com data) e farol, todos da **conta corrente**. Abaixo deles, um cartão menor por carteira, com saldo e farol próprios (R13). O check-in diário tem uma linha por carteira que tenha diário previsto. Indicador **"Livre depois das contas do mês"** = saldo de hoje menos as saídas que ainda vencem depois de hoje e não foram pagas (as vencidas em aberto já estão dentro do saldo, contá-las aqui descontaria duas vezes). Bloco **"Contas do mês"** com as ocorrências de 45 dias atrás até o fim do mês corrente e o estado de cada uma (R12): o que já venceu entra na contagem de "a confirmar", o que ainda vai vencer aparece para poder ser marcado adiantado, e o que venceu antes da âncora sem resposta ganha destaque, porque está fora da projeção. Campo rápido **"Quanto gastei hoje?"** (check-in diário, aceita 0). Próximos 7 dias de movimentos. Alerta do próximo aperto.
 3. **Calendário**: lista dia a dia agrupada por mês, rola até hoje. Colunas: Data, Dia da semana, Entrada, Saída, Diário (editável inline; previsto em cinza itálico, real em azul negrito), Saldo, Farol. Ação "voltar para previsão" no diário.
-4. **Plano de Contas**: CRUD de lançamentos, filtros por tipo e tag, colunas derivadas "Cai na conta em" e "Última vez", riscado quando já está todo antes da âncora, aviso se Cartão sem cartão válido.
+4. **Lançamentos**: a tela onde se lança **tudo**, em três seções com um índice no topo. (a) *O que entra e o que sai*: CRUD de lançamentos, filtros por tipo e tag, colunas derivadas "Cai na conta em" e "Última vez", riscado quando já está todo antes da âncora, aviso se Cartão sem cartão válido. (b) *Ganho variável* (R17): um campo por mês, com navegação de mês, a nota de onde veio, a lista dos meses preenchidos e a média deles. Não dá para preencher mês que ainda não começou. (c) *Faturas de cartão* (R14 a R16): uma fatura por ciclo, com o total do banco e a conta aberta (informado, acrescentado, detalhado, total efetivo, pago, falta pagar), registrar pagamento parcial, e marca de atraso com os juros da R15. As rotas antigas `/plano` e `/faturas` continuam abrindo esta tela, porque o app vive num atalho salvo na tela do iPhone.
 5. **Resumo do mês**: seletor de mês, indicadores do R8, saídas por tag com barra proporcional, horizonte de 12 meses (R10), gráfico de linha do saldo diário com linha tracejada do conforto.
 6. **Simulador**: formulário + resultado + veredito colorido. Mostrar a curva com e sem a compra.
-7. **Configurações**: âncora e conferência com banco (Recalibrar), diário previsto, conforto, toggle de entradas incertas, já guardado, cartões, tags, horizonte, exportar/importar dados.
+7. **Configurações**: âncora e conferência com banco (Recalibrar), diário previsto e o liga/desliga da contagem dele, conforto, toggle de entradas incertas, já guardado, cartões (com os juros do rotativo), carteiras, tags, horizonte, exportar/importar dados.
 
 ### Identidade visual (herdada da planilha, minimalista)
 - Faixa/topo: verde-petróleo `#134E4A`; acento `#0F766E`; texto `#1F2933`; secundário `#6B7280`; linhas `#E5E7EB`; fundo de cartão `#F8FAFC`.

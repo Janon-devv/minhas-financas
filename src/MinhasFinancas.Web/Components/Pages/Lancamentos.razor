@@ -1,10 +1,14 @@
+@page "/lancamentos"
+@* Rotas antigas mantidas: o app vive num atalho na tela do iPhone, e trocar o endereco
+   quebraria o atalho que ja esta salvo. *@
 @page "/plano"
+@page "/faturas"
 @inject PlanejamentoService Servico
 @inject IRelogio Relogio
 
-<PageTitle>Plano de Contas | Minhas Finanças</PageTitle>
+<PageTitle>Lançamentos | Minhas Finanças</PageTitle>
 
-<h1 class="so-leitor">Plano de Contas</h1>
+<h1 class="so-leitor">Lançamentos</h1>
 
 @if (_dados is null)
 {
@@ -12,9 +16,19 @@
 }
 else
 {
-    <div class="bloco">
+    @* Indice das secoes. Sem ele o campo do ganho variavel fica soterrado pela lista de
+       lancamentos, e um campo que ninguem acha e um campo que ninguem preenche. *@
+    @* O caminho vai inteiro no href de proposito: com o <base href="/"> do Blazor, um href
+       so com fragmento (#secao) e resolvido contra a base e joga o dono na tela Hoje. *@
+    <nav class="pilulas atalhos-secao" aria-label="Seções desta tela">
+        <a class="btn pequeno secundario" href="lancamentos#secao-lancamentos">O que entra e sai</a>
+        <a class="btn pequeno secundario" href="lancamentos#secao-ganho">Ganho variável</a>
+        <a class="btn pequeno secundario" href="lancamentos#secao-faturas">Faturas</a>
+    </nav>
+
+    <div class="bloco" id="secao-lancamentos" tabindex="-1">
         <header>
-            <h2>Plano de Contas</h2>
+            <h2>O que entra e o que sai</h2>
             <button type="button" class="btn pequeno" @onclick="() => Abrir(null)">
                 <Icone Nome="mais" Tamanho="16" /> Novo
             </button>
@@ -80,7 +94,12 @@ else
                             }
                             @if (l.TagId is int tagId && _dados.Tags.FirstOrDefault(t => t.Id == tagId) is Tag tag)
                             {
-                                <span class="pilula neutra">@tag.Nome</span>
+                                <span class="pilula @Formato.ClasseTag(tag.Cor)">@tag.Nome</span>
+                            }
+                            @if (l.CarteiraId is int idCarteira &&
+                                 _dados.Carteiras.FirstOrDefault(c => c.Id == idCarteira) is Carteira carteira)
+                            {
+                                <span class="pilula neutra">@carteira.Nome</span>
                             }
                             <br />
                             Cai na conta em @Formato.Data(linha.CaiEm)
@@ -110,6 +129,15 @@ else
         O valor é de cada ocorrência, não o total. Riscado quer dizer que todas as ocorrências ficaram
         antes do seu saldo de partida, então já estão dentro dele.
     </p>
+
+    @* Tudo que se lança mora nesta tela. Fatura e ganho variavel ficavam em telas separadas, e
+       ai era preciso lembrar em qual delas cada numero e preenchido. *@
+    <div id="secao-ganho" tabindex="-1">
+        <BlocoGanhoVariavel Dados="_dados" Mudou="CarregarAsync" />
+    </div>
+    <div id="secao-faturas" tabindex="-1">
+        <BlocoFaturas Dados="_dados" Mudou="CarregarAsync" />
+    </div>
 }
 
 @if (_editando is not null)
@@ -137,9 +165,7 @@ else
                 <CampoDinheiro Valor="_editando.ValorCentavos" ValorChanged="v => _editando.ValorCentavos = v" Id="valor" />
             </div>
             <div class="campo-grupo">
-                <label for="data">
-                    @(_editando.Tipo == TipoLancamento.Cartao ? "Data da compra" : "Dia que cai na conta")
-                </label>
+                <label for="data">@RotuloDaData(_editando.Tipo)</label>
                 <CampoData Valor="_editando.Data" ValorChanged="v => _editando.Data = v ?? Relogio.Hoje" Id="data" />
             </div>
         </div>
@@ -149,13 +175,25 @@ else
             <select id="repeticao" class="campo" value="@_repeticao" @onchange="TrocarRepeticao">
                 <option value="uma">Uma vez só</option>
                 <option value="sem-fim">Todo mês, sem fim</option>
-                <option value="contado">Um número de vezes</option>
+                <option value="contado">Todo mês, um número de vezes</option>
+                <option value="semanal">Toda semana, sem fim</option>
+                <option value="semanal-contado">Toda semana, um número de vezes</option>
             </select>
-            @if (_repeticao == "contado")
+            @if (_repeticao is "contado" or "semanal-contado")
             {
                 <input type="number" inputmode="numeric" min="1" max="360" class="campo" style="margin-top:0.4rem"
                        @bind="_vezes" />
-                <div class="dica">Uma ocorrência por mês, @_vezes vez(es).</div>
+                <div class="dica">
+                    Uma ocorrência por @(_repeticao == "semanal-contado" ? "semana" : "mês"), @_vezes vez(es).
+                </div>
+            }
+            @if (_repeticao is "semanal" or "semanal-contado")
+            {
+                <div class="dica">
+                    Cai no mesmo dia da semana da data acima, de 7 em 7 dias.
+                    Se o valor varia, como compra de mercado, deixe aqui o que costuma dar e
+                    confirme o valor de verdade em Contas do mês.
+                </div>
             }
         </div>
 
@@ -192,6 +230,21 @@ else
             </div>
         }
 
+        @if (_editando.Tipo == TipoLancamento.Cartao && _dados!.Cartoes.Count > 0)
+        {
+            <div class="campo-grupo">
+                <label for="papel">Dentro da fatura</label>
+                <select id="papel" class="campo" @bind="_papel">
+                    <option value="NovoLancamento">Soma ao total da fatura</option>
+                    <option value="Detalhamento">Só detalha o total já informado</option>
+                </select>
+                <div class="dica">
+                    Só vale quando existe fatura cadastrada para o ciclo. "Só detalha" serve para
+                    listar as compras sem que elas somem de novo ao total que o banco mostra.
+                </div>
+            </div>
+        }
+
         @if (_editando.Tipo == TipoLancamento.Entrada)
         {
             <div class="campo-grupo">
@@ -216,6 +269,23 @@ else
                     @foreach (var meta in _dados.Metas.Where(m => m.ArquivadaEm is null))
                     {
                         <option value="@meta.Id">@meta.Nome</option>
+                    }
+                </select>
+            </div>
+        }
+
+        @if (_dados!.Carteiras.Count > 0 && _editando.Tipo != TipoLancamento.Cartao)
+        {
+            @* Escondido quando so existe a conta corrente: escolher entre uma opcao so e um
+               campo que nunca muda de valor. Cartao sempre cai na conta corrente, porque e a
+               fatura que sai de la. *@
+            <div class="campo-grupo">
+                <label for="carteira">De onde sai o dinheiro</label>
+                <select id="carteira" class="campo" @bind="_carteiraId">
+                    <option value="0">Conta corrente</option>
+                    @foreach (var carteira in _dados.Carteiras)
+                    {
+                        <option value="@carteira.Id">@carteira.Nome</option>
                     }
                 </select>
             </div>
@@ -273,9 +343,11 @@ else
     private string _repeticao = "uma";
     private int _vezes = 2;
     private int _cartaoId;
+    private int _carteiraId;
     private int _tagId;
     private int _metaId;
     private string _certeza = "Certa";
+    private string _papel = "NovoLancamento";
     private bool _salvando;
 
     [SupplyParameterFromQuery(Name = "novo")]
@@ -303,7 +375,7 @@ else
         .Select(l =>
         {
             var efetiva = Ocorrencias.DataEfetiva(l, cartoes);
-            return new LinhaPlano(l, efetiva, Ocorrencias.UltimaVez(efetiva, l.Vezes));
+            return new LinhaPlano(l, efetiva, Ocorrencias.UltimaVez(efetiva, l.Vezes, l.Periodicidade));
         })
         .OrderBy(linha => linha.CaiEm)
         .ToList();
@@ -324,9 +396,11 @@ else
             _repeticao = "uma";
             _vezes = 2;
             _cartaoId = 0;
+            _carteiraId = 0;
             _tagId = 0;
             _metaId = 0;
             _certeza = "Certa";
+            _papel = "NovoLancamento";
             return;
         }
 
@@ -339,25 +413,32 @@ else
             Tipo = original.Tipo,
             ValorCentavos = original.ValorCentavos,
             Vezes = original.Vezes,
+            Periodicidade = original.Periodicidade,
             CartaoId = original.CartaoId,
+            CarteiraId = original.CarteiraId,
+            PapelNaFatura = original.PapelNaFatura,
             Certeza = original.Certeza,
             TagId = original.TagId,
             MetaId = original.MetaId,
             Obs = original.Obs
         };
 
+        var semanal = original.Periodicidade == Periodicidade.Semanal;
+
         _repeticao = original.Vezes switch
         {
-            null => "sem-fim",
-            1 => "uma",
-            _ => "contado"
+            null => semanal ? "semanal" : "sem-fim",
+            1 when !semanal => "uma",
+            _ => semanal ? "semanal-contado" : "contado"
         };
 
         _vezes = original.Vezes ?? 2;
         _cartaoId = original.CartaoId ?? 0;
+        _carteiraId = original.CarteiraId ?? 0;
         _tagId = original.TagId ?? 0;
         _metaId = original.MetaId ?? 0;
         _certeza = (original.Certeza ?? Certeza.Certa).ToString();
+        _papel = original.PapelNaFatura.ToString();
     }
 
     private void Fechar()
@@ -394,6 +475,16 @@ else
         _ => "Dinheiro que você separa para guardar. Sai da conta mas continua sendo seu."
     };
 
+    // Entrada cai, Saída sai, Economia é guardada: cada tipo mexe no dinheiro num sentido,
+    // e "cai na conta" numa Saída diz o contrário do que acontece.
+    private static string RotuloDaData(TipoLancamento tipo) => tipo switch
+    {
+        TipoLancamento.Entrada => "Dia que cai na conta",
+        TipoLancamento.Saida => "Dia que sai da conta",
+        TipoLancamento.Cartao => "Data da compra",
+        _ => "Dia que você guarda"
+    };
+
     private async Task SalvarAsync()
     {
         if (_editando is null || _dados is null)
@@ -403,19 +494,27 @@ else
 
         _editando.Vezes = _repeticao switch
         {
-            "sem-fim" => null,
-            "contado" => Math.Max(1, _vezes),
+            "sem-fim" or "semanal" => null,
+            "contado" or "semanal-contado" => Math.Max(1, _vezes),
             _ => 1
         };
 
+        _editando.Periodicidade = _repeticao is "semanal" or "semanal-contado"
+            ? Periodicidade.Semanal
+            : Periodicidade.Mensal;
+
         _editando.CartaoId = _editando.Tipo == TipoLancamento.Cartao && _cartaoId > 0 ? _cartaoId : null;
+        _editando.CarteiraId = _editando.Tipo != TipoLancamento.Cartao && _carteiraId > 0 ? _carteiraId : null;
+        _editando.PapelNaFatura = _editando.Tipo == TipoLancamento.Cartao
+            ? Enum.Parse<PapelNaFatura>(_papel)
+            : PapelNaFatura.NovoLancamento;
         _editando.TagId = _tagId > 0 ? _tagId : null;
         _editando.MetaId = _editando.Tipo == TipoLancamento.Economia && _metaId > 0 ? _metaId : null;
         _editando.Certeza = _editando.Tipo == TipoLancamento.Entrada
             ? Enum.Parse<Certeza>(_certeza)
             : null;
 
-        _erros = Validacao.Lancamento(_editando, _dados.Cartoes);
+        _erros = Validacao.Lancamento(_editando, _dados.Cartoes, _dados.Carteiras);
 
         if (_erros.Count > 0)
         {

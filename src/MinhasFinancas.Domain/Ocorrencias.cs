@@ -26,17 +26,25 @@ public static class Ocorrencias
     }
 
     /// <summary>
-    /// Ocorrencias a partir da data efetiva, uma por mes, parando no limite informado.
-    /// Cada ocorrencia e derivada da data original, nunca da anterior.
+    /// Ocorrencias a partir da data efetiva, de mes em mes ou de semana em semana, parando no
+    /// limite informado. Cada ocorrencia e derivada da data original, nunca da anterior: somando
+    /// na anterior, um mes que cai no dia 30 puxaria todos os seguintes para o dia 30.
     /// </summary>
-    public static IEnumerable<DateOnly> Ate(DateOnly dataEfetiva, int? vezes, DateOnly limite)
+    public static IEnumerable<DateOnly> Ate(
+        DateOnly dataEfetiva,
+        int? vezes,
+        DateOnly limite,
+        Periodicidade periodicidade = Periodicidade.Mensal)
     {
         var dia = dataEfetiva.Day;
         var total = vezes is null ? (int?)null : Math.Max(1, vezes.Value);
 
         for (var k = 0; total is null || k < total.Value; k++)
         {
-            var ocorrencia = Calendario.AdicionarMeses(dataEfetiva, k, dia);
+            var ocorrencia = periodicidade == Periodicidade.Semanal
+                ? dataEfetiva.AddDays(7 * k)
+                : Calendario.AdicionarMeses(dataEfetiva, k, dia);
+
             if (ocorrencia > limite)
             {
                 yield break;
@@ -50,8 +58,20 @@ public static class Ocorrencias
     /// Ultima ocorrencia de um lancamento, ignorando o horizonte. null significa sem fim.
     /// Alimenta a coluna "Ultima vez" do Plano de Contas.
     /// </summary>
-    public static DateOnly? UltimaVez(DateOnly dataEfetiva, int? vezes) =>
-        vezes is null
-            ? null
-            : Calendario.AdicionarMeses(dataEfetiva, Math.Max(1, vezes.Value) - 1, dataEfetiva.Day);
+    public static DateOnly? UltimaVez(
+        DateOnly dataEfetiva,
+        int? vezes,
+        Periodicidade periodicidade = Periodicidade.Mensal)
+    {
+        if (vezes is null)
+        {
+            return null;
+        }
+
+        var ultima = Math.Max(1, vezes.Value) - 1;
+
+        return periodicidade == Periodicidade.Semanal
+            ? dataEfetiva.AddDays(7 * ultima)
+            : Calendario.AdicionarMeses(dataEfetiva, ultima, dataEfetiva.Day);
+    }
 }

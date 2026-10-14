@@ -13,6 +13,13 @@ public class Configuracao
     /// <summary>Gasto miudo esperado por dia. Na duvida, errar pra mais.</summary>
     public long DiarioPrevistoCentavos { get; set; }
 
+    /// <summary>
+    /// Liga a contagem do previsto na projecao (R4). Desligado, dia sem registro vale zero e o
+    /// valor acima fica guardado so como referencia. Nasce ligado: quem ja usava o app conta o
+    /// previsto, e virar zero sozinho faria todo saldo projetado subir de um dia para o outro.
+    /// </summary>
+    public bool DiarioPrevistoAtivo { get; set; } = true;
+
     /// <summary>Limite pessoal: abaixo dele o farol fica amarelo.</summary>
     public long SaldoConfortoCentavos { get; set; }
 

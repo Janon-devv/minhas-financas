@@ -31,6 +31,13 @@ public static class Calendario
 
     public static bool MesmoMes(DateOnly a, DateOnly b) => a.Year == b.Year && a.Month == b.Month;
 
+    /// <summary>
+    /// Um dia dentro de um mes, caindo no ultimo dia quando ele nao existe: dia 31 em novembro
+    /// vira 30. Serve para as datas de fechamento e vencimento de cartao, que sao dias do mes.
+    /// </summary>
+    public static DateOnly NoMes(int ano, int mes, int dia) =>
+        new(ano, mes, Math.Min(Math.Max(1, dia), UltimoDiaDoMes(ano, mes)));
+
     public static DateOnly Maior(DateOnly a, DateOnly b) => a >= b ? a : b;
 
     public static DateOnly Menor(DateOnly a, DateOnly b) => a <= b ? a : b;
