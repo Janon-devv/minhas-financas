@@ -180,7 +180,19 @@ else
                                                 <li style="padding-left:0; padding-right:0">
                                                     <div class="principal">
                                                         <div class="titulo">@movimento.Descricao</div>
-                                                        <div class="sub"><Pilula Tipo="movimento.Tipo" /></div>
+                                                        <div class="sub">
+                                                            <span class="pilulas">
+                                                            <Pilula Tipo="movimento.Tipo" />
+                                                            @if (movimento.Pago)
+                                                            {
+                                                                <span class="farol ok">pago</span>
+                                                            }
+                                                            @if (movimento.Atrasada)
+                                                            {
+                                                                <span class="farol negativo">atrasada</span>
+                                                            }
+                                                            </span>
+                                                        </div>
                                                     </div>
                                                     <div class="dinheiro">@Formato.Moeda(movimento.ValorCentavos)</div>
                                                 </li>

@@ -7,7 +7,7 @@ O documento de especificação chama o projeto de Radar do Saldo, que era o nome
 
 ## Regras do projeto
 
-- O motor de domínio é **função pura**: regras R1 a R11 em `docs/CONTEXTO.md` seção 6, implementadas
+- O motor de domínio é **função pura**: regras R1 a R17 em `docs/CONTEXTO.md` seção 6, implementadas
   em `src/MinhasFinancas.Domain`. Sem I/O, sem `DateTime.Now`: o "hoje" entra por `IRelogio`.
 - Os **testes dourados** em `tests/MinhasFinancas.Domain.Tests/MotorTests.cs` leem `docs/fixtures` e precisam
   continuar passando com igualdade exata em centavos. Se um deles quebrar, o motor está errado, não
@@ -108,7 +108,7 @@ No código, `DiaProjetado.SaidaTotalCentavos` corresponde à primeira e
 ## Comandos
 
 ```bash
-dotnet test                                              # 48 testes
+dotnet test                                              # 73 testes
 dotnet run --project src/MinhasFinancas.Web --launch-profile local # http://localhost:5080
 dotnet run --project src/MinhasFinancas.Web --launch-profile rede  # 0.0.0.0:5080, para o iPhone
 dotnet dotnet-ef migrations add <Nome> --project src/MinhasFinancas.Infra --startup-project src/MinhasFinancas.Infra --output-dir Migracoes

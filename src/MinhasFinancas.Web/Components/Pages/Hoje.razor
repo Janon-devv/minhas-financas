@@ -21,7 +21,43 @@ else
         @if (agora.SaldoHojeCentavos is long saldoHoje)
         {
             <div class="numero @Formato.ClasseValor(saldoHoje, conforto)">@Formato.Moeda(saldoHoje)</div>
-            <div class="ajuda">Projetado para o fim do dia, já contando o diário.</div>
+            <div class="ajuda">
+                @if (_dados.Configuracao.DataAncora == Relogio.Hoje.AddDays(1))
+                {
+                    @* Conferido hoje: o número veio do banco, não de projeção nenhuma, e já
+                       inclui o que saiu hoje. Dizer "projetado" aqui seria mentira. *@
+                    <text>Conferido com o banco hoje. Já inclui o que saiu hoje.</text>
+                }
+                else
+                {
+                    <text>
+                        Projetado para o fim do dia,
+                        @(_dados.Configuracao.DiarioPrevistoAtivo
+                            ? "já contando o diário."
+                            : "com o que você registrar no diário.")
+                    </text>
+                }
+            </div>
+
+            var aVencer = ContasAVencer();
+
+            @if (aVencer.Count > 0)
+            {
+                @* O saldo grande ainda não viu as contas que vencem depois de hoje. Este número
+                   é o que sobra se todas elas saírem: é ele que responde se dá para gastar. *@
+                var comprometido = aVencer.Sum(p => p.ValorCentavos);
+
+                <div style="margin-top:0.6rem; padding-top:0.6rem; border-top:1px solid var(--linha)">
+                    <div class="rotulo">Livre depois das contas do mês</div>
+                    <div class="numero medio @Formato.ClasseValor(saldoHoje - comprometido, conforto)">
+                        @Formato.Moeda(saldoHoje - comprometido)
+                    </div>
+                    <div class="ajuda">
+                        Já tirando @aVencer.Count conta(s) que ainda vencem este mês,
+                        @Formato.Moeda(comprometido) no total.
+                    </div>
+                </div>
+            }
         }
         else
         {
@@ -72,17 +108,62 @@ else
         </a>
     </div>
 
+    @if (_projecao.Carteiras.Count > 0)
+    {
+        @* Banco grande em cima, benefícios menores embaixo: o aluguel sai da conta corrente,
+           e é o saldo dela que decide se o mês fecha. *@
+        <div class="painel-cartoes" style="margin-top:0.75rem">
+            @foreach (var carteira in _projecao.Carteiras)
+            {
+                <div class="cartao">
+                    <div class="rotulo">@carteira.Carteira.Nome</div>
+                    @if (carteira.Agora.SaldoHojeCentavos is long saldoCarteira)
+                    {
+                        <div class="numero medio @Formato.ClasseValor(saldoCarteira, carteira.Carteira.SaldoConfortoCentavos)">
+                            @Formato.Moeda(saldoCarteira)
+                        </div>
+                        <div class="ajuda">
+                            <FarolTag Farol="carteira.Agora.Farol" />
+                            @if (carteira.Agora.MenorSaldoAFrenteCentavos is long menorCarteira &&
+                                 menorCarteira != saldoCarteira)
+                            {
+                                <text> menor à frente @Formato.Moeda(menorCarteira)</text>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="numero medio">--</div>
+                        <div class="ajuda">Saldo informado a partir de @Formato.Data(carteira.Carteira.DataAncora).</div>
+                    }
+                </div>
+            }
+        </div>
+    }
+
     @if (_dados.Lancamentos.Count == 0)
     {
         @* Sem nada cadastrado a projecao so tem o diario, entao ela sempre cai.
            Mostrar o numero (ele esta no cartao acima) mas explicar que falta metade da historia. *@
         <div class="aviso info">
             <strong>Falta cadastrar o que entra e o que sai.</strong>
-            Por enquanto a projeção só tem o seu gasto diário previsto de
-            @Formato.Moeda(_dados.Configuracao.DiarioPrevistoCentavos), por isso o saldo só desce.
+            @if (_dados.Configuracao.DiarioPrevistoAtivo)
+            {
+                <text>
+                    Por enquanto a projeção só tem o seu gasto diário previsto de
+                    @Formato.Moeda(_dados.Configuracao.DiarioPrevistoCentavos), por isso o saldo só desce.
+                </text>
+            }
+            else
+            {
+                <text>
+                    Por enquanto a projeção é uma linha reta: o diário está desligado e não há
+                    lançamento nenhum para mexer no saldo.
+                </text>
+            }
             Cadastre o salário e as contas fixas para esses números virarem realidade.
             <div class="acoes">
-                <a class="btn pequeno" href="plano?novo=1">Cadastrar o que entra</a>
+                <a class="btn pequeno" href="lancamentos?novo=1">Cadastrar o que entra</a>
                 <a class="btn pequeno secundario" href="ajustes">Ajustar o diário</a>
             </div>
         </div>
@@ -114,6 +195,149 @@ else
         <div class="aviso atencao">@aviso</div>
     }
 
+    @* ---------- O que ja venceu (R12) ---------- *@
+    @if (_pendencias.Count > 0)
+    {
+        var semResposta = _pendencias.Count(p => p.ForaDaProjecao && !p.Registrada);
+
+        // Conta so o que ja venceu: o que ainda vai vencer aparece na lista para poder ser
+        // marcado adiantado, mas nao e cobranca.
+        var aConfirmar = _pendencias.Count(p =>
+            p.Estado is EstadoOcorrencia.EmAberto or EstadoOcorrencia.VenceHoje);
+
+        <div class="bloco" style="margin-top:0.75rem">
+            <header>
+                <h2>Contas do mês</h2>
+                @if (aConfirmar > 0)
+                {
+                    <span class="pilula saida">@aConfirmar a confirmar</span>
+                }
+                else
+                {
+                    <span class="pilula entrada">em dia</span>
+                }
+            </header>
+
+            @if (semResposta > 0)
+            {
+                @* Este é o caso que mente no saldo: a conta venceu antes da âncora, o dinheiro
+                   dela ainda está no extrato que virou o saldo de partida, e a projeção não a
+                   mostra saindo. O app parece ter mais dinheiro do que tem. *@
+                <div class="aviso atencao" style="margin:0.75rem 0.9rem 0" role="alert">
+                    <strong>
+                        @(semResposta == 1 ? "Uma conta venceu" : semResposta + " contas venceram")
+                        antes do seu saldo de partida.
+                    </strong>
+                    Enquanto você não disser se saiu ou não, ela fica fora da projeção, e o saldo
+                    lá em cima parece maior do que é.
+                </div>
+            }
+
+            <ul class="lista">
+                @foreach (var pendencia in _pendencias)
+                {
+                    var tag = pendencia.TagId is int idTag
+                        ? _dados.Tags.FirstOrDefault(t => t.Id == idTag)
+                        : null;
+
+                    <li>
+                        <div class="principal">
+                            <div class="titulo">@pendencia.Descricao</div>
+                            <div class="sub">
+                                @Formato.Data(pendencia.DataPrevista)
+                                &middot;
+                                <span class="pilulas">
+                                <Pilula Tipo="pendencia.Tipo" />
+                                @if (tag is not null)
+                                {
+                                    <span class="pilula @Formato.ClasseTag(tag.Cor)">@tag.Nome</span>
+                                }
+                                @if (pendencia.Estado == EstadoOcorrencia.Pulada)
+                                {
+                                    <span class="pilula neutra">não teve</span>
+                                }
+                                else if (pendencia.Estado == EstadoOcorrencia.Paga)
+                                {
+                                    <span class="farol ok">pago em @Formato.DataCurta(pendencia.PagoEm!.Value)</span>
+                                }
+                                else if (pendencia.Registrada)
+                                {
+                                    <span class="farol negativo">não pago</span>
+                                }
+                                else if (pendencia.ForaDaProjecao)
+                                {
+                                    <span class="farol atencao">confirme</span>
+                                }
+                                else if (pendencia.Estado == EstadoOcorrencia.VenceHoje)
+                                {
+                                    <span class="pilula diario">vence hoje</span>
+                                }
+                                else if (pendencia.Estado == EstadoOcorrencia.Prevista)
+                                {
+                                    <span class="pilula neutra">vence em @Formato.DataCurta(pendencia.DataPrevista)</span>
+                                }
+                                else
+                                {
+                                    <span class="pilula neutra">a pagar</span>
+                                }
+                                </span>
+                            </div>
+
+                            @if (EstaInformandoValor(pendencia))
+                            {
+                                @* O valor vem preenchido com o previsto: conta que não varia é só
+                                   confirmar, e a que varia se corrige sem editar o lançamento. *@
+                                <div class="linha-campos" style="margin-top:0.4rem">
+                                    <CampoDinheiro Valor="_valorPago" ValorChanged="v => _valorPago = v"
+                                                   Id="@($"pago-{pendencia.LancamentoId}-{pendencia.DataPrevista:yyyyMMdd}")" />
+                                    <button type="button" class="btn" style="flex:0 0 auto" disabled="@_salvandoPendencia"
+                                            @onclick="() => ConfirmarPagamentoAsync(pendencia)">Confirmar</button>
+                                </div>
+                                <div class="acoes">
+                                    <button type="button" class="btn pequeno secundario"
+                                            @onclick="() => _informandoValor = null">Cancelar</button>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="acoes">
+                                    @if (pendencia.Estado is EstadoOcorrencia.Paga or EstadoOcorrencia.Pulada)
+                                    {
+                                        <button type="button" class="btn pequeno secundario" disabled="@_salvandoPendencia"
+                                                @onclick="() => LimparAsync(pendencia)">Desfazer</button>
+                                    }
+                                    else
+                                    {
+                                        <button type="button" class="btn pequeno" disabled="@_salvandoPendencia"
+                                                @onclick="() => AbrirPagamento(pendencia)">
+                                            @RotuloDoPagar(pendencia)
+                                        </button>
+                                        @if (!pendencia.Registrada && pendencia.ForaDaProjecao)
+                                        {
+                                            <button type="button" class="btn pequeno secundario" disabled="@_salvandoPendencia"
+                                                    @onclick="() => NaoPagueiAsync(pendencia)">Ainda não</button>
+                                        }
+                                        <button type="button" class="btn pequeno secundario" disabled="@_salvandoPendencia"
+                                                @onclick="() => PularAsync(pendencia)">Não teve</button>
+                                    }
+                                </div>
+                            }
+                        </div>
+                        <div class="dinheiro @(pendencia.Tipo == TipoLancamento.Entrada ? "valor-ok" : "")">
+                            @Formato.Moeda(pendencia.ValorCentavos)
+                        </div>
+                    </li>
+                }
+            </ul>
+
+            @if (_mensagemPendencia is not null)
+            {
+                <div class="aviso bom" role="status" aria-live="polite"
+                     style="margin:0 0.9rem 0.9rem">@_mensagemPendencia</div>
+            }
+        </div>
+    }
+
     @* No PC o check-in e os proximos dias ficam lado a lado; no celular, um embaixo do outro. *@
     <div class="colunas" style="margin-top:0.75rem">
 
@@ -121,36 +345,58 @@ else
     <div class="bloco">
         <header>
             <h2>Quanto gastei hoje?</h2>
-            @if (_diarioDeHojeERegistrado)
+            @if (_diarios.All(d => d.Registrado))
             {
                 <span class="pilula diario">registrado</span>
             }
-            else
-            {
-                <span class="pilula neutra">usando o previsto</span>
-            }
         </header>
         <div class="corpo">
-            <div class="linha-campos">
-                <CampoDinheiro Valor="_diarioHoje" ValorChanged="v => _diarioHoje = v" Id="diario-hoje" />
-                <button type="button" class="btn" style="flex:0 0 auto" @onclick="SalvarDiario">Salvar</button>
-            </div>
-            <p class="ajuda" style="margin:0.5rem 0 0">
-                Vale o gasto miúdo do dia: lanche, transporte, mercado de passagem.
-                Zero também conta como resposta.
-                @if (!_diarioDeHojeERegistrado)
-                {
-                    <text>Sem registro, o dia usa o previsto de @Formato.Moeda(_dados.Configuracao.DiarioPrevistoCentavos).</text>
-                }
-            </p>
-            @if (_diarioDeHojeERegistrado)
+            @foreach (var linha in _diarios)
             {
-                <div class="acoes">
-                    <button type="button" class="btn secundario pequeno" @onclick="VoltarParaPrevisao">
-                        Voltar para a previsão
-                    </button>
+                <div style="margin-bottom:0.9rem">
+                    @if (_diarios.Count > 1)
+                    {
+                        <div class="rotulo" style="margin-bottom:0.2rem">
+                            @linha.Nome
+                            @if (linha.Registrado)
+                            {
+                                <span class="pilula diario">registrado</span>
+                            }
+                        </div>
+                    }
+                    <div class="linha-campos">
+                        <CampoDinheiro Valor="linha.Valor" ValorChanged="v => linha.Valor = v"
+                                       Id="@($"diario-{linha.CarteiraId?.ToString() ?? "conta"}")" />
+                        <button type="button" class="btn" style="flex:0 0 auto" disabled="@_salvandoDiario"
+                                @onclick="() => SalvarDiario(linha)">Salvar</button>
+                    </div>
+                    @if (linha.Registrado)
+                    {
+                        <div class="acoes">
+                            <button type="button" class="btn secundario pequeno" disabled="@_salvandoDiario"
+                                    @onclick="() => VoltarParaPrevisao(linha)">
+                                Voltar para a previsão
+                            </button>
+                        </div>
+                    }
                 </div>
             }
+
+            <p class="ajuda" style="margin:0">
+                Vale o gasto miúdo do dia: lanche, transporte, mercado de passagem.
+                Zero também conta como resposta.
+                @if (_diarios.Any(d => !d.Registrado && d.CarteiraId is null))
+                {
+                    @if (_dados.Configuracao.DiarioPrevistoAtivo)
+                    {
+                        <text>Sem registro, o dia usa o previsto de @Formato.Moeda(_dados.Configuracao.DiarioPrevistoCentavos).</text>
+                    }
+                    else
+                    {
+                        <text>Sem registro, o dia conta zero: você desligou o diário previsto em Ajustes.</text>
+                    }
+                }
+            </p>
             @if (_mensagemDiario is not null)
             {
                 <div class="aviso bom" role="status" aria-live="polite" style="margin-top:0.6rem">@_mensagemDiario</div>
@@ -204,7 +450,7 @@ else
     </div>
 
     <div class="acoes">
-        <a class="btn largo" href="plano?novo=1">
+        <a class="btn largo" href="lancamentos?novo=1">
             <Icone Nome="mais" Tamanho="18" /> Novo lançamento
         </a>
     </div>
@@ -213,9 +459,27 @@ else
 @code {
     private DadosPlanejamento? _dados;
     private ResultadoProjecao? _projecao;
-    private long _diarioHoje;
-    private bool _diarioDeHojeERegistrado;
     private string? _mensagemDiario;
+    private bool _salvandoDiario;
+
+    /// <summary>
+    /// Uma linha de check-in por carteira que tem diário. Carteira sem diário previsto não
+    /// aparece aqui: pedir um número que ela não usa só faria inventar gasto.
+    /// </summary>
+    private sealed class LinhaDiario
+    {
+        public int? CarteiraId { get; init; }
+        public string Nome { get; init; } = "";
+        public long Valor { get; set; }
+        public bool Registrado { get; init; }
+    }
+
+    private List<LinhaDiario> _diarios = [];
+    private List<Pendencia> _pendencias = [];
+    private bool _salvandoPendencia;
+    private string? _mensagemPendencia;
+    private (int LancamentoId, DateOnly Data)? _informandoValor;
+    private long _valorPago;
 
     protected override async Task OnInitializedAsync() => await CarregarAsync();
 
@@ -230,23 +494,193 @@ else
         }
 
         _projecao = Servico.Projetar(_dados, null, Relogio.Hoje);
+        _pendencias = Servico.ListarPendencias(_dados, Relogio.Hoje);
 
-        var registro = _dados.Diarios.FirstOrDefault(d => d.Data == Relogio.Hoje);
-        _diarioDeHojeERegistrado = registro is not null;
-        _diarioHoje = registro?.ValorCentavos ?? _dados.Configuracao.DiarioPrevistoCentavos;
+        _diarios = MontarLinhasDeDiario();
     }
 
-    private async Task SalvarDiario()
+    private List<LinhaDiario> MontarLinhasDeDiario()
     {
-        await Servico.RegistrarDiarioAsync(Relogio.Hoje, _diarioHoje);
-        _mensagemDiario = $"Diário de hoje registrado em {Formato.Moeda(_diarioHoje)}.";
-        await CarregarAsync();
+        var linhas = new List<LinhaDiario>();
+        var registroConta = _dados!.Diarios.FirstOrDefault(d => d.Data == Relogio.Hoje && d.CarteiraId is null);
+
+        linhas.Add(new LinhaDiario
+        {
+            CarteiraId = null,
+            Nome = "Conta corrente",
+            Registrado = registroConta is not null,
+
+            // Com a contagem desligada o campo abre em zero, não no previsto: abrir no previsto
+            // convidaria a salvar um gasto que o dono acabou de dizer que não tem.
+            Valor = registroConta?.ValorCentavos
+                    ?? (_dados.Configuracao.DiarioPrevistoAtivo ? _dados.Configuracao.DiarioPrevistoCentavos : 0)
+        });
+
+        foreach (var carteira in _dados.Carteiras.Where(c => c.DiarioPrevistoCentavos is not null))
+        {
+            var registro = _dados.Diarios.FirstOrDefault(d => d.Data == Relogio.Hoje && d.CarteiraId == carteira.Id);
+
+            linhas.Add(new LinhaDiario
+            {
+                CarteiraId = carteira.Id,
+                Nome = carteira.Nome,
+                Registrado = registro is not null,
+                Valor = registro?.ValorCentavos ?? carteira.DiarioPrevistoCentavos ?? 0
+            });
+        }
+
+        return linhas;
     }
 
-    private async Task VoltarParaPrevisao()
+    private async Task SalvarDiario(LinhaDiario linha)
     {
-        await Servico.VoltarParaPrevisaoAsync(Relogio.Hoje);
-        _mensagemDiario = "Hoje voltou a usar o diário previsto.";
-        await CarregarAsync();
+        if (_salvandoDiario)
+        {
+            return;
+        }
+
+        _salvandoDiario = true;
+
+        try
+        {
+            await Servico.RegistrarDiarioAsync(Relogio.Hoje, linha.Valor, linha.CarteiraId);
+            _mensagemDiario = $"{linha.Nome}: hoje registrado em {Formato.Moeda(linha.Valor)}.";
+            await CarregarAsync();
+        }
+        finally
+        {
+            _salvandoDiario = false;
+        }
     }
+
+    private async Task VoltarParaPrevisao(LinhaDiario linha)
+    {
+        if (_salvandoDiario)
+        {
+            return;
+        }
+
+        _salvandoDiario = true;
+
+        try
+        {
+            await Servico.VoltarParaPrevisaoAsync(Relogio.Hoje, linha.CarteiraId);
+            _mensagemDiario = $"{linha.Nome}: hoje voltou a usar o previsto.";
+            await CarregarAsync();
+        }
+        finally
+        {
+            _salvandoDiario = false;
+        }
+    }
+
+    // ---------- O que ja venceu ----------
+
+    /// <summary>
+    /// Quando o dinheiro saiu, que decide se a saída entra ou não na projeção.
+    ///
+    /// Ocorrência que venceu antes da âncora e nunca foi respondida: o botão está confirmando que
+    /// ela já tinha saído, então a data é a prevista, anterior à âncora, e ela continua fora da
+    /// projeção porque o saldo de partida já a contabilizou. Gravar hoje aqui descontaria o mesmo
+    /// dinheiro duas vezes.
+    ///
+    /// Nos outros casos a saída está acontecendo agora: ou o dono já tinha dito que não pagou, ou
+    /// a conta vence a partir da âncora. Aí vale hoje, e o atraso fica registrado como a distância
+    /// entre as duas datas.
+    /// </summary>
+    private DateOnly QuandoSaiu(Pendencia pendencia) =>
+        !pendencia.Registrada && pendencia.DataPrevista < _dados!.Configuracao.DataAncora
+            ? pendencia.DataPrevista
+            : Relogio.Hoje;
+
+    private string RotuloDoPagar(Pendencia pendencia)
+    {
+        var entrada = pendencia.Tipo == TipoLancamento.Entrada;
+
+        return QuandoSaiu(pendencia) == pendencia.DataPrevista && pendencia.DataPrevista != Relogio.Hoje
+            ? (entrada ? "Já caiu" : "Já saiu")
+            : (entrada ? "Caiu" : "Paguei");
+    }
+
+    private bool EstaInformandoValor(Pendencia pendencia) =>
+        _informandoValor == (pendencia.LancamentoId, pendencia.DataPrevista);
+
+    /// <summary>
+    /// Conta que já saiu antes da âncora não precisa de valor: ela fica fora da projeção de
+    /// qualquer jeito, e pedir um número que não muda nada só atrasa a confirmação.
+    /// </summary>
+    private async Task AbrirPagamento(Pendencia pendencia)
+    {
+        if (QuandoSaiu(pendencia) == pendencia.DataPrevista && pendencia.DataPrevista != Relogio.Hoje)
+        {
+            await ConfirmarPagamentoAsync(pendencia, pedirValor: false);
+            return;
+        }
+
+        _valorPago = pendencia.ValorCentavos;
+        _informandoValor = (pendencia.LancamentoId, pendencia.DataPrevista);
+    }
+
+    private async Task ConfirmarPagamentoAsync(Pendencia pendencia, bool pedirValor = true)
+    {
+        var valor = pedirValor ? _valorPago : (long?)null;
+
+        await ComTravaAsync(
+            () => Servico.MarcarPagoAsync(pendencia.LancamentoId, pendencia.DataPrevista, QuandoSaiu(pendencia), valor),
+            valor is long v && v != pendencia.ValorCentavos
+                ? $"{pendencia.Descricao} confirmado em {Formato.Moeda(v)}."
+                : pendencia.Descricao + " confirmado.");
+
+        _informandoValor = null;
+    }
+
+    private async Task PularAsync(Pendencia pendencia) =>
+        await ComTravaAsync(
+            () => Servico.MarcarPuladaAsync(pendencia.LancamentoId, pendencia.DataPrevista),
+            pendencia.Descricao + " não teve neste período.");
+
+    /// <summary>
+    /// As contas que ainda vão sair da conta depois de hoje. Vencidas em aberto ficam de fora
+    /// porque já foram trazidas para dentro do saldo projetado, e contá-las aqui seria descontar
+    /// duas vezes.
+    /// </summary>
+    private List<Pendencia> ContasAVencer() =>
+        [.. _pendencias.Where(p =>
+            p.Tipo != TipoLancamento.Entrada &&
+            p.Estado is not (EstadoOcorrencia.Paga or EstadoOcorrencia.Pulada) &&
+            p.DataPrevista > Relogio.Hoje)];
+
+    private async Task NaoPagueiAsync(Pendencia pendencia) =>
+        await ComTravaAsync(
+            () => Servico.MarcarEmAbertoAsync(pendencia.LancamentoId, pendencia.DataPrevista),
+            pendencia.Descricao + " entrou na projeção como conta a pagar.");
+
+    private async Task LimparAsync(Pendencia pendencia) =>
+        await ComTravaAsync(
+            () => Servico.LimparSituacaoAsync(pendencia.LancamentoId, pendencia.DataPrevista),
+            pendencia.Descricao + " voltou a ficar sem resposta.");
+
+    /// <summary>Trava os botões enquanto grava: dois toques seguidos gravariam duas vezes.</summary>
+    private async Task ComTravaAsync(Func<Task> gravar, string mensagem)
+    {
+        if (_salvandoPendencia)
+        {
+            return;
+        }
+
+        _salvandoPendencia = true;
+
+        try
+        {
+            await gravar();
+            _mensagemPendencia = mensagem;
+            await CarregarAsync();
+        }
+        finally
+        {
+            _salvandoPendencia = false;
+        }
+    }
+
+
 }

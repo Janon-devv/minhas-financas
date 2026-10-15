@@ -8,9 +8,18 @@ namespace MinhasFinancas.Domain;
 /// </summary>
 public static class Validacao
 {
-    public static List<string> Lancamento(Lancamento lancamento, IReadOnlyList<Cartao> cartoes)
+    public static List<string> Lancamento(
+        Lancamento lancamento,
+        IReadOnlyList<Cartao> cartoes,
+        IReadOnlyList<Carteira>? carteiras = null)
     {
         var erros = new List<string>();
+
+        if (lancamento.CarteiraId is int carteiraId && carteiras is not null &&
+            carteiras.All(c => c.Id != carteiraId))
+        {
+            erros.Add("A carteira escolhida nao existe mais.");
+        }
 
         if (string.IsNullOrWhiteSpace(lancamento.Descricao))
         {
@@ -30,6 +39,15 @@ public static class Validacao
         if (lancamento.Vezes is int vezes && vezes < 1)
         {
             erros.Add("A quantidade de vezes precisa ser pelo menos 1, ou deixe em branco para sem fim.");
+        }
+
+        // A data efetiva de um lancamento de Cartao e o vencimento da fatura, calculado uma vez
+        // a partir da compra. Repetir isso de 7 em 7 dias geraria vencimentos que nao existem:
+        // compra semanal no cartao e varias compras caindo na MESMA fatura, nao uma fatura por
+        // semana. Enquanto a R1 nao for aplicada por ocorrencia, semanal so vale fora do cartao.
+        if (lancamento.Tipo == TipoLancamento.Cartao && lancamento.Periodicidade == Periodicidade.Semanal)
+        {
+            erros.Add("Repeticao semanal ainda nao vale para lancamento de Cartao.");
         }
 
         if (lancamento.Tipo == TipoLancamento.Cartao)
@@ -79,6 +97,39 @@ public static class Validacao
         if (cfg.HorizonteMeses is < 1 or > 120)
         {
             erros.Add("O horizonte precisa ficar entre 1 e 120 meses.");
+        }
+
+        return erros;
+    }
+
+    public static List<string> Carteira(Carteira carteira)
+    {
+        var erros = new List<string>();
+
+        if (string.IsNullOrWhiteSpace(carteira.Nome))
+        {
+            erros.Add("De um nome a carteira.");
+        }
+
+        if (carteira.DataAncora == default)
+        {
+            erros.Add("Informe a data do saldo da carteira.");
+        }
+
+        // Beneficio nao entra no cheque especial: o cartao do VA simplesmente recusa a compra.
+        if (carteira.Tipo == TipoCarteira.Beneficio && carteira.SaldoAncoraCentavos < 0)
+        {
+            erros.Add("Saldo de beneficio nao pode ser negativo.");
+        }
+
+        if (carteira.DiarioPrevistoCentavos is long diario && diario < 0)
+        {
+            erros.Add("O diario previsto da carteira nao pode ser negativo.");
+        }
+
+        if (carteira.SaldoConfortoCentavos < 0)
+        {
+            erros.Add("O saldo de conforto da carteira nao pode ser negativo.");
         }
 
         return erros;

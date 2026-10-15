@@ -13,8 +13,41 @@ public sealed record EntradaProjecao
 
     public IReadOnlyList<Tag> Tags { get; init; } = [];
 
-    /// <summary>Diario registrado por data. A chave presente com valor 0 significa "nao gastei nada".</summary>
+    /// <summary>
+    /// O que foi registrado sobre ocorrencias especificas (R12). Lista vazia significa tudo no
+    /// padrao, que e exatamente o comportamento de antes desta regra existir.
+    /// </summary>
+    public IReadOnlyList<SituacaoOcorrencia> Situacoes { get; init; } = [];
+
+    /// <summary>
+    /// Faturas cadastradas (R14). Ciclo sem fatura aqui continua na R1: cada compra sai sozinha
+    /// na data de vencimento dela, que e o comportamento de antes das faturas existirem.
+    /// </summary>
+    public IReadOnlyList<FaturaCartao> Faturas { get; init; } = [];
+
+    /// <summary>
+    /// Ganho variavel registrado mes a mes (R17). Nao mexe no saldo projetado: e registro do que
+    /// ja caiu, e o saldo conferido com o banco ja o contem. Entra so nos ganhos DO MES (R8).
+    /// </summary>
+    public IReadOnlyList<GanhoVariavel> GanhosVariaveis { get; init; } = [];
+
+    /// <summary>
+    /// Carteiras alem da conta corrente (R13). Lista vazia deixa so a conta corrente, que e o
+    /// comportamento de antes de elas existirem.
+    /// </summary>
+    public IReadOnlyList<Carteira> Carteiras { get; init; } = [];
+
+    /// <summary>
+    /// Diario registrado por data, da CONTA CORRENTE. A chave presente com valor 0 significa
+    /// "nao gastei nada". Continua existindo porque e assim que o cenario de referencia informa.
+    /// </summary>
     public IReadOnlyDictionary<DateOnly, long> DiariosReais { get; init; } = new Dictionary<DateOnly, long>();
+
+    /// <summary>
+    /// Diario registrado de qualquer carteira. Soma-se ao dicionario acima; em conflito no mesmo
+    /// dia da conta corrente, este manda, por ser o registro completo.
+    /// </summary>
+    public IReadOnlyList<DiarioReal> Diarios { get; init; } = [];
 
     public required DateOnly Hoje { get; init; }
 
@@ -34,15 +67,24 @@ public sealed record EntradaProjecao
         IEnumerable<Tag>? tags = null,
         IEnumerable<DiarioReal>? diarios = null,
         DateOnly? fimHorizonte = null,
-        Simulacao? simulacao = null) => new()
+        Simulacao? simulacao = null,
+        IEnumerable<SituacaoOcorrencia>? situacoes = null,
+        IEnumerable<Carteira>? carteiras = null,
+        IEnumerable<FaturaCartao>? faturas = null,
+        IEnumerable<GanhoVariavel>? ganhosVariaveis = null) => new()
         {
             Configuracao = configuracao,
             Hoje = hoje,
             Lancamentos = lancamentos?.ToList() ?? [],
             Cartoes = cartoes?.ToList() ?? [],
             Tags = tags?.ToList() ?? [],
-            DiariosReais = diarios?.ToDictionary(d => d.Data, d => d.ValorCentavos) ?? [],
+            DiariosReais = diarios?.Where(d => d.CarteiraId is null).ToDictionary(d => d.Data, d => d.ValorCentavos) ?? [],
+            Diarios = diarios?.ToList() ?? [],
+            Carteiras = carteiras?.ToList() ?? [],
+            Faturas = faturas?.ToList() ?? [],
+            GanhosVariaveis = ganhosVariaveis?.ToList() ?? [],
             FimHorizonte = fimHorizonte,
-            Simulacao = simulacao
+            Simulacao = simulacao,
+            Situacoes = situacoes?.ToList() ?? []
         };
 }

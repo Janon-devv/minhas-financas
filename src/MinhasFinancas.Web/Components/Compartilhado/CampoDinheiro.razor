@@ -1,19 +1,27 @@
 @* Campo de dinheiro em centavos. inputmode=decimal abre o teclado numerico no iPhone. *@
 
-<input @key="_chave"
-       type="text"
-       inputmode="decimal"
-       enterkeyhint="done"
-       class="campo dinheiro-campo"
-       placeholder="0,00"
-       value="@_texto"
-       id="@Id"
-       @onchange="Alterou" />
+<span class="campo-dinheiro">
+    <span class="campo-dinheiro-prefixo" id="@_idPrefixo">R$</span>
+    <input @key="_chave"
+           type="text"
+           inputmode="decimal"
+           enterkeyhint="done"
+           class="campo dinheiro-campo"
+           placeholder="0,00"
+           value="@_texto"
+           id="@Id"
+           aria-describedby="@_idPrefixo"
+           @onchange="Alterou" />
+</span>
 
 @code {
     private string _texto = "";
     private int _chave;
     private long _ultimoValor = long.MinValue;
+
+    // O prefixo e lido pelo leitor de tela via aria-describedby, entao precisa de id proprio.
+    // Esconder com aria-hidden tiraria a unica pista de que o campo e em reais.
+    private readonly string _idPrefixo = $"moeda-{Guid.NewGuid():N}";
 
     [Parameter]
     public long Valor { get; set; }

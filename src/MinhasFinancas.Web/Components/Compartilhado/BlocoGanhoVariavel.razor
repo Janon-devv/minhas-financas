@@ -1,0 +1,186 @@
+@inject PlanejamentoService Servico
+@inject IRelogio Relogio
+
+@* Ganho variavel (R17). Um campo por mes, no lugar de um lancamento novo a cada mes.
+   E registro do que JA CAIU: conta nos ganhos do mes, mas nao mexe no saldo projetado,
+   porque o saldo conferido com o banco ja contem esse dinheiro. *@
+
+<div class="bloco" style="margin-top:0.75rem">
+    <header>
+        <h2>Ganho variável</h2>
+        <span class="pilulas">
+            <button type="button" class="btn pequeno secundario" @onclick="() => Mover(-1)"
+                    aria-label="Mês anterior">
+                <Icone Nome="voltar" Tamanho="16" />
+            </button>
+            <button type="button" class="btn pequeno secundario" @onclick="() => Mover(1)"
+                    disabled="@(!PodeAvancar)" aria-label="Mês seguinte">
+                <span style="transform:rotate(180deg); display:inline-flex"><Icone Nome="voltar" Tamanho="16" /></span>
+            </button>
+        </span>
+    </header>
+
+    <div class="corpo">
+        <p class="ajuda" style="margin:0 0 0.75rem">
+            Renda que muda todo mês, tipo aplicativo de corrida ou freela. Preencha quanto
+            <strong>já entrou</strong> e ele conta nos ganhos do mês. Não mexe no saldo: esse
+            dinheiro já está na conta, e somar de novo mostraria dinheiro que não existe.
+        </p>
+
+        <div class="linha-campos">
+            <div class="campo-grupo">
+                <label for="ganho-variavel">@Formato.MesAno(_mes.Year, _mes.Month)</label>
+                <CampoDinheiro Id="ganho-variavel" @bind-Valor="_valor" />
+            </div>
+            <div class="campo-grupo">
+                <label for="ganho-obs">De onde veio (opcional)</label>
+                <input id="ganho-obs" class="campo" maxlength="60" @bind="_obs"
+                       placeholder="Uber, freela" />
+            </div>
+        </div>
+
+        <div class="pilulas" style="margin-top:0.75rem">
+            <button type="button" class="btn pequeno" @onclick="Salvar" disabled="@_salvando">
+                Salvar o mês
+            </button>
+            @if (_registrado is not null)
+            {
+                <button type="button" class="btn pequeno secundario" @onclick="Limpar"
+                        disabled="@_salvando">
+                    Apagar
+                </button>
+            }
+        </div>
+
+        @if (_confirmacao is not null)
+        {
+            <p class="ajuda" aria-live="polite" style="margin:0.6rem 0 0">@_confirmacao</p>
+        }
+
+        @if (_registrado is null)
+        {
+            <p class="ajuda" style="margin:0.6rem 0 0">
+                Este mês ainda está em branco, e mês em branco rende zero na conta. O app não
+                chuta média nenhuma.
+            </p>
+        }
+    </div>
+</div>
+
+@if (_historico.Count > 0)
+{
+    <div class="bloco" style="margin-top:0.75rem">
+        <header>
+            <h2>Meses preenchidos</h2>
+            @if (GanhosVariaveis.Media(_historico) is long media)
+            {
+                <span class="pilula neutra">média @Formato.Moeda(media)</span>
+            }
+        </header>
+        <div class="corpo" style="padding:0">
+            <table class="tabela">
+                <thead>
+                    <tr>
+                        <th scope="col">Mês</th>
+                        <th scope="col">De onde veio</th>
+                        <th scope="col" style="text-align:right">Ganho</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var registro in _historico)
+                    {
+                        <tr class="clicavel @(registro.Ano == _mes.Year && registro.Mes == _mes.Month ? "hoje" : "")"
+                            tabindex="0" role="button"
+                            @onclick="() => Ir(registro)"
+                            @onkeydown="@(e => { if (e.Key is "Enter" or " ") { Ir(registro); } })">
+                            <td>@Formato.MesAnoCurto(registro.Ano, registro.Mes)</td>
+                            <td class="secundario">@(registro.Obs ?? "-")</td>
+                            <td style="text-align:right">@Formato.Moeda(registro.ValorCentavos)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+
+@code {
+    /// Os dados ja carregados pela tela que hospeda o bloco.
+    [Parameter] public DadosPlanejamento? Dados { get; set; }
+
+    /// Avisa a tela que algo mudou, para ela recarregar tudo de uma vez.
+    [Parameter] public EventCallback Mudou { get; set; }
+
+    private DateOnly _mes;
+    private long _valor;
+    private string _obs = "";
+    private bool _salvando;
+    private string? _confirmacao;
+    private GanhoVariavel? _registrado;
+    private List<GanhoVariavel> _historico = [];
+
+    // Nao da para preencher o mes que ainda nao comecou: o ganho so e conhecido depois que entra.
+    private bool PodeAvancar => _mes < MinhasFinancas.Domain.Calendario.PrimeiroDiaDoMes(Relogio.Hoje);
+
+    protected override void OnInitialized() =>
+        _mes = MinhasFinancas.Domain.Calendario.PrimeiroDiaDoMes(Relogio.Hoje);
+
+    protected override void OnParametersSet()
+    {
+        _historico = GanhosVariaveis.MaisRecentesPrimeiro(Dados?.GanhosVariaveis ?? []);
+        Ler();
+    }
+
+    private void Ler()
+    {
+        _registrado = _historico.FirstOrDefault(g => g.Ano == _mes.Year && g.Mes == _mes.Month);
+        _valor = _registrado?.ValorCentavos ?? 0;
+        _obs = _registrado?.Obs ?? "";
+    }
+
+    private void Mover(int meses)
+    {
+        _mes = _mes.AddMonths(meses);
+        _confirmacao = null;
+        Ler();
+    }
+
+    private void Ir(GanhoVariavel registro)
+    {
+        _mes = new DateOnly(registro.Ano, registro.Mes, 1);
+        _confirmacao = null;
+        Ler();
+    }
+
+    private async Task Salvar()
+    {
+        _salvando = true;
+
+        try
+        {
+            await Servico.SalvarGanhoVariavelAsync(_mes.Year, _mes.Month, _valor, _obs);
+            _confirmacao = $"Guardado: {Formato.Moeda(_valor)} em {Formato.MesAno(_mes.Year, _mes.Month)}.";
+            await Mudou.InvokeAsync();
+        }
+        finally
+        {
+            _salvando = false;
+        }
+    }
+
+    private async Task Limpar()
+    {
+        _salvando = true;
+
+        try
+        {
+            await Servico.LimparGanhoVariavelAsync(_mes.Year, _mes.Month);
+            _confirmacao = $"{Formato.MesAno(_mes.Year, _mes.Month)} voltou para em branco.";
+            await Mudou.InvokeAsync();
+        }
+        finally
+        {
+            _salvando = false;
+        }
+    }
+}

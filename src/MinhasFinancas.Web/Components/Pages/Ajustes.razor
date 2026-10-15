@@ -22,12 +22,16 @@ else
     <div class="bloco">
         <header><h2>Conferência com o banco</h2></header>
         <div class="corpo">
-            <div class="rotulo">O app diz que hoje você tem</div>
+            <div class="rotulo">O app diz que você termina hoje com</div>
             <div class="numero medio">@Formato.Moeda(_saldoProjetadoHoje)</div>
 
             <div class="campo-grupo" style="margin-top:0.8rem">
-                <label for="saldo-real">E o banco diz quanto?</label>
+                <label for="saldo-real">Quanto o banco mostra agora?</label>
                 <CampoDinheiro Valor="_saldoReal" ValorChanged="v => _saldoReal = v" Id="saldo-real" />
+                <div class="dica">
+                    O saldo de agora, com os gastos de hoje já descontados. Se ainda vai sair
+                    algo hoje que o banco não mostrou, confira amanhã.
+                </div>
             </div>
 
             @if (_saldoProjetadoHoje is long projetado)
@@ -52,13 +56,14 @@ else
                         }
                     </div>
                     <div class="acoes">
-                        <button type="button" class="btn" @onclick="Recalibrar">
-                            Usar @Formato.Moeda(_saldoReal) como saldo de hoje
+                        <button type="button" class="btn" @onclick="Recalibrar" disabled="@_salvando">
+                            Usar @Formato.Moeda(_saldoReal) como saldo real
                         </button>
                     </div>
                     <p class="ajuda" style="margin-top:0.4rem">
-                        Recalibrar não apaga nada. Lançamentos e diários continuam guardados por data;
-                        o que ficou antes de hoje só deixa de contar no saldo.
+                        O saldo conferido passa a valer a partir de amanhã, porque o número do banco
+                        já inclui o que saiu hoje. Recalibrar não apaga nada: lançamentos e diários
+                        continuam guardados por data, só deixam de contar no saldo.
                     </p>
                 }
             }
@@ -88,7 +93,32 @@ else
             <div class="campo-grupo">
                 <label for="diario-previsto">Diário previsto</label>
                 <CampoDinheiro Valor="_cfg.DiarioPrevistoCentavos" ValorChanged="v => _cfg.DiarioPrevistoCentavos = v" Id="diario-previsto" />
-                <div class="dica">Usado em todo dia sem registro, inclusive nos que já passaram.</div>
+                <div class="dica">
+                    @if (_cfg.DiarioPrevistoAtivo)
+                    {
+                        <text>Usado em todo dia sem registro, inclusive nos que já passaram.</text>
+                    }
+                    else
+                    {
+                        <text>
+                            Guardado só como referência: com a contagem desligada, dia sem registro
+                            vale zero e este valor não desce do saldo.
+                        </text>
+                    }
+                </div>
+            </div>
+
+            <div class="campo-grupo">
+                <label class="campo-opcao">
+                    <input type="checkbox" @bind="_cfg.DiarioPrevistoAtivo"
+                           style="width:1.1rem; height:1.1rem" />
+                    Descontar o diário previsto todo dia
+                </label>
+                <div class="dica">
+                    Desligue se o gasto miúdo não é de todo dia, e sim compra de vez em quando.
+                    O que você registrar no diário continua descendo igual, e a compra da semana
+                    entra como conta em Lançamentos.
+                </div>
             </div>
 
             <div class="campo-grupo">
@@ -113,7 +143,7 @@ else
             </div>
 
             <div class="campo-grupo">
-                <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400">
+                <label class="campo-opcao">
                     <input type="checkbox" @bind="_cfg.ContarEntradasIncertas"
                            style="width:1.1rem; height:1.1rem" />
                     Contar entradas incertas no saldo
@@ -145,13 +175,66 @@ else
     </div>
 
     <div>
-    @* ---------- Cartoes ---------- *@
+    @* ---------- Carteiras ---------- *@
     <div class="bloco">
         <header>
-            <h2>Cartões</h2>
-            <button type="button" class="btn pequeno" @onclick="() => AbrirCartao(null)">
-                <Icone Nome="mais" Tamanho="16" /> Novo
+            <h2>Carteiras</h2>
+            <button type="button" class="btn pequeno" @onclick="() => AbrirCarteira(null)">
+                <Icone Nome="mais" Tamanho="16" /> Nova
             </button>
+        </header>
+
+        <ul class="lista">
+            <li>
+                <div class="principal">
+                    <div class="titulo">Conta corrente</div>
+                    <div class="sub">
+                        O saldo e o diário dela são os do bloco acima. Toda conta e todo cartão
+                        saem daqui.
+                    </div>
+                </div>
+                <span class="pilula neutra">sempre existe</span>
+            </li>
+            @foreach (var carteira in _dados.Carteiras)
+            {
+                <li>
+                    <div class="principal">
+                        <div class="titulo">@carteira.Nome</div>
+                        <div class="sub">
+                            @Formato.Moeda(carteira.SaldoAncoraCentavos) desde @Formato.Data(carteira.DataAncora)
+                            &middot;
+                            @(carteira.DiarioPrevistoCentavos is long d
+                                ? $"diário de {Formato.Moeda(d)}"
+                                : "sem diário")
+                        </div>
+                    </div>
+                    <button type="button" class="btn secundario pequeno"
+                            aria-label="Editar a carteira @carteira.Nome"
+                            @onclick="() => AbrirCarteira(carteira)">
+                        <Icone Nome="editar" Tamanho="14" />
+                    </button>
+                </li>
+            }
+        </ul>
+
+        <div class="corpo">
+            <p class="ajuda" style="margin:0">
+                Vale-alimentação e vale-transporte têm saldo próprio: o almoço pago no benefício
+                não deixa a conta corrente mais pobre, e o benefício não paga aluguel.
+            </p>
+        </div>
+    </div>
+
+    @* ---------- Cartoes ---------- *@
+    <div class="bloco" style="margin-top:0.75rem">
+        <header>
+            <h2>Cartões</h2>
+            <span class="pilulas">
+                <a class="btn pequeno secundario" href="lancamentos">Faturas</a>
+                <button type="button" class="btn pequeno" @onclick="() => AbrirCartao(null)">
+                    <Icone Nome="mais" Tamanho="16" /> Novo
+                </button>
+            </span>
         </header>
 
         @if (_dados.Cartoes.Count == 0)
@@ -198,7 +281,24 @@ else
                 {
                     <li>
                         <div class="principal">
-                            <div class="titulo">@tag.Nome</div>
+                            <div class="titulo">
+                                <span class="pilula @Formato.ClasseTag(tag.Cor)">@tag.Nome</span>
+                            </div>
+                            <div class="sub">
+                                @* Radio, não botão: a escolha é uma só entre várias, e o teclado
+                                   anda entre elas com as setas de graça. *@
+                                <fieldset class="cores" style="border:0; padding:0; margin:0.4rem 0 0">
+                                    <legend class="so-leitor">Cor da tag @tag.Nome</legend>
+                                    @foreach (var cor in Formato.CoresDeTag)
+                                    {
+                                        var id = $"cor-{tag.Id}-{cor}";
+                                        <input type="radio" id="@id" name="cor-@tag.Id" checked="@(tag.Cor == cor)"
+                                               @onchange="() => TrocarCorDaTag(tag, cor)" />
+                                        <label for="@id" class="pilula @Formato.ClasseTag(cor)"
+                                               title="@cor" aria-label="@cor"></label>
+                                    }
+                                </fieldset>
+                            </div>
                         </div>
                         <button type="button" class="btn perigo pequeno" @onclick="() => ExcluirTag(tag.Id)">
                             Excluir
@@ -306,6 +406,82 @@ else
     </div>
 }
 
+@if (_carteiraEditando is not null)
+{
+    <Modal Titulo="@(_carteiraEditando.Id == 0 ? "Nova carteira" : "Editar carteira")"
+           AoFechar="() => _carteiraEditando = null">
+        <div class="campo-grupo">
+            <label for="nome-carteira">Nome</label>
+            <input id="nome-carteira" class="campo" @bind="_carteiraEditando.Nome"
+                   placeholder="Vale-alimentação" />
+        </div>
+
+        <div class="linha-campos">
+            <div class="campo-grupo">
+                <label for="saldo-carteira">Saldo agora</label>
+                <CampoDinheiro Valor="_carteiraEditando.SaldoAncoraCentavos"
+                               ValorChanged="v => _carteiraEditando.SaldoAncoraCentavos = v" Id="saldo-carteira" />
+            </div>
+            <div class="campo-grupo">
+                <label for="data-carteira">A partir de</label>
+                <CampoData Valor="_carteiraEditando.DataAncora"
+                           ValorChanged="v => _carteiraEditando.DataAncora = v ?? Relogio.Hoje" Id="data-carteira" />
+            </div>
+        </div>
+
+        <div class="campo-grupo">
+            <label class="campo-opcao">
+                <input type="checkbox" checked="@(_carteiraEditando.DiarioPrevistoCentavos is not null)"
+                       @onchange="TrocarDiarioDaCarteira" style="width:1.1rem; height:1.1rem" />
+                Esta carteira tem gasto por dia
+            </label>
+            <div class="dica">
+                Vale-transporte costuma ter: é o mesmo valor todo dia útil. Vale-alimentação
+                costuma não ter, porque você registra o que gastou.
+            </div>
+        </div>
+
+        @if (_carteiraEditando.DiarioPrevistoCentavos is long diarioCarteira)
+        {
+            <div class="campo-grupo">
+                <label for="diario-carteira">Diário previsto</label>
+                <CampoDinheiro Valor="diarioCarteira"
+                               ValorChanged="v => _carteiraEditando.DiarioPrevistoCentavos = v" Id="diario-carteira" />
+            </div>
+        }
+
+        <div class="campo-grupo">
+            <label for="conforto-carteira">Saldo de conforto</label>
+            <CampoDinheiro Valor="_carteiraEditando.SaldoConfortoCentavos"
+                           ValorChanged="v => _carteiraEditando.SaldoConfortoCentavos = v" Id="conforto-carteira" />
+            <div class="dica">Abaixo disso o farol desta carteira acende. Pode ser zero.</div>
+        </div>
+
+        @if (_errosCarteira.Count > 0)
+        {
+            <div class="aviso ruim" role="alert">
+                @foreach (var erro in _errosCarteira)
+                {
+                    <div>@erro</div>
+                }
+            </div>
+        }
+
+        <div class="acoes">
+            <button type="button" class="btn" @onclick="SalvarCarteira" disabled="@_salvandoCarteira">
+                @(_salvandoCarteira ? "Salvando..." : "Salvar")
+            </button>
+            <button type="button" class="btn secundario" @onclick="() => _carteiraEditando = null">Cancelar</button>
+            @if (_carteiraEditando.Id != 0)
+            {
+                <button type="button" class="btn perigo" style="margin-left:auto" @onclick="ExcluirCarteira">
+                    Excluir
+                </button>
+            }
+        </div>
+    </Modal>
+}
+
 @if (_cartaoEditando is not null)
 {
     <Modal Titulo="@(_cartaoEditando.Id == 0 ? "Novo cartão" : "Editar cartão")" AoFechar="() => _cartaoEditando = null">
@@ -329,6 +505,16 @@ else
 
         <div class="dica">
             Compra feita no próprio dia do fechamento já entra na fatura seguinte.
+        </div>
+
+        <div class="campo-grupo">
+            <label for="juros-cartao">Juros do rotativo ao mês (%)</label>
+            <input id="juros-cartao" type="number" inputmode="decimal" min="0" max="50" step="0.1"
+                   class="campo" @bind="_jurosPercentual" />
+            <div class="dica">
+                Só entra na conta quando a fatura passa do vencimento sem ser paga.
+                Deixe zero se não souber: o app não inventa juros.
+            </div>
         </div>
 
         @if (_errosCartao.Count > 0)
@@ -365,6 +551,10 @@ else
 
     private Cartao? _cartaoEditando;
     private List<string> _errosCartao = [];
+    private decimal _jurosPercentual;
+    private Carteira? _carteiraEditando;
+    private List<string> _errosCarteira = [];
+    private bool _salvandoCarteira;
     private string _novaTag = "";
     private bool _salvando;
 
@@ -380,7 +570,17 @@ else
         _ancoras = await Servico.ObterHistoricoAncorasAsync();
 
         var projecao = Servico.Projetar(_dados, null, Relogio.Hoje);
-        _saldoProjetadoHoje = projecao.Agora.SaldoHojeCentavos;
+
+        // O numero a comparar com o banco e o saldo do FIM de hoje, que e o mesmo que o
+        // saldo do inicio de amanha. Depois de uma recalibracao a ancora passa a ser amanha,
+        // e ai hoje fica fora da projecao: nesse caso o saldo do fim de hoje e a propria
+        // ancora. Sem este segundo caso a tela sumiria logo apos conferir.
+        _saldoProjetadoHoje = _cfg.DataAncora <= Relogio.Hoje
+            ? projecao.Dia(Relogio.Hoje)?.SaldoCentavos
+            : _cfg.DataAncora == Relogio.Hoje.AddDays(1)
+                ? _cfg.SaldoAncoraCentavos
+                : null;
+
         _saldoReal = _saldoProjetadoHoje ?? 0;
     }
 
@@ -414,14 +614,111 @@ else
 
     private async Task Recalibrar()
     {
-        await Servico.RecalibrarAsync(_saldoReal, Relogio.Hoje);
-        _mensagem = $"Saldo de hoje passou a ser {Formato.Moeda(_saldoReal)}.";
-        await CarregarAsync();
+        // Dois toques criariam duas ancoras no historico.
+        if (_salvando)
+        {
+            return;
+        }
+
+        _salvando = true;
+
+        try
+        {
+            await Servico.RecalibrarAsync(_saldoReal, Relogio.Hoje);
+            _mensagem = $"Saldo conferido em {Formato.Moeda(_saldoReal)}. " +
+                        $"Vale a partir de {Formato.Data(Relogio.Hoje.AddDays(1))}.";
+            await CarregarAsync();
+        }
+        finally
+        {
+            _salvando = false;
+        }
+    }
+
+    private void AbrirCarteira(Carteira? original)
+    {
+        _errosCarteira = [];
+
+        // Copia, para cancelar nao deixar a lista com dados meio editados.
+        _carteiraEditando = original is null
+            ? new Carteira { Nome = "", Tipo = TipoCarteira.Beneficio, DataAncora = Relogio.Hoje }
+            : new Carteira
+            {
+                Id = original.Id,
+                Nome = original.Nome,
+                Tipo = original.Tipo,
+                SaldoAncoraCentavos = original.SaldoAncoraCentavos,
+                DataAncora = original.DataAncora,
+                DiarioPrevistoCentavos = original.DiarioPrevistoCentavos,
+                SaldoConfortoCentavos = original.SaldoConfortoCentavos,
+                Ordem = original.Ordem
+            };
+    }
+
+    /// <summary>
+    /// null e "carteira sem diario", que e diferente de diario zero: zero desconta zero todo
+    /// dia, null nao desconta nada e nem aparece no check-in.
+    /// </summary>
+    private void TrocarDiarioDaCarteira(ChangeEventArgs evento)
+    {
+        if (_carteiraEditando is not null)
+        {
+            _carteiraEditando.DiarioPrevistoCentavos = evento.Value is true ? 0 : null;
+        }
+    }
+
+    private async Task SalvarCarteira()
+    {
+        if (_carteiraEditando is null)
+        {
+            return;
+        }
+
+        _errosCarteira = Validacao.Carteira(_carteiraEditando);
+
+        if (_errosCarteira.Count > 0)
+        {
+            return;
+        }
+
+        _salvandoCarteira = true;
+
+        try
+        {
+            await Servico.SalvarCarteiraAsync(_carteiraEditando);
+            _carteiraEditando = null;
+            await CarregarAsync();
+        }
+        finally
+        {
+            _salvandoCarteira = false;
+        }
+    }
+
+    private async Task ExcluirCarteira()
+    {
+        if (_carteiraEditando is { Id: > 0 } carteira)
+        {
+            var impedimento = await Servico.ExcluirCarteiraAsync(carteira.Id);
+
+            if (impedimento is not null)
+            {
+                _errosCarteira = [impedimento];
+                return;
+            }
+
+            _carteiraEditando = null;
+            await CarregarAsync();
+        }
     }
 
     private void AbrirCartao(Cartao? original)
     {
         _errosCartao = [];
+
+        // Guardado como fração (0,15), digitado como porcentagem (15): o dono pensa em "15% ao
+        // mês", e o motor precisa do fator para multiplicar.
+        _jurosPercentual = (original?.JurosRotativoMensal ?? 0m) * 100m;
 
         _cartaoEditando = original is null
             ? new Cartao { Nome = "", DiaFechamento = 1, DiaVencimento = 10 }
@@ -430,7 +727,8 @@ else
                 Id = original.Id,
                 Nome = original.Nome,
                 DiaFechamento = original.DiaFechamento,
-                DiaVencimento = original.DiaVencimento
+                DiaVencimento = original.DiaVencimento,
+                JurosRotativoMensal = original.JurosRotativoMensal
             };
     }
 
@@ -441,6 +739,7 @@ else
             return;
         }
 
+        _cartaoEditando.JurosRotativoMensal = _jurosPercentual / 100m;
         _errosCartao = Validacao.Cartao(_cartaoEditando);
 
         if (_errosCartao.Count > 0)
@@ -479,6 +778,13 @@ else
 
         await Servico.SalvarTagAsync(new Tag { Nome = _novaTag.Trim() });
         _novaTag = "";
+        await CarregarAsync();
+    }
+
+    private async Task TrocarCorDaTag(Tag tag, string cor)
+    {
+        tag.Cor = cor;
+        await Servico.SalvarTagAsync(tag);
         await CarregarAsync();
     }
 

@@ -25,6 +25,21 @@ public sealed record ArquivoBackup
     public List<DiarioReal> Diarios { get; init; } = [];
 
     public List<AncoraHistorico> Ancoras { get; init; } = [];
+
+    /// <summary>
+    /// Versao 2 em diante. Num arquivo da versao 1 esta lista vem vazia, que e exatamente o que
+    /// a versao 1 queria dizer: nenhuma ocorrencia tinha situacao registrada.
+    /// </summary>
+    public List<SituacaoOcorrencia> Situacoes { get; init; } = [];
+
+    /// <summary>Versao 3 em diante. Vazia num arquivo antigo: so existia a conta corrente.</summary>
+    public List<Carteira> Carteiras { get; init; } = [];
+
+    /// <summary>Versao 3 em diante. Vazia num arquivo antigo: cada compra saia sozinha (R16).</summary>
+    public List<FaturaCartao> Faturas { get; init; } = [];
+
+    /// <summary>Versao 4 em diante. Vazia num arquivo antigo: nao existia ganho variavel (R17).</summary>
+    public List<GanhoVariavel> GanhosVariaveis { get; init; } = [];
 }
 
 public sealed record ResultadoRestauracao
@@ -45,7 +60,12 @@ public sealed record ResultadoRestauracao
 /// </summary>
 public sealed class BackupService(IDbContextFactory<FinancasDbContext> fabrica, IRelogio relogio)
 {
-    public const int VersaoSchema = 1;
+    /// <summary>
+    /// 1: formato original. 2: cor na tag, liga/desliga do diario previsto e a situacao de cada
+    /// ocorrencia. 3: repeticao semanal, ocorrencia pulada, carteiras e faturas. 4: ganho variavel. Todo campo novo tem padrao neutro, entao arquivo antigo e lido direto,
+    /// sem conversao: o que falta nele simplesmente nao existia.
+    /// </summary>
+    public const int VersaoSchema = 4;
 
     private static readonly JsonSerializerOptions Opcoes = new()
     {
@@ -68,7 +88,11 @@ public sealed class BackupService(IDbContextFactory<FinancasDbContext> fabrica, 
             Metas = await db.Metas.AsNoTracking().ToListAsync(),
             Lancamentos = await db.Lancamentos.AsNoTracking().ToListAsync(),
             Diarios = await db.DiariosReais.AsNoTracking().ToListAsync(),
-            Ancoras = await db.Ancoras.AsNoTracking().ToListAsync()
+            Ancoras = await db.Ancoras.AsNoTracking().ToListAsync(),
+            Situacoes = await db.Situacoes.AsNoTracking().ToListAsync(),
+            Carteiras = await db.Carteiras.AsNoTracking().ToListAsync(),
+            Faturas = await db.Faturas.AsNoTracking().ToListAsync(),
+            GanhosVariaveis = await db.GanhosVariaveis.AsNoTracking().ToListAsync()
         };
 
         return JsonSerializer.Serialize(arquivo, Opcoes);
@@ -111,7 +135,11 @@ public sealed class BackupService(IDbContextFactory<FinancasDbContext> fabrica, 
             $"{arquivo.Diarios.Count} dia(s) com diario registrado",
             $"{arquivo.Cartoes.Count} cartao(oes)",
             $"{arquivo.Tags.Count} tag(s)",
-            $"{arquivo.Metas.Count} meta(s)"
+            $"{arquivo.Metas.Count} meta(s)",
+            $"{arquivo.Situacoes.Count} conta(s) com pagamento registrado",
+            $"{arquivo.Carteiras.Count} carteira(s) alem da conta corrente",
+            $"{arquivo.Faturas.Count} fatura(s) de cartao",
+            $"{arquivo.GanhosVariaveis.Count} mes(es) com ganho variavel"
         };
 
         if (!confirmar)
@@ -130,8 +158,12 @@ public sealed class BackupService(IDbContextFactory<FinancasDbContext> fabrica, 
         await using var transacao = await db.Database.BeginTransactionAsync();
 
         // A ordem importa por causa das chaves estrangeiras dos lancamentos.
+        await db.Situacoes.ExecuteDeleteAsync();
         await db.Lancamentos.ExecuteDeleteAsync();
         await db.DiariosReais.ExecuteDeleteAsync();
+        await db.GanhosVariaveis.ExecuteDeleteAsync();
+        await db.Faturas.ExecuteDeleteAsync();
+        await db.Carteiras.ExecuteDeleteAsync();
         await db.Ancoras.ExecuteDeleteAsync();
         await db.Cartoes.ExecuteDeleteAsync();
         await db.Tags.ExecuteDeleteAsync();
@@ -150,6 +182,10 @@ public sealed class BackupService(IDbContextFactory<FinancasDbContext> fabrica, 
         db.Lancamentos.AddRange(arquivo.Lancamentos);
         db.DiariosReais.AddRange(arquivo.Diarios);
         db.Ancoras.AddRange(arquivo.Ancoras);
+        db.Carteiras.AddRange(arquivo.Carteiras);
+        db.Faturas.AddRange(arquivo.Faturas);
+        db.GanhosVariaveis.AddRange(arquivo.GanhosVariaveis);
+        db.Situacoes.AddRange(arquivo.Situacoes);
 
         await db.SaveChangesAsync();
         await transacao.CommitAsync();
@@ -166,9 +202,17 @@ public sealed class BackupService(IDbContextFactory<FinancasDbContext> fabrica, 
     {
         var erros = new List<string>();
 
-        if (arquivo.SchemaVersion != VersaoSchema)
+        // Arquivo mais antigo e aceito: os campos que faltam nele nascem no padrao, que e o
+        // comportamento da versao em que ele foi gerado. Recusar deixaria o dono com uma pasta
+        // de backups que o proprio app nao abre mais, que e o pior desfecho possivel.
+        if (arquivo.SchemaVersion > VersaoSchema)
         {
-            erros.Add($"O arquivo e da versao {arquivo.SchemaVersion} e este programa le a versao {VersaoSchema}.");
+            erros.Add($"O arquivo e da versao {arquivo.SchemaVersion} e este programa le ate a versao {VersaoSchema}. " +
+                      "Ele foi gerado por uma versao mais nova do app.");
+        }
+        else if (arquivo.SchemaVersion < 1)
+        {
+            erros.Add($"O arquivo diz ser da versao {arquivo.SchemaVersion}, que nao existe.");
         }
 
         if (arquivo.Configuracao is null)

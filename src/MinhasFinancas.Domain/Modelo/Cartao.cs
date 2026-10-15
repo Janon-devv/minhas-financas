@@ -10,12 +10,26 @@ public class Cartao
 
     /// <summary>Dia do mes em que a fatura vence (1 a 31).</summary>
     public int DiaVencimento { get; set; }
+
+    /// <summary>
+    /// Juros do rotativo ao mes, como fracao: 0,15 e 15% ao mes. Usado so quando a fatura passa
+    /// do vencimento com saldo devedor (R15). Zero significa "nao sei", e ai o app nao inventa
+    /// juros nenhum.
+    /// </summary>
+    public decimal JurosRotativoMensal { get; set; }
 }
 
 public class Tag
 {
     public int Id { get; set; }
     public string Nome { get; set; } = "";
+
+    /// <summary>
+    /// Nome da cor da paleta, nao um hexadecimal livre: cada nome tem par de fundo e texto ja
+    /// medido em 4,5:1 no app.css. Cor escolhida a dedo quebraria o contraste sem avisar.
+    /// Vazio cai na pilula neutra.
+    /// </summary>
+    public string Cor { get; set; } = "";
 }
 
 /// <summary>

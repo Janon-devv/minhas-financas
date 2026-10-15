@@ -198,6 +198,17 @@ public static class Formato
         _ => "economia"
     };
 
+    /// <summary>
+    /// Nomes da paleta de tags, na ordem em que aparecem para escolher.
+    /// Os pares de cor estao no app.css; aqui so os nomes, para nao ter hexadecimal solto no C#.
+    /// </summary>
+    public static readonly string[] CoresDeTag =
+        ["rosa", "laranja", "ambar", "verde", "turquesa", "azul", "indigo", "roxo"];
+
+    /// <summary>Classe da pilula de uma tag. Cor desconhecida ou vazia cai na neutra.</summary>
+    public static string ClasseTag(string? cor) =>
+        !string.IsNullOrEmpty(cor) && CoresDeTag.Contains(cor) ? $"tag-{cor}" : "neutra";
+
     public static string TextoVeredito(Veredito veredito) => veredito switch
     {
         Veredito.CabeComFolga => "Cabe com folga",

@@ -14,10 +14,27 @@ public class Lancamento
     /// <summary>Valor de cada ocorrencia, em centavos. Precisa ser maior que zero.</summary>
     public long ValorCentavos { get; set; }
 
-    /// <summary>1 = uma vez; N = N ocorrencias mensais; null = todo mes, sem fim.</summary>
+    /// <summary>1 = uma vez; N = N ocorrencias; null = sem fim. O intervalo vem de Periodicidade.</summary>
     public int? Vezes { get; set; }
 
+    /// <summary>
+    /// Mensal (padrao) ou Semanal. Compra de supermercado acontece toda semana, nao todo dia 5:
+    /// forcar tudo em mes espalha o gasto na data errada e o saldo do dia sai errado.
+    /// </summary>
+    public Periodicidade Periodicidade { get; set; } = Periodicidade.Mensal;
+
     public int? CartaoId { get; set; }
+
+    /// <summary>
+    /// So significa algo quando Tipo = Cartao e existe fatura cadastrada para o ciclo (R14).
+    /// </summary>
+    public PapelNaFatura PapelNaFatura { get; set; } = PapelNaFatura.NovoLancamento;
+
+    /// <summary>
+    /// De qual carteira o dinheiro sai ou entra. null e a conta corrente (R13), que e o que
+    /// todo lancamento gravado antes das carteiras existirem quer dizer.
+    /// </summary>
+    public int? CarteiraId { get; set; }
 
     /// <summary>So para Entrada. null equivale a Certa.</summary>
     public Certeza? Certeza { get; set; }
@@ -38,6 +55,16 @@ public class Lancamento
 /// </summary>
 public class DiarioReal
 {
+    /// <summary>
+    /// Chave propria em vez da data. A partir das carteiras, o mesmo dia tem um diario por
+    /// carteira, e o SQLite nao aceita chave composta com coluna anulavel.
+    /// </summary>
+    public int Id { get; set; }
+
     public DateOnly Data { get; set; }
+
+    /// <summary>null e a conta corrente (R13).</summary>
+    public int? CarteiraId { get; set; }
+
     public long ValorCentavos { get; set; }
 }

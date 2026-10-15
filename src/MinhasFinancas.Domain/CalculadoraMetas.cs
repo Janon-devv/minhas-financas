@@ -77,7 +77,7 @@ public static class CalculadoraMetas
             {
                 var dataEfetiva = Ocorrencias.DataEfetiva(aporte, indiceCartoes);
 
-                foreach (var data in Ocorrencias.Ate(dataEfetiva, aporte.Vezes, limite))
+                foreach (var data in Ocorrencias.Ate(dataEfetiva, aporte.Vezes, limite, aporte.Periodicidade))
                 {
                     if (data < ancora)
                     {

@@ -81,6 +81,18 @@ else
                         <td>Entradas</td>
                         <td class="num valor-ok">@Formato.Moeda(mes.EntradasCentavos)</td>
                     </tr>
+                    @if (mes.GanhoVariavelCentavos > 0)
+                    {
+                        @* Mostrar a composicao, e nao so o total: o resto das entradas e
+                           projecao e esta parte e numero que o dono digitou. Somar sem dizer
+                           deixaria ele sem como reconstruir o numero de cima. *@
+                        <tr>
+                            <td class="secundario" style="padding-left:1rem">
+                                sendo ganho variável
+                            </td>
+                            <td class="num secundario">@Formato.Moeda(mes.GanhoVariavelCentavos)</td>
+                        </tr>
+                    }
                     <tr>
                         <td>Saídas</td>
                         <td class="num">@Formato.Moeda(mes.SaidasCentavos)</td>
@@ -147,16 +159,20 @@ else
                 <div class="corpo">
                     @foreach (var tag in mes.SaidasPorTag)
                     {
+                        var classe = Formato.ClasseTag(
+                            tag.TagId is int id ? _dados.Tags.FirstOrDefault(t => t.Id == id)?.Cor : null);
+
                         <div style="margin-bottom:0.7rem">
                             <div style="display:flex; justify-content:space-between; gap:0.5rem; font-size:0.85rem">
-                                <span>@tag.Nome</span>
+                                <span class="pilula @classe">@tag.Nome</span>
                                 <span class="dinheiro">
                                     @Formato.Moeda(tag.ValorCentavos)
                                     <span class="ajuda">@Formato.Porcento(tag.Fracao)</span>
                                 </span>
                             </div>
                             <div class="barra" style="margin-top:0.2rem">
-                                <span style="width:@((tag.Fracao * 100).ToString("N1", CultureInfo.InvariantCulture))%"></span>
+                                <span class="@classe"
+                                      style="width:@((tag.Fracao * 100).ToString("N1", CultureInfo.InvariantCulture))%"></span>
                             </div>
                         </div>
                     }

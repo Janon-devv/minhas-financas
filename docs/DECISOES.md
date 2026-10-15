@@ -124,9 +124,12 @@ antiga continua no lugar como rede de segurança.
 
 ## 8. Testes
 
-O dono pediu o mínimo: "eu testo". Ficaram 48 testes, concentrados onde um erro passa despercebido:
+O dono pediu o mínimo: "eu testo". Ficaram 73 testes, concentrados onde um erro passa despercebido:
 
 - 6 dourados, comparando o motor com `docs/fixtures` dia a dia e mês a mês, em centavos exatos.
+- As regras R12 a R17, que nasceram depois dos fixtures e portanto não têm cenário dourado:
+  situação da ocorrência, carteiras e a aritmética da fatura (total informado contra soma dos
+  itens, detalhamento que não soma duas vezes, pagamento parcial, parcelamento e juros do atraso).
 - Casos de borda das regras R1 a R11 que o cenário não cobre: compra no próprio dia do fechamento,
   vencimento 31 em fevereiro de ano bissexto, dia 31 recorrente, diário real zero contra ausência de
   registro, empate de mínimo, âncora no futuro, recalibração.
@@ -146,3 +149,277 @@ Descoberto ao implementar, vale repetir porque custa tempo:
 - `esperado_mensal.csv`: `saidas_e_cartao_centavos` **exclui** economias.
 
 Quem comparar os dois com a mesma fórmula vai ver erro onde não tem.
+
+## 10. A conferência com o banco estava comparando unidades diferentes
+
+Encontrado no primeiro uso real do app, não nos testes: os testes cobrem o motor, e o defeito
+estava na costura entre o motor e a tela.
+
+`ResumoAgora.SaldoHojeCentavos` é o saldo do **fim** do dia, já com o diário descontado.
+`RecalibrarAsync` gravava esse número em `Configuracao.SaldoAncoraCentavos`, que por definição
+é o saldo do **início** do dia. Comparar um com o outro e gravar de volta não converge: a cada
+recalibração sumia exatamente o diário do dia. Com diário de R$ 4,96, conferir R$ 38,27 fazia o
+app passar a dizer R$ 33,31 e apontar uma diferença nova de R$ 4,96, para sempre.
+
+A origem era a R7 da especificação, que mandava gravar `data = hoje`. A seção 7 já tinha a
+pista certa ("ou recalibre com data de amanhã"), mas como conselho ao usuário, não como regra.
+
+**Decisão:** o número que o usuário digita é o que o banco mostra **agora**, com os gastos do
+dia já dentro dele. Logo ele é o saldo do início de **amanhã**, e a nova âncora é `hoje + 1`.
+A R7 foi corrigida junto com o código.
+
+Consequência que precisou de tratamento na borda: com a âncora em amanhã, hoje passa a ser
+anterior à âncora e `SaldoHojeCentavos` fica nulo. A tela de conferência sumiria logo após
+conferir. `Ajustes` resolve isso lendo a própria âncora nesse caso, que é por definição o saldo
+do fim de hoje.
+
+Alternativa descartada: perguntar a cada conferência se o número já inclui os gastos do dia.
+Mais exato, um toque a mais toda semana, e o caso "confiro antes de gastar qualquer coisa" é
+raro o bastante para não pagar esse preço.
+
+
+### Desdobramento: o dia da conferência ficava sem saldo
+
+Ancorar em hoje + 1 fechou a aritmética, mas apagou o número principal da tela Hoje pelo resto do
+dia em que o dono conferia: a projeção começa amanhã, logo "saldo de hoje" não existia mais.
+
+Isso era conclusão errada tirada de premissa certa. O saldo âncora é o saldo do **início** de
+amanhã, que é exatamente o saldo do **fim** de hoje: é o mesmo instante visto de dois lados. Então
+hoje tem saldo, e é justamente o número que o dono acabou de ler no banco.
+
+A tela também passa a dizer de onde veio: "Conferido com o banco hoje. Já inclui o que saiu hoje",
+em vez de "Projetado para o fim do dia, já contando o diário", que seria falso duas vezes.
+
+Com a âncora mais de um dia à frente continua sem saldo de hoje, porque aí seria preciso projetar
+para trás, e projetar para trás é inventar.
+
+## 11. O diário previsto virou opcional
+
+O CONTEXTO tratava o diário previsto como fato: todo dia sem registro desconta o previsto, e a
+R4 avisava que dia passado sem registro usa o previsto, "não é zero". A ideia era não prometer
+dinheiro que não existe.
+
+Só que ela assume um padrão de gasto que nem todo mundo tem. Quem faz marmita e compra de
+semana gasta em blocos, não um pouco por dia: o gasto real já está cadastrado como conta, e o
+diário descontava de novo, todo dia, um valor que não sai. Em dois anos de horizonte isso vira
+uma montanha inventada, e foi o que fez a primeira projeção do app aparecer em -R$ 18.261,73.
+
+**Decisão:** `diario_previsto_ativo`, ligado por padrão. Desligado, dia sem registro vale zero e
+o valor do previsto continua gravado, só como referência. O registro do dia continua mandando
+nos dois casos, inclusive o registro de valor zero: desligar o previsto não apaga gasto real.
+
+Padrão `true` nos dois lugares, na classe e na coluna do banco (`HasDefaultValue(true)`). Com o
+padrão `false` que o EF gera sozinho, a atualização desligaria o diário de quem já usava o app,
+calada, e todo saldo projetado subiria de um dia para o outro sem ninguém ter pedido.
+
+Alternativa descartada: deixar o dono zerar o valor do previsto quando não quisesse contar.
+Funciona para a conta, mas perde a informação: ele quer manter o valor de referência à mão e
+poder ligar de novo sem ter que lembrar quanto era.
+
+## 12. O primeiro acesso virou guia, e não uma lista de links
+
+A tela final do onboarding mostrava três links ("Cadastre o que entra", "as contas fixas", "seus
+cartões") que jogavam o usuário na aplicação inteira liberada. Quem clicava no primeiro saía do
+primeiro acesso e perdia os outros dois: a sequência existia no texto, mas não no programa.
+
+**Decisão:** as três etapas passam a acontecer dentro do próprio guia, com formulário embutido,
+"Passo N de 6", confirmação do que foi salvo a cada item e "Pular esta etapa" em todas. A tela
+final lista o que ficou feito e o que ficou pulado, e só então leva para a tela Hoje.
+
+Quem sai no meio não recomeça do zero: com os números já salvos, `/comecar` volta direto para a
+etapa de cadastro, não para a primeira pergunta.
+
+
+## 13. Pago e não pago é propriedade da ocorrência, não do lançamento
+
+O dono relatou o aluguel atrasado e pediu um sistema de conta paga e não paga. A tentação é um
+campo `Pago` no lançamento, e ele estaria errado: o lançamento é a regra ("aluguel todo dia 5"),
+que gera ocorrências para sempre. Pagar o aluguel de outubro não diz nada sobre o de novembro.
+
+Daí `SituacaoOcorrencia`, com chave `(lancamento_id, data_prevista)` e registro **só quando a
+ocorrência foge do padrão**. Sem registro, tudo se comporta como antes: é o elemento neutro que
+mantém os testes dourados passando sem tocar nos fixtures.
+
+**O problema de verdade não era mostrar um selo de "pago".** Era que uma conta vencida antes da
+âncora simplesmente não existe para a projeção: a R3 exclui ocorrências anteriores à âncora
+porque o saldo de partida veio do extrato e já as contabilizou. Quando a conta **não** foi paga,
+essa premissa cai: o dinheiro ainda está lá, a saída ainda vai acontecer, e o app mostra folga
+que não existe. Era o caso do dono naquele dia.
+
+**Decisão:** o app não adivinha. O extrato não diz quais contas saíram dele, então a tela Hoje
+lista o que venceu nos últimos 45 dias e pergunta. Respondido "ainda não", a saída é trazida
+para o primeiro dia projetado em vez de desaparecer. Respondido "paguei", some de vez se saiu
+antes da âncora, ou conta no dia em que saiu de verdade, se saiu depois.
+
+De carona, a mesma entidade resolve conta que varia: `valor_centavos` na ocorrência vale só
+naquele mês, e os seguintes continuam no previsto. Luz e água deixam de precisar de edição do
+lançamento todo mês.
+
+Alternativa descartada: marcar como pago movendo a data do lançamento. Perderia o histórico e
+mudaria todas as ocorrências futuras junto.
+
+## 14. Cor de tag é nome de paleta, não hexadecimal
+
+O dono pediu cores diferentes por tag. Campo de cor livre é o caminho curto e quebra o contraste
+na primeira escolha: o texto da pílula é escuro, e qualquer fundo escuro reprova os 4,5:1 que o
+projeto trata como regra que não regride.
+
+**Decisão:** oito nomes fixos (rosa, laranja, âmbar, verde, turquesa, azul, índigo, roxo), cada
+um com par de fundo e texto no `app.css`, medidos entre 6,3:1 e 8,0:1. A cor do texto serve de
+preenchimento da barra do Resumo, com no mínimo 7:1 sobre o branco. O nome da tag continua
+escrito dentro da pílula, então a cor nunca é a única pista.
+
+
+## 15. Repetição semanal existe por causa do valor que varia, não apesar dele
+
+O dono faz marmita e compra de mercado uma vez por semana. Cadastrar isso como conta mensal erra
+duas vezes: a data, porque o dinheiro sai quatro ou cinco vezes no mês e não uma, e o valor,
+porque ele muda a cada compra.
+
+A primeira metade se resolve com `Periodicidade = Semanal`, de 7 em 7 dias a partir da data
+original. A segunda **não se resolve no lançamento**, e foi o próprio dono quem apontou: "o valor
+varia, não é fixo". Por isso as duas coisas entraram juntas. O lançamento guarda o valor que
+costuma dar, e a cada semana a ocorrência é confirmada com o valor de verdade, que fica gravado
+só naquela ocorrência (R12).
+
+Semanal não vale para `Cartao`: a data efetiva de um lançamento de cartão é o vencimento da
+fatura, e quatro compras na mesma semana caem na **mesma** fatura. Repetir de 7 em 7 dias ali
+inventaria vencimentos que não existem. A `Validacao` recusa, em vez de deixar o motor produzir
+um número errado em silêncio.
+
+## 16. "Não teve" é um terceiro estado, não um pagamento de zero
+
+Academia trancada no mês, semana sem compra. Marcar como paga de R$ 0,00 confundiria duas coisas
+diferentes na hora de olhar para trás: dinheiro que saiu valendo zero contra evento que não
+aconteceu. `Pulada` é um campo próprio, a ocorrência some da projeção e da lista, e o lançamento
+continua valendo nos outros períodos.
+
+## 17. "Livre depois das contas do mês"
+
+O saldo grande é o do fim de hoje: ele ainda não viu as contas que vencem dia 20, 25, 30. Para
+quem tem pouco na conta, esse número sozinho convida a gastar o que já está comprometido.
+
+O indicador novo subtrai dele as saídas que **ainda vão vencer** neste mês e não foram pagas. As
+vencidas que o dono marcou em aberto ficam de fora da subtração de propósito: elas já foram
+trazidas para dentro da projeção pela R12, e contá-las de novo descontaria duas vezes o mesmo
+dinheiro. É o mesmo cuidado da seção 10, agora no outro sentido.
+
+
+## 18. A conta corrente não virou uma linha da tabela de carteiras
+
+O plano previa uma entidade `Carteira` com um sinalizador `Principal`, e a migração semeando uma
+linha "Banco" a partir da `Configuracao`. Na hora de escrever, isso criava duas verdades para o
+mesmo número: a conferência com o extrato (R7) grava em `Configuracao`, o onboarding também, e a
+tela de carteiras gravaria na linha. Qual das duas vale passaria a depender de qual foi salva por
+último, e o erro só apareceria como um saldo estranho semanas depois.
+
+**Decisão:** a tabela guarda só as carteiras **além** da conta corrente. A conta corrente é a
+própria `Configuracao`, sintetizada como carteira de id 0 na hora de projetar. Não há seed, não
+há migração de dados, e `carteira_id = null` num lançamento antigo já significa exatamente o que
+precisa significar.
+
+Isso também simplificou o motor: em vez de arrays de duas dimensões e um acumulador por carteira,
+o mesmo núcleo roda uma vez por carteira, com a configuração equivalente dela. Carteira sem
+diário projeta com a contagem desligada, que é a R4 que já existia desde a seção 11.
+
+**Projeções independentes, de propósito.** Nada soma os saldos das carteiras num número único.
+R$ 190 de vale-alimentação não ajudam a pagar um aluguel de R$ 1.500, e um total de R$ 6.154
+esconderia exatamente o aperto que o app existe para mostrar.
+
+## 19. A fatura de cartão aceita o total, os itens, ou os dois
+
+A R1 já fazia a parte difícil: cada compra no cartão sai na data de vencimento da fatura dela, e
+compra parcelada sai uma parcela por ciclo. O que faltava era o caminho de quem **não** cadastra
+compra por compra, que é todo mundo depois da segunda semana. Olhar o aplicativo do banco e
+digitar um número é uma rotina que se mantém; transcrever quarenta linhas não é.
+
+O problema é que os dois caminhos juntos contam duas vezes. Se o total informado é R$ 1.200 e as
+compras lançadas somam R$ 890, somar tudo dá R$ 2.090 de dívida que não existe. A especificação já
+proibia isso na seção 7, mas proibir não resolve: o dono vai querer ver o que compôs a fatura.
+
+**Decisão:** cada item de cartão carrega um papel. `Detalhamento` só descreve o que já está dentro
+do total informado e não soma; `NovoLancamento` entra além dele. Sem total informado, os itens são
+a única fonte e todos contam, porque não existe total para eles estarem dentro.
+
+O padrão tinha que ser `NovoLancamento`: todo lançamento de Cartão já gravado soma na projeção
+hoje, e qualquer outro padrão mudaria o significado de dado antigo sem avisar.
+
+**A conta fica aberta na tela.** Informado, acrescentado, detalhado, total efetivo, pago e falta
+pagar, cada linha com a sua quantidade de itens. Mostrar só o resultado seria pedir confiança num
+número que o dono não consegue reconstruir, e um total errado sem decomposição visível vira
+desconfiança no app inteiro.
+
+**Pagamento parcial é a regra.** `pago_centavos` acumula, e o que já saiu sai no dia em que saiu,
+não no vencimento. A parcela que falta continua marcada no vencimento, porque é quando ela vai
+sair. Enquanto nada foi pago, a projeção assume pagamento integral: é a hipótese conservadora da
+seção 4.
+
+**Juros só com taxa informada.** Zero é o padrão e significa "não sei", não "não tem". Atraso de
+40 dias conta 1 mês cheio, os juros incidem sobre o que sobrou e não sobre o total, e o
+arredondamento acontece uma vez no fim: arredondar mês a mês acumularia erro sempre no sentido
+favorável ao app, que é justamente o sentido errado.
+
+**Fatura vencida antes da âncora não desaparece.** A R3 exclui o passado porque o saldo do extrato
+já o reflete, mas uma fatura não paga não está no extrato: o dinheiro ainda está na conta. Então
+ela vem para o primeiro dia projetado, com os juros do atraso, pelo mesmo motivo da seção 13.
+
+**Ciclo sem fatura cadastrada não mudou nada** (R16). É o que mantém os seis dourados intactos: o
+cenário dos fixtures não tem fatura nenhuma, logo os 811 dias saem com os mesmos centavos.
+
+## 20. Ganho variável é registro do passado, não previsão do futuro
+
+Renda de aplicativo de corrida muda todo mês. Isso não cabe em `Lancamento`, que existe para o
+que se repete com valor conhecido, e cadastrar um lançamento novo a cada mês é rotina que ninguém
+mantém depois da segunda vez. O dono foi direto ao ponto: não queria mais uma categoria, queria
+**um campo para preencher todo mês**.
+
+A pergunta difícil não era onde guardar, era o que o número significa. Se o dinheiro do Uber já
+caiu na conta, ele já está dentro do saldo conferido com o banco, e somá-lo na projeção mostraria
+dinheiro que não existe. É a mesma armadilha da seção 13, invertida: lá uma conta não paga sumia
+do saldo, aqui um ganho já recebido apareceria duas vezes.
+
+**Decisão do dono, entre três opções apresentadas:** é sempre registro do que **já caiu**. Conta
+nos ganhos do mês (R8) e monta o histórico, mas nunca mexe no saldo projetado. Em troca, não serve
+para dizer "espero fazer R$ 1.000 em novembro", e foi escolhido sabendo disso.
+
+**Mês em branco vale zero, e o app não chuta média.** Também foi escolha explícita, sobre a
+alternativa de projetar a média dos meses preenchidos com um liga/desliga. O preço é conhecido: o
+"menor saldo à frente" ignora um ganho que quase sempre vem, e fica mais feio que a realidade. O
+preço do contrário seria mostrar dinheiro que pode não vir, e a seção 4 já tinha decidido de que
+lado errar.
+
+Zero digitado e mês sem registro são coisas diferentes: "não rendeu nada" contra "ainda não
+respondi". Por isso apagar o registro é uma ação própria, e a média de referência ignora os meses
+em branco. É a mesma distinção do diário real, que também separa 0 de ausência.
+
+A tela mostra a composição, não só o total: **Entradas R$ 5.447,00 / sendo ganho variável
+R$ 1.247,00**. O resto das entradas é projeção e essa parte é número digitado. Somar sem dizer
+deixaria o dono sem como reconstruir o número de cima, que é exatamente o que a seção 19 evitou
+na fatura.
+
+## 21. "Plano" virou "Lançamentos", e virou a tela única de lançar
+
+O dono disse que o nome não fazia sentido na tela onde se lança as coisas, e que ali deveria
+juntar tudo que se lança. Ele estava certo duas vezes.
+
+"Plano de Contas" é o nome do **conceito** herdado da planilha, a lista de lançamentos
+programados. Como nome de tela, ele descrevia só uma das coisas que a tela faz, e não dizia o
+verbo que o dono usa: lançar.
+
+Pior: fatura de cartão e ganho variável também são coisas que se lançam, e estavam em telas
+separadas. Isso obrigava a lembrar em qual tela cada número é preenchido, que é exatamente o tipo
+de atrito que faz uma rotina ser abandonada.
+
+**Decisão:** uma tela só, chamada Lançamentos, com três seções: o que entra e o que sai, ganho
+variável, faturas de cartão. A tela de faturas deixou de existir como tela e virou um bloco em
+`Components/Compartilhado`, que recebe os dados já carregados pela tela e avisa quando algo muda.
+Carregar de novo dentro do bloco daria duas projeções por visita e deixaria as listas
+desencontradas depois de salvar.
+
+**As rotas antigas continuam.** `/plano` e `/faturas` abrem a mesma tela, porque o app vive num
+atalho salvo na tela do iPhone e trocar o endereço quebraria o atalho.
+
+**Um índice no topo.** Com três seções empilhadas, o campo do ganho variável ficava soterrado pela
+lista de lançamentos, e campo que ninguém acha é campo que ninguém preenche. O índice leva a cada
+seção. O caminho vai inteiro no `href` de propósito: com o `<base href="/">` do Blazor, um href só
+com fragmento é resolvido contra a base e joga o dono na tela Hoje.
