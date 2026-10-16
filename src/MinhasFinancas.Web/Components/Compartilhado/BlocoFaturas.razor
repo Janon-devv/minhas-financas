@@ -1,262 +1,258 @@
 @inject PlanejamentoService Servico
 @inject IRelogio Relogio
 
-@* Bloco de faturas (R14 a R16). Mora dentro da tela de lançar, e não numa tela só dele:
-   fatura é uma das coisas que o dono lança, e espalhar isso por duas telas obrigava a
-   lembrar em qual delas cada número é preenchido. *@
+@* Faturas de cartao (R14 a R16). Mora dentro da tela de lancar, e nao numa tela so dela:
+   fatura e uma das coisas que o dono lanca, e espalhar isso por duas telas obrigava a
+   lembrar em qual delas cada numero e preenchido. *@
 
 @if (_dados is null)
 {
-    <p class="vazio">Carregando...</p>
+    <Carregando />
 }
 else if (_dados.Cartoes.Count == 0)
 {
-    <div class="bloco" style="margin-top:0.75rem">
-        <header>
-            <h2>Faturas de cartão</h2>
-        </header>
-        <div class="corpo">
-            <p class="ajuda" style="margin:0">
-                Cadastre um cartão em Ajustes primeiro. Sem o dia de fechamento e o de
-                vencimento, o app não sabe em que dia a fatura sai da conta.
-            </p>
-        </div>
-    </div>
+    <Vazio Texto="Nenhum cartão cadastrado." NomeIcone="cartao">
+        <a class="btn" href="ajustes#cartoes">Cadastrar cartão</a>
+    </Vazio>
 }
 else
 {
-    <div class="bloco" style="margin-top:0.75rem">
-        <header>
-            <h2>Faturas de cartão</h2>
-            <button type="button" class="btn pequeno" @onclick="() => AbrirFatura(null)">
-                <Icone Nome="mais" Tamanho="16" /> Nova
-            </button>
-        </header>
-        <div class="corpo">
-            <p class="ajuda" style="margin:0">
-                Informe o total que o banco mostra e pronto: a fatura entra como um gasto só, no
-                dia do vencimento. Os itens são opcionais, e cada um diz se <strong>detalha</strong>
-                o total informado ou se <strong>soma</strong> a ele. Ciclo sem fatura aqui continua
-                com cada compra saindo sozinha.
-            </p>
-        </div>
+    <div style="margin-top:16px">
+        <Rotulo Texto="Uma fatura por ciclo, com o total do banco." Classe="rotulo-dica"
+                Ajuda="A fatura entra como um gasto só, no vencimento, e as compras do ciclo deixam de sair uma a uma. Cadastrar as compras é opcional: cada uma diz se já está no total ou se soma a ele. Ciclo sem fatura cadastrada continua com cada compra saindo no vencimento dela." />
     </div>
 
     @if (_resumos.Count == 0)
     {
-        <p class="vazio">Nenhuma fatura cadastrada ainda.</p>
+        <div class="grupo-corpo" style="margin-top:8px">
+            <Vazio Texto="Nenhuma fatura cadastrada.">
+                <button type="button" class="btn" @onclick="() => AbrirFatura(null)">Adicionar</button>
+            </Vazio>
+        </div>
     }
 
     @foreach (var resumo in _resumos)
     {
-        <div class="bloco" style="margin-top:0.75rem">
-            <header>
-                <h2>@resumo.NomeCartao</h2>
-                <span class="pilulas">
-                    @if (resumo.DevedorCentavos == 0)
-                    {
-                        <span class="farol ok">paga</span>
-                    }
-                    else if (resumo.EmAtraso)
-                    {
-                        <span class="farol negativo">em atraso</span>
-                    }
-                    else
-                    {
-                        <span class="pilula neutra">vence @Formato.DataCurta(resumo.Fatura.Vencimento)</span>
-                    }
-                </span>
-            </header>
-
-            <div class="corpo">
-                @* A conta aberta, não só o resultado: um total errado sem a decomposição à vista
-                   vira desconfiança no app inteiro. *@
-                <table class="tabela">
-                    <tbody>
+        <Grupo Titulo="@resumo.NomeCartao">
+            <Marcador>
+                @if (resumo.DevedorCentavos == 0)
+                {
+                    <span class="farol ok">paga</span>
+                }
+                else if (resumo.EmAtraso)
+                {
+                    <span class="farol negativo">em atraso</span>
+                }
+                else
+                {
+                    <span class="pilula neutra">vence @Formato.DataCurta(resumo.Fatura.Vencimento)</span>
+                }
+            </Marcador>
+            <Acoes>
+                <button type="button" class="btn texto pequeno" @onclick="() => AbrirFatura(resumo.Fatura)"
+                        aria-label="Editar fatura @resumo.NomeCartao de @Formato.DataCurta(resumo.Fatura.Vencimento)">
+                    Editar
+                </button>
+            </Acoes>
+            <ChildContent>
+                <div class="corpo">
+                    @* A conta aberta, não só o resultado: um total errado sem a decomposição à vista
+                       vira desconfiança no app inteiro. *@
+                    <dl class="linhas">
                         @if (resumo.TotalFoiInformado)
                         {
-                            <tr>
-                                <td>Informado</td>
-                                <td class="num">@Formato.Moeda(resumo.InformadoCentavos)</td>
-                            </tr>
+                            <div class="linha">
+                                <dt>Total do banco</dt>
+                                <dd><Valor Centavos="resumo.InformadoCentavos" /></dd>
+                            </div>
                         }
-                        <tr>
-                            <td>
-                                Acrescentado
-                                <div class="ajuda">@resumo.QuantidadeAcrescentada lançamento(s) novo(s)</div>
-                            </td>
-                            <td class="num">@Formato.Moeda(resumo.AcrescentadoCentavos)</td>
-                        </tr>
-                        <tr>
-                            <td>
-                                Detalhado
-                                <div class="ajuda">
-                                    @resumo.QuantidadeDetalhada item(ns)@(resumo.TotalFoiInformado
-                                        ? ", já dentro do informado"
-                                        : "")
-                                </div>
-                            </td>
-                            <td class="num">@Formato.Moeda(resumo.DetalhadoCentavos)</td>
-                        </tr>
-                        <tr>
-                            <td><strong>Total efetivo</strong></td>
-                            <td class="num"><strong>@Formato.Moeda(resumo.TotalCentavos)</strong></td>
-                        </tr>
+                        <div class="linha">
+                            <dt>
+                                Compras que somam
+                                <span class="linha-sub">@Formato.Quantos(resumo.QuantidadeAcrescentada, "compra", "compras")</span>
+                            </dt>
+                            <dd><Valor Centavos="resumo.AcrescentadoCentavos" /></dd>
+                        </div>
+                        <div class="linha">
+                            <dt>
+                                Compras já no total
+                                <span class="linha-sub">
+                                    @Formato.Quantos(resumo.QuantidadeDetalhada, "compra", "compras")@(resumo.TotalFoiInformado ? ", não somam de novo" : ", somam porque não há total do banco")
+                                </span>
+                            </dt>
+                            <dd><Valor Centavos="resumo.DetalhadoCentavos" /></dd>
+                        </div>
+                        <div class="linha total">
+                            <dt>Total da fatura</dt>
+                            <dd><Valor Centavos="resumo.TotalCentavos" /></dd>
+                        </div>
                         @if (resumo.PagoCentavos > 0)
                         {
-                            <tr>
-                                <td>
+                            <div class="linha">
+                                <dt>
                                     Pago
                                     @if (resumo.Fatura.PagoEm is DateOnly pagoEm)
                                     {
-                                        <div class="ajuda">último em @Formato.Data(pagoEm)</div>
+                                        <span class="linha-sub">último em @Formato.Data(pagoEm)</span>
                                     }
-                                </td>
-                                <td class="num valor-ok">@Formato.Moeda(resumo.PagoCentavos)</td>
-                            </tr>
+                                </dt>
+                                <dd><Valor Centavos="-resumo.PagoCentavos" /></dd>
+                            </div>
                         }
                         @if (resumo.JurosCentavos > 0)
                         {
-                            <tr>
-                                <td>
+                            <div class="linha">
+                                <dt>
                                     Juros do atraso
-                                    <div class="ajuda">@resumo.MesesDeAtraso mês(es) de atraso</div>
-                                </td>
-                                <td class="num valor-negativo">@Formato.Moeda(resumo.JurosCentavos)</td>
-                            </tr>
+                                    <span class="linha-sub">@Formato.Quantos(resumo.MesesDeAtraso, "mês", "meses")</span>
+                                </dt>
+                                <dd class="valor-negativo"><Valor Centavos="resumo.JurosCentavos" Mais="true" /></dd>
+                            </div>
                         }
-                        <tr>
-                            <td><strong>Falta pagar</strong></td>
-                            <td class="num @(resumo.ASairCentavos > 0 ? "valor-negativo" : "valor-ok")">
-                                <strong>@Formato.Moeda(resumo.ASairCentavos)</strong>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+                        <div class="linha total">
+                            <dt>Falta pagar</dt>
+                            <dd class="@(resumo.ASairCentavos > 0 ? "valor-negativo" : "")"><Valor Centavos="resumo.ASairCentavos" /></dd>
+                        </div>
+                    </dl>
 
-                <p class="ajuda" style="margin:0.5rem 0 0">
-                    Fecha em @Formato.Data(resumo.Fatura.Fechamento),
-                    vence em @Formato.Data(resumo.Fatura.Vencimento).
+                    <p class="dica">
+                        Fecha em @Formato.DataCurta(resumo.Fatura.Fechamento), vence em @Formato.Data(resumo.Fatura.Vencimento).
+                        @if (resumo.ASairCentavos > 0)
+                        {
+                            <text>Sai da conta em @Formato.Data(MinhasFinancas.Domain.Calendario.Maior(resumo.Fatura.Vencimento, Relogio.Hoje)).</text>
+                        }
+                    </p>
+
                     @if (resumo.ASairCentavos > 0)
                     {
-                        <text>Sai da conta em @Formato.Data(MinhasFinancas.Domain.Calendario.Maior(resumo.Fatura.Vencimento, Relogio.Hoje)).</text>
+                        <div class="acoes">
+                            <button type="button" class="btn secundario" @onclick="() => AbrirPagamento(resumo)">
+                                Registrar pagamento
+                            </button>
+                        </div>
                     }
-                </p>
-
-                <div class="acoes">
-                    @if (resumo.ASairCentavos > 0)
-                    {
-                        <button type="button" class="btn pequeno" @onclick="() => AbrirPagamento(resumo)">
-                            Registrar pagamento
-                        </button>
-                    }
-                    <button type="button" class="btn pequeno secundario" @onclick="() => AbrirFatura(resumo.Fatura)">
-                        Editar
-                    </button>
                 </div>
-            </div>
-        </div>
+            </ChildContent>
+        </Grupo>
     }
 }
 
-@if (_editando is not null)
+@if (_editando is not null && _dados is not null)
 {
-    <Modal Titulo="@(_editando.Id == 0 ? "Nova fatura" : "Editar fatura")" AoFechar="() => _editando = null">
-        <div class="campo-grupo">
-            <label for="cartao-fatura">Cartão</label>
-            <select id="cartao-fatura" class="campo" @bind="_cartaoId" @bind:after="SugerirDatas">
-                <option value="0">Escolha o cartão</option>
-                @foreach (var cartao in _dados!.Cartoes)
-                {
-                    <option value="@cartao.Id">@cartao.Nome</option>
-                }
-            </select>
-        </div>
-
-        <div class="linha-campos">
+    <Modal Titulo="@(_editando.Id == 0 ? "Nova fatura" : "Editar fatura")" AoFechar="FecharFatura">
+        <ChildContent>
             <div class="campo-grupo">
-                <label for="fechamento-fatura">Fecha em</label>
-                <CampoData Valor="_editando.Fechamento"
-                           ValorChanged="v => _editando.Fechamento = v ?? Relogio.Hoje" Id="fechamento-fatura" />
+                <Rotulo Texto="Cartão" Para="cartao-fatura" />
+                <select id="cartao-fatura" class="campo" @bind="_cartaoId" @bind:after="SugerirDatas">
+                    <option value="0">Escolha o cartão</option>
+                    @foreach (var cartao in _dados.Cartoes)
+                    {
+                        <option value="@cartao.Id">@cartao.Nome</option>
+                    }
+                </select>
             </div>
+
+            <div class="linha-campos">
+                <div class="campo-grupo">
+                    <Rotulo Texto="Fecha em" Para="fechamento-fatura" />
+                    <CampoData Valor="_editando.Fechamento"
+                               ValorChanged="v => _editando.Fechamento = v ?? Relogio.Hoje" Id="fechamento-fatura" />
+                </div>
+                <div class="campo-grupo">
+                    <Rotulo Texto="Vence em" Para="vencimento-fatura" />
+                    <CampoData Valor="_editando.Vencimento"
+                               ValorChanged="v => _editando.Vencimento = v ?? Relogio.Hoje" Id="vencimento-fatura" />
+                </div>
+            </div>
+
             <div class="campo-grupo">
-                <label for="vencimento-fatura">Vence em</label>
-                <CampoData Valor="_editando.Vencimento"
-                           ValorChanged="v => _editando.Vencimento = v ?? Relogio.Hoje" Id="vencimento-fatura" />
+                <label class="interruptor">
+                    Informar o total do banco
+                    <input type="checkbox" role="switch" checked="@(_editando.TotalInformadoCentavos is not null)"
+                           @onchange="TrocarTotalInformado" />
+                </label>
+                <div class="dica">
+                    @(_editando.TotalInformadoCentavos is null
+                        ? "Desligado, a fatura é a soma das compras do ciclo."
+                        : "O total manda. Compras marcadas como já no total não somam de novo.")
+                </div>
             </div>
-        </div>
 
-        <div class="campo-grupo">
-            <label class="campo-opcao">
-                <input type="checkbox" checked="@(_editando.TotalInformadoCentavos is not null)"
-                       @onchange="TrocarTotalInformado" style="width:1.1rem; height:1.1rem" />
-                Informar o total que o banco mostra
-            </label>
-            <div class="dica">
-                Desligado, o app soma os itens cadastrados. Ligado, o número que você digitar manda,
-                e os itens marcados como detalhamento não são somados de novo.
-            </div>
-        </div>
+            @if (_editando.TotalInformadoCentavos is long total)
+            {
+                <div class="campo-grupo">
+                    <Rotulo Texto="Total da fatura" Para="total-fatura" />
+                    <CampoDinheiro Valor="total" ValorChanged="v => _editando.TotalInformadoCentavos = v"
+                                   Id="total-fatura" />
+                </div>
+            }
 
-        @if (_editando.TotalInformadoCentavos is long total)
-        {
-            <div class="campo-grupo">
-                <label for="total-fatura">Total da fatura</label>
-                <CampoDinheiro Valor="total" ValorChanged="v => _editando.TotalInformadoCentavos = v"
-                               Id="total-fatura" />
-            </div>
-        }
-
-        @if (_erros.Count > 0)
-        {
-            <div class="aviso ruim" role="alert">
-                @foreach (var erro in _erros)
-                {
-                    <div>@erro</div>
-                }
-            </div>
-        }
-
-        <div class="acoes">
+            @if (_erros.Count > 0)
+            {
+                <Aviso Tipo="ruim" Papel="alert">
+                    @foreach (var erro in _erros)
+                    {
+                        <div>@erro</div>
+                    }
+                </Aviso>
+            }
+        </ChildContent>
+        <Rodape>
             <button type="button" class="btn" @onclick="SalvarFatura" disabled="@_salvando">
                 @(_salvando ? "Salvando..." : "Salvar")
             </button>
-            <button type="button" class="btn secundario" @onclick="() => _editando = null">Cancelar</button>
             @if (_editando.Id != 0)
             {
-                <button type="button" class="btn perigo" style="margin-left:auto" @onclick="ExcluirFatura">
-                    Excluir
+                <button type="button" class="btn @(_confirmandoExclusao ? "perigo-cheio" : "perigo")" @onclick="ExcluirFatura">
+                    @(_confirmandoExclusao ? "Excluir de vez" : "Excluir")
                 </button>
             }
-        </div>
+        </Rodape>
     </Modal>
 }
 
 @if (_pagando is not null)
 {
     <Modal Titulo="Registrar pagamento" AoFechar="() => _pagando = null">
-        <p class="ajuda" style="margin-top:0">
-            Falta pagar @Formato.Moeda(_pagando.ASairCentavos) da fatura do @_pagando.NomeCartao.
-            Pode pagar menos: o resto continua contando como dívida.
-        </p>
+        <ChildContent>
+            <dl class="linhas">
+                <div class="linha">
+                    <dt>Fatura</dt>
+                    <dd>@_pagando.NomeCartao, @Formato.DataCurta(_pagando.Fatura.Vencimento)</dd>
+                </div>
+                <div class="linha total">
+                    <dt>Falta pagar</dt>
+                    <dd><Valor Centavos="_pagando.ASairCentavos" /></dd>
+                </div>
+            </dl>
 
-        <div class="linha-campos">
-            <div class="campo-grupo">
-                <label for="valor-pago">Quanto pagou</label>
-                <CampoDinheiro Valor="_valorPago" ValorChanged="v => _valorPago = v" Id="valor-pago" />
+            <div class="linha-campos" style="margin-top:12px">
+                <div class="campo-grupo">
+                    <Rotulo Texto="Valor pago" Para="valor-pago"
+                            Ajuda="Pode ser menos que o total. O que faltar continua como dívida, saindo no vencimento." />
+                    <CampoDinheiro Valor="_valorPago" ValorChanged="v => _valorPago = v" Id="valor-pago" />
+                </div>
+                <div class="campo-grupo">
+                    <Rotulo Texto="Pago em" Para="data-pago" />
+                    <CampoData Valor="_dataPagamento" ValorChanged="v => _dataPagamento = v ?? Relogio.Hoje" Id="data-pago" />
+                </div>
             </div>
-            <div class="campo-grupo">
-                <label for="data-pago">Em que dia</label>
-                <CampoData Valor="_dataPagamento" ValorChanged="v => _dataPagamento = v ?? Relogio.Hoje" Id="data-pago" />
-            </div>
-        </div>
 
-        <div class="acoes">
+            @if (_erros.Count > 0)
+            {
+                <Aviso Tipo="ruim" Papel="alert">
+                    @foreach (var erro in _erros)
+                    {
+                        <div>@erro</div>
+                    }
+                </Aviso>
+            }
+        </ChildContent>
+        <Rodape>
             <button type="button" class="btn" @onclick="ConfirmarPagamento" disabled="@_salvando">
                 @(_salvando ? "Salvando..." : "Confirmar")
             </button>
-            <button type="button" class="btn secundario" @onclick="() => _pagando = null">Cancelar</button>
-        </div>
+        </Rodape>
     </Modal>
 }
 
@@ -278,6 +274,7 @@ else
     private DateOnly _dataPagamento;
     private List<string> _erros = [];
     private bool _salvando;
+    private bool _confirmandoExclusao;
 
     protected override void OnParametersSet()
     {
@@ -287,15 +284,18 @@ else
 
     private async Task CarregarAsync() => await Mudou.InvokeAsync();
 
-    private void AbrirFatura(FaturaCartao? original)
+    /// <summary>Abre o formulário. Público para o botão "Nova" do cabeçalho da tela.</summary>
+    public void AbrirFatura(FaturaCartao? original)
     {
         _erros = [];
+        _confirmandoExclusao = false;
 
         if (original is null)
         {
             _cartaoId = _dados!.Cartoes.Count == 1 ? _dados.Cartoes[0].Id : 0;
             _editando = new FaturaCartao { Fechamento = Relogio.Hoje, Vencimento = Relogio.Hoje };
             SugerirDatas();
+            StateHasChanged();
             return;
         }
 
@@ -313,6 +313,12 @@ else
             PagoEm = original.PagoEm,
             Obs = original.Obs
         };
+    }
+
+    private void FecharFatura()
+    {
+        _editando = null;
+        _confirmandoExclusao = false;
     }
 
     /// <summary>
@@ -391,18 +397,28 @@ else
         }
     }
 
+    /// <summary>Excluir pede um segundo toque: a fatura some da previsão e o pagamento junto.</summary>
     private async Task ExcluirFatura()
     {
-        if (_editando is { Id: > 0 } fatura)
+        if (_editando is not { Id: > 0 } fatura)
         {
-            await Servico.ExcluirFaturaAsync(fatura.Id);
-            _editando = null;
-            await CarregarAsync();
+            return;
         }
+
+        if (!_confirmandoExclusao)
+        {
+            _confirmandoExclusao = true;
+            return;
+        }
+
+        await Servico.ExcluirFaturaAsync(fatura.Id);
+        FecharFatura();
+        await CarregarAsync();
     }
 
     private void AbrirPagamento(ResumoFatura resumo)
     {
+        _erros = [];
         _pagando = resumo;
         _valorPago = resumo.ASairCentavos;
         _dataPagamento = Relogio.Hoje;
@@ -411,6 +427,15 @@ else
     private async Task ConfirmarPagamento()
     {
         if (_pagando is null)
+        {
+            return;
+        }
+
+        // Zero nao muda nada alem da data do ultimo pagamento. Negativo continua aceito: e o
+        // unico jeito de corrigir um pagamento registrado a mais.
+        _erros = _valorPago != 0 ? [] : ["Informe quanto foi pago."];
+
+        if (_erros.Count > 0)
         {
             return;
         }

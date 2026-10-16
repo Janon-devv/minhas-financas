@@ -1,0 +1,50 @@
+@*
+    Cabecalho de pagina em petroleo. Compacto por padrao (titulo e, se houver, voltar e acoes);
+    Hoje e Calendario usam a classe "destaque" e poem o numero principal dentro dele.
+    Toda pagina comeca por ele: a barra de status do iPhone fica sobre o petroleo.
+*@
+
+<header class="cabecalho @Classe">
+    <div class="cabecalho-topo">
+        @if (Voltar is not null)
+        {
+            <a class="btn-icone" href="@Voltar" aria-label="Voltar">
+                <Icone Nome="voltar" Tamanho="22" />
+            </a>
+        }
+        <div class="cabecalho-titulos">
+            @if (Marca)
+            {
+                <span class="marca">Minhas Finanças</span>
+            }
+            <h1>@Titulo</h1>
+        </div>
+        @if (Acoes is not null)
+        {
+            <div class="cabecalho-acoes">@Acoes</div>
+        }
+    </div>
+    @ChildContent
+</header>
+
+@code {
+    [Parameter, EditorRequired]
+    public string Titulo { get; set; } = "";
+
+    /// <summary>Mostra o nome do app acima do titulo. So nas telas de destaque.</summary>
+    [Parameter]
+    public bool Marca { get; set; }
+
+    /// <summary>Endereco do botao de voltar, para subpaginas como Metas.</summary>
+    [Parameter]
+    public string? Voltar { get; set; }
+
+    [Parameter]
+    public string? Classe { get; set; }
+
+    [Parameter]
+    public RenderFragment? Acoes { get; set; }
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+}

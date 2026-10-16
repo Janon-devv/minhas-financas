@@ -1,0 +1,37 @@
+@* Mes anterior, nome do mes e mes seguinte. Escuro dentro do cabecalho, claro fora dele. *@
+
+<div class="seletor-mes @(Claro ? "claro" : "")">
+    <div class="seletor-mes-controle">
+        <button type="button" class="btn-icone" @onclick="() => AoMover.InvokeAsync(-1)"
+                disabled="@(!PodeVoltar)" aria-label="Mês anterior">
+            <Icone Nome="voltar" Tamanho="22" />
+        </button>
+        <span class="seletor-mes-nome" aria-live="polite">@Formato.MesAno(Mes.Year, Mes.Month)</span>
+        <button type="button" class="btn-icone" @onclick="() => AoMover.InvokeAsync(1)"
+                disabled="@(!PodeAvancar)" aria-label="Mês seguinte">
+            <Icone Nome="avancar" Tamanho="22" />
+        </button>
+    </div>
+    @ChildContent
+</div>
+
+@code {
+    [Parameter]
+    public DateOnly Mes { get; set; }
+
+    [Parameter]
+    public bool PodeVoltar { get; set; } = true;
+
+    [Parameter]
+    public bool PodeAvancar { get; set; } = true;
+
+    [Parameter]
+    public EventCallback<int> AoMover { get; set; }
+
+    [Parameter]
+    public bool Claro { get; set; }
+
+    /// <summary>Botao ao lado, como o "Hoje" do calendario.</summary>
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+}

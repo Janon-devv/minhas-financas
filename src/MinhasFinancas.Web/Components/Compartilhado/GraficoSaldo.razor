@@ -11,6 +11,11 @@
     <svg class="grafico" viewBox="0 0 @Largura @Altura" preserveAspectRatio="none" role="img"
          aria-label="@Resumo()">
 
+        @if (SerieComparacao is not { Count: >= 2 })
+        {
+            <polygon class="area-saldo" points="@Area(Serie)" />
+        }
+
         @if (_mostrarZero)
         {
             <line class="linha-zero" x1="0" y1="@Coordenada(0)" x2="@Largura" y2="@Coordenada(0)"
@@ -26,36 +31,52 @@
         @if (SerieComparacao is { Count: >= 2 })
         {
             <polyline class="linha-simulada" points="@Pontos(SerieComparacao)" vector-effect="non-scaling-stroke" />
+            @foreach (var marcador in Marcadores(SerieComparacao))
+            {
+                <circle class="ponto ponto-simulado" cx="@marcador.X" cy="@marcador.Y" r="6" aria-hidden="true">
+                    <title>@marcador.Titulo</title>
+                </circle>
+            }
         }
 
         <polyline class="linha-saldo" points="@Pontos(Serie)" vector-effect="non-scaling-stroke" />
+        @* Marcador por ponto: sem JS, so o <title> nativo do SVG. Mostra o valor exato ao passar
+           o mouse, sem substituir o texto ao lado (quem usa toque nao tem hover). *@
+        @foreach (var marcador in Marcadores(Serie))
+        {
+            <circle class="ponto" cx="@marcador.X" cy="@marcador.Y" r="6" aria-hidden="true">
+                <title>@marcador.Titulo</title>
+            </circle>
+        }
     </svg>
 
     <div class="legenda">
-        <span class="s-saldo">saldo projetado</span>
-        @if (_mostrarConforto)
-        {
-            <span class="s-conforto">conforto @Formato.Moeda(Conforto)</span>
-        }
+        <span class="s-saldo">@(SerieComparacao is { Count: >= 2 } ? "sem a compra" : "saldo previsto")</span>
         @if (SerieComparacao is { Count: >= 2 })
         {
             <span class="s-compra">com a compra</span>
         }
-        <span style="margin-left:auto">de @Formato.Moeda(_minimo) a @Formato.Moeda(_maximo)</span>
+        @if (_mostrarConforto)
+        {
+            <span class="s-conforto">conforto @Formato.Moeda(Conforto)</span>
+        }
+        <span class="faixa" style="margin-left:auto">de @Formato.Moeda(_minimoSerie) a @Formato.Moeda(_maximoSerie)</span>
     </div>
 }
 else
 {
-    <p class="vazio">Sem dias suficientes para desenhar o gráfico.</p>
+    <p class="vazio">Poucos dias para desenhar o gráfico.</p>
 }
 
 @code {
     private const int Largura = 600;
-    private const int Altura = 160;
+    private const int Altura = 168;
     private const int Margem = 10;
 
     private long _minimo;
     private long _maximo;
+    private long _minimoSerie;
+    private long _maximoSerie;
     private bool _mostrarZero;
     private bool _mostrarConforto;
 
@@ -81,6 +102,11 @@ else
         {
             valores.AddRange(SerieComparacao.Select(p => p.Centavos));
         }
+
+        // A faixa escrita na legenda e a dos saldos; a do desenho inclui zero e conforto,
+        // para as duas linhas de referencia caberem.
+        _minimoSerie = valores.Min();
+        _maximoSerie = valores.Max();
 
         valores.Add(Conforto);
         valores.Add(0);
@@ -108,7 +134,7 @@ else
 
         var menor = Serie.MinBy(ponto => ponto.Centavos)!;
 
-        var texto = $"Saldo projetado de {Formato.Data(Serie[0].Data)} a {Formato.Data(Serie[^1].Data)}. " +
+        var texto = $"Saldo previsto de {Formato.Data(Serie[0].Data)} a {Formato.Data(Serie[^1].Data)}. " +
                     $"Começa em {Formato.Moeda(Serie[0].Centavos)} e termina em {Formato.Moeda(Serie[^1].Centavos)}. " +
                     $"O menor saldo do período é {Formato.Moeda(menor.Centavos)}, em {Formato.Data(menor.Data)}.";
 
@@ -152,5 +178,28 @@ else
 
         return string.Join(" ", serie.Select((ponto, i) =>
             string.Create(CultureInfo.InvariantCulture, $"{Math.Round(i * passo, 2)},{Y(ponto.Centavos)}")));
+    }
+
+    /// <summary>A curva fechada ate a base do desenho, para a area clara embaixo dela.</summary>
+    private string Area(IReadOnlyList<PontoGrafico> serie) =>
+        string.Create(CultureInfo.InvariantCulture, $"0,{Altura} {Pontos(serie)} {Largura},{Altura}");
+
+    /// <summary>Um circulo por ponto, para o mouse achar o valor exato.</summary>
+    private IEnumerable<(string X, string Y, string Titulo)> Marcadores(IReadOnlyList<PontoGrafico> serie)
+    {
+        if (serie.Count < 2)
+        {
+            yield break;
+        }
+
+        var passo = (double)Largura / (serie.Count - 1);
+
+        for (var i = 0; i < serie.Count; i++)
+        {
+            var ponto = serie[i];
+            var x = Math.Round(i * passo, 2).ToString(CultureInfo.InvariantCulture);
+            var titulo = $"{Formato.Data(ponto.Data)}: {Formato.Moeda(ponto.Centavos)}";
+            yield return (x, Coordenada(ponto.Centavos), titulo);
+        }
     }
 }

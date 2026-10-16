@@ -79,13 +79,13 @@ banco depois que você confirma. Antes de substituir, ela salva sozinha o estado
 
 A mesma aplicação se adapta ao tamanho da tela, sem versão separada:
 
-- **No celular:** navegação em barra fixa embaixo, indicadores dois por linha, blocos empilhados,
-  respeitando as áreas seguras do aparelho.
-- **No PC:** a navegação vira uma coluna lateral à esquerda (com dois atalhos a mais, Metas e
-  Simulador), os indicadores ficam quatro em linha e os blocos se organizam em duas colunas: na tela
-  Hoje o check-in fica ao lado dos próximos dias, no Resumo o detalhamento fica ao lado do gráfico,
-  nos Ajustes os seus números ficam ao lado dos cadastros. O calendário ganha uma coluna a mais
-  mostrando a situação de cada dia.
+- **No celular:** navegação em barra fixa embaixo (Hoje, Calendário, Lançar, Resumo, Ajustes),
+  cabeçalho verde-petróleo em toda tela, blocos empilhados, respeitando as áreas seguras do
+  aparelho. Metas e Simular compra ficam nas ações rápidas da tela Hoje.
+- **No PC:** a navegação vira uma coluna lateral à esquerda (com Metas e Simular compra) e os
+  blocos se organizam em duas colunas: na tela Hoje o gasto do dia e as contas ficam ao lado dos
+  outros saldos e dos próximos dias, no Resumo a composição fica ao lado do saldo, nos Ajustes a
+  conferência fica ao lado dos cadastros. No calendário, entrada, saída e diário viram colunas.
 
 A troca acontece em 900px de largura.
 
@@ -93,13 +93,13 @@ A troca acontece em 900px de largura.
 
 | Tela | O que faz |
 |---|---|
-| **Hoje** | Saldo de hoje, quanto pode gastar, menor saldo à frente com data e farol, check-in do diário, próximos 7 dias, alerta do próximo aperto |
-| **Calendário** | Mês a mês, dia a dia, com diário editável na própria linha e detalhe dos lançamentos do dia |
-| **Plano de Contas** | Cadastro de Entrada, Saída, Cartão e Economia, com repetição mensal, parcelas, tags, certeza da entrada e vínculo com meta |
-| **Resumo** | Performance, custo de vida, economizado, diário médio, saídas por tag, horizonte de 12 meses e gráfico do saldo diário |
-| **Simulador** | Compra à vista ou parcelada, com entrada e juros ao mês, comparando as duas curvas de saldo |
-| **Metas** | Objetivo, prazo, progresso, aporte sugerido e aviso quando os aportes cadastrados não alcançam o objetivo |
-| **Ajustes** | Conferência com o banco e recalibração, parâmetros, cartões, tags, backup e restauração |
+| **Hoje** | Saldo previsto hoje, quanto pode gastar, menor saldo com data, saldo após as contas do mês, gasto de hoje, contas do mês para confirmar, outros saldos, próximos 7 dias e o aviso mais grave |
+| **Calendário** | Resumo do mês e um dia por linha (entrada, saída, diário, saldo), com detalhe e gasto do dia numa folha |
+| **Lançar** | Receitas e despesas (Entrada, Saída, Cartão e Economia, com repetição mensal ou semanal, parcelas, tags, certeza da entrada e meta), renda variável do mês e faturas de cartão |
+| **Resumo** | Resultado do mês, entradas contra saídas, para onde foi o dinheiro, custo de vida, economizado, tags, saldo do mês com gráfico e os próximos 12 meses |
+| **Simular compra** | Compra à vista ou parcelada, com entrada e juros ao mês, comparando as duas curvas de saldo |
+| **Metas** | Objetivo, prazo, progresso, quanto guardar por mês e aviso quando as economias lançadas não alcançam o objetivo |
+| **Ajustes** | Conferir saldo com o banco, saldo e previsão, carteiras, cartões, tags, backup e restauração |
 
 O motor de cálculo implementa as regras R1 a R11 de [docs/CONTEXTO.md](docs/CONTEXTO.md) seção 6 e
 bate 100% com o cenário conferido em `docs/fixtures`.

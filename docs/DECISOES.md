@@ -423,3 +423,48 @@ atalho salvo na tela do iPhone e trocar o endereço quebraria o atalho.
 lista de lançamentos, e campo que ninguém acha é campo que ninguém preenche. O índice leva a cada
 seção. O caminho vai inteiro no `href` de propósito: com o `<base href="/">` do Blazor, um href só
 com fragmento é resolvido contra a base e joga o dono na tela Hoje.
+
+## 22. Refatoração visual: menos texto, um número por vez
+
+Em 15/10/2026 a interface inteira foi refeita a partir de uma referência de calendário com
+cabeçalho verde-petróleo e de outras telas de apps financeiros. Motor, banco e regras não
+mudaram: os 73 testes, inclusive os dourados, continuam passando sem tocar em nada do domínio
+além do texto das mensagens de erro, que estavam sem acento.
+
+O que foi decidido, e por quê:
+
+- **Cabeçalho petróleo em toda página, grande só onde há um número que manda.** Hoje (saldo
+  previsto) e Calendário (saldo no fim do mês) têm o destaque; o resto tem cabeçalho compacto.
+  Repetir o bloco grande em Ajustes ou num formulário seria decoração.
+- **Barra de status `black-translucent`.** O relógio do iPhone fica branco sobre o petróleo. O
+  custo é que nenhuma página pode começar sem `<Cabecalho>`, e a `.faixa-status` cobre a área
+  quando o conteúdo rola por baixo.
+- **Explicação no (i), regra à vista.** Parágrafos explicativos viraram ajuda que abre por toque
+  ou teclado (`Rotulo`, `BotaoAjuda`). O que muda dinheiro continua escrito na tela numa linha:
+  "no saldo inicial" na lista, "por mês, 4x" ao lado do valor, "Não muda o saldo previsto" na
+  renda variável, o aviso das contas fora da previsão. No destaque da tela Hoje há um (i) só para
+  os quatro números: um por número quebrava os rótulos das colunas estreitas.
+- **O farol diz a regra.** "Tranquilo" virou "acima do conforto". O aviso verde da tela Hoje só
+  aparece quando nada está fora da conta: conta vencida sem resposta ou cadastro com problema
+  deixam a previsão incompleta, e aí afirmar que está tudo bem seria falso.
+- **Calendário começa em hoje.** Os dias que já passaram no mês ficam a um toque ("Mostrar os 2
+  dias anteriores"), para registrar o gasto de ontem. Cada dia é uma linha com data, entrada,
+  saída, diário e saldo; o detalhe e a edição do gasto do dia abrem numa folha.
+- **Entradas do mês dizem quanto é renda variável**, também no Calendário: ali os dias somam
+  zero de entrada e o total do mês não, e sem a composição a conta não fecha (R17).
+- **Lançar em três abas com endereço próprio** (`?secao=renda`, `?secao=faturas`). Os atalhos
+  antigos `/plano` e `/faturas` continuam abrindo a seção certa.
+- **Contas do mês abrem numa folha.** Antes cada linha tinha dois ou três botões; agora a linha
+  mostra o estado e as ações ficam juntas, com a regra do saldo inicial escrita quando importa.
+  As resolvidas ficam recolhidas.
+- **Folha com rodapé fixo acima do teclado.** `app.js` mede a área visível de verdade
+  (`visualViewport`) e o modal cabe nela; com 420px de altura o botão de salvar continua a vista.
+  O modal também passou a fechar com Esc e a prender o foco, que eram lacunas conhecidas.
+- **Excluir pede um segundo toque** em lançamento, fatura, carteira, cartão e tag. Antes um toque
+  apagava um lançamento recorrente sem volta.
+- **Tag é editada numa folha**, com nome e cor. Renomear passou a existir; antes só dava para
+  trocar a cor, com oito quadrados por linha na tela de Ajustes.
+- **Repetição semanal aparece como semanal.** A lista mostrava "todo mês, sem fim" para um
+  lançamento semanal, porque o texto ignorava a periodicidade.
+- **Pagamento de fatura de zero é recusado.** Não mudava nada além da data do último pagamento.
+  Valor negativo continua aceito: é o único jeito de corrigir um pagamento lançado a mais.

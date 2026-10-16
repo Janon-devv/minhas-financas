@@ -1,17 +1,26 @@
-@* Campo de dinheiro em centavos. inputmode=decimal abre o teclado numerico no iPhone. *@
+@* Campo de dinheiro em centavos. inputmode=decimal abre o teclado numerico com virgula no iPhone.
+   Aceita o jeito brasileiro (1.234,56) e os atalhos que a pessoa digita (50, R$ 90, 1234.56). *@
 
 <span class="campo-dinheiro">
-    <span class="campo-dinheiro-prefixo" id="@_idPrefixo">R$</span>
+    @if (Prefixo is not null)
+    {
+        <span class="campo-dinheiro-prefixo" id="@_idPrefixo">@Prefixo</span>
+    }
     <input @key="_chave"
            type="text"
            inputmode="decimal"
            enterkeyhint="done"
-           class="campo dinheiro-campo"
+           autocomplete="off"
+           class="campo dinheiro-campo @(Prefixo is null ? "" : "com-prefixo") @(Sufixo is null ? "" : "com-sufixo")"
            placeholder="0,00"
            value="@_texto"
            id="@Id"
-           aria-describedby="@_idPrefixo"
+           aria-describedby="@(Prefixo is not null ? _idPrefixo : Sufixo is not null ? _idSufixo : null)"
            @onchange="Alterou" />
+    @if (Sufixo is not null)
+    {
+        <span class="campo-dinheiro-sufixo" id="@_idSufixo">@Sufixo</span>
+    }
 </span>
 
 @code {
@@ -22,6 +31,7 @@
     // O prefixo e lido pelo leitor de tela via aria-describedby, entao precisa de id proprio.
     // Esconder com aria-hidden tiraria a unica pista de que o campo e em reais.
     private readonly string _idPrefixo = $"moeda-{Guid.NewGuid():N}";
+    private readonly string _idSufixo = $"unidade-{Guid.NewGuid():N}";
 
     [Parameter]
     public long Valor { get; set; }
@@ -31,6 +41,14 @@
 
     [Parameter]
     public string? Id { get; set; }
+
+    /// <summary>R$ por padrao. Nulo para campos que nao sao dinheiro, como a taxa de juros.</summary>
+    [Parameter]
+    public string? Prefixo { get; set; } = "R$";
+
+    /// <summary>Unidade depois do numero, como % na taxa de juros.</summary>
+    [Parameter]
+    public string? Sufixo { get; set; }
 
     protected override void OnParametersSet()
     {

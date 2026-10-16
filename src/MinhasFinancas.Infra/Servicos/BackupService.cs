@@ -114,12 +114,12 @@ public sealed class BackupService(IDbContextFactory<FinancasDbContext> fabrica, 
         }
         catch (JsonException erro)
         {
-            return new ResultadoRestauracao { Erros = ["O arquivo nao e um JSON valido: " + erro.Message] };
+            return new ResultadoRestauracao { Erros = ["O arquivo não é um JSON válido: " + erro.Message] };
         }
 
         if (arquivo is null)
         {
-            return new ResultadoRestauracao { Erros = ["O arquivo esta vazio."] };
+            return new ResultadoRestauracao { Erros = ["O arquivo está vazio."] };
         }
 
         var erros = Conferir(arquivo);
@@ -131,15 +131,15 @@ public sealed class BackupService(IDbContextFactory<FinancasDbContext> fabrica, 
 
         var resumo = new List<string>
         {
-            $"{arquivo.Lancamentos.Count} lancamento(s)",
-            $"{arquivo.Diarios.Count} dia(s) com diario registrado",
-            $"{arquivo.Cartoes.Count} cartao(oes)",
+            $"{arquivo.Lancamentos.Count} lançamento(s)",
+            $"{arquivo.Diarios.Count} dia(s) com gasto registrado",
+            $"{arquivo.Cartoes.Count} cartão(ões)",
             $"{arquivo.Tags.Count} tag(s)",
             $"{arquivo.Metas.Count} meta(s)",
             $"{arquivo.Situacoes.Count} conta(s) com pagamento registrado",
-            $"{arquivo.Carteiras.Count} carteira(s) alem da conta corrente",
-            $"{arquivo.Faturas.Count} fatura(s) de cartao",
-            $"{arquivo.GanhosVariaveis.Count} mes(es) com ganho variavel"
+            $"{arquivo.Carteiras.Count} carteira(s) além da conta corrente",
+            $"{arquivo.Faturas.Count} fatura(s) de cartão",
+            $"{arquivo.GanhosVariaveis.Count} mês(es) com renda variável"
         };
 
         if (!confirmar)
@@ -207,17 +207,17 @@ public sealed class BackupService(IDbContextFactory<FinancasDbContext> fabrica, 
         // de backups que o proprio app nao abre mais, que e o pior desfecho possivel.
         if (arquivo.SchemaVersion > VersaoSchema)
         {
-            erros.Add($"O arquivo e da versao {arquivo.SchemaVersion} e este programa le ate a versao {VersaoSchema}. " +
-                      "Ele foi gerado por uma versao mais nova do app.");
+            erros.Add($"O arquivo é da versão {arquivo.SchemaVersion}, e este app lê até a versão {VersaoSchema}. " +
+                      "Ele veio de uma versão mais nova do app.");
         }
         else if (arquivo.SchemaVersion < 1)
         {
-            erros.Add($"O arquivo diz ser da versao {arquivo.SchemaVersion}, que nao existe.");
+            erros.Add($"O arquivo diz ser da versão {arquivo.SchemaVersion}, que não existe.");
         }
 
         if (arquivo.Configuracao is null)
         {
-            erros.Add("O arquivo nao tem configuracao.");
+            erros.Add("O arquivo não tem configuração.");
         }
         else
         {
@@ -232,28 +232,28 @@ public sealed class BackupService(IDbContextFactory<FinancasDbContext> fabrica, 
         {
             if (lancamento.CartaoId is int cartao && !idsCartoes.Contains(cartao))
             {
-                erros.Add($"O lancamento \"{lancamento.Descricao}\" aponta para um cartao que nao esta no arquivo.");
+                erros.Add($"O lançamento \"{lancamento.Descricao}\" usa um cartão que não está no arquivo.");
             }
 
             if (lancamento.TagId is int tag && !idsTags.Contains(tag))
             {
-                erros.Add($"O lancamento \"{lancamento.Descricao}\" aponta para uma tag que nao esta no arquivo.");
+                erros.Add($"O lançamento \"{lancamento.Descricao}\" usa uma tag que não está no arquivo.");
             }
 
             if (lancamento.MetaId is int meta && !idsMetas.Contains(meta))
             {
-                erros.Add($"O lancamento \"{lancamento.Descricao}\" aponta para uma meta que nao esta no arquivo.");
+                erros.Add($"O lançamento \"{lancamento.Descricao}\" usa uma meta que não está no arquivo.");
             }
 
             if (lancamento.ValorCentavos <= 0)
             {
-                erros.Add($"O lancamento \"{lancamento.Descricao}\" tem valor zero ou negativo.");
+                erros.Add($"O lançamento \"{lancamento.Descricao}\" tem valor zero ou negativo.");
             }
         }
 
         if (arquivo.Diarios.Any(d => d.ValorCentavos < 0))
         {
-            erros.Add("Existe diario com valor negativo no arquivo.");
+            erros.Add("O arquivo tem gasto do dia com valor negativo.");
         }
 
         // Nao vale a pena despejar cem linhas iguais na tela.

@@ -1,0 +1,49 @@
+@* Bloco de conteudo: titulo fora, conteudo numa superficie branca. Sem caixa dentro de caixa. *@
+
+<section class="grupo @(Titulo is null && Acoes is null ? "sem-titulo" : "") @Classe" id="@Id" aria-labelledby="@(Titulo is null ? null : _idTitulo)">
+    @if (Titulo is not null || Acoes is not null)
+    {
+        <div class="grupo-cabecalho">
+            @if (Titulo is not null)
+            {
+                <h2 id="@_idTitulo">@Titulo @Marcador</h2>
+            }
+            @Acoes
+        </div>
+    }
+    @if (SemSuperficie)
+    {
+        @ChildContent
+    }
+    else
+    {
+        <div class="grupo-corpo">@ChildContent</div>
+    }
+</section>
+
+@code {
+    private readonly string _idTitulo = $"grupo-{Guid.NewGuid():N}";
+
+    [Parameter]
+    public string? Titulo { get; set; }
+
+    /// <summary>Contador ou estado ao lado do titulo.</summary>
+    [Parameter]
+    public RenderFragment? Marcador { get; set; }
+
+    [Parameter]
+    public RenderFragment? Acoes { get; set; }
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    [Parameter]
+    public string? Id { get; set; }
+
+    [Parameter]
+    public string? Classe { get; set; }
+
+    /// <summary>Para conteudo que ja traz a propria superficie, como os cartoes de meta.</summary>
+    [Parameter]
+    public bool SemSuperficie { get; set; }
+}

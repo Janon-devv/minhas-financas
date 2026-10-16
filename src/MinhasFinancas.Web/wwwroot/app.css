@@ -1,23 +1,42 @@
-/* Minhas Finanças: paleta e componentes. Mobile first, pensado para o Safari do iPhone. */
+/*
+    Minhas Finanças: tokens e componentes.
+    Mobile first, desenhado em 390px e testado de 360 a 430. O PC é uma adaptação disso,
+    a partir de 900px. Pensado para o Safari do iPhone.
+*/
 
 :root {
-    --topo: #134E4A;
+    /* ---------- Cor ---------- */
+    --petroleo: #134E4A;
     --acento: #0F766E;
+    --acento-forte: #115E59;
+    --acento-suave: #E2F0EE;
+
     --texto: #1F2933;
-    --secundario: #6B7280;
-    --linha: #E5E7EB;
-    --cartao: #F8FAFC;
-    --fundo: #FFFFFF;
+    /* 5,9:1 sobre o branco e 5,4:1 sobre o fundo. */
+    --secundario: #5B6670;
+    --linha: #E4E9E8;
+    --fundo: #F2F5F4;
+    --superficie: #FFFFFF;
+    --superficie-suave: #F6F8F8;
 
     /*
         Contorno de campo de formulario e componente de interface, nao enfeite: a WCAG pede
-        3:1 contra o fundo. A linha decorativa de tabela continua clara de proposito.
-        #868E9B da 3,30:1 sobre o branco; #E5E7EB daria 1,24:1.
+        3:1 contra o fundo. A linha decorativa continua clara de proposito.
+        #868E9B da 3,30:1 sobre o branco; --linha daria 1,2:1.
     */
     --borda-campo: #868E9B;
 
-    /* #6B7280 sobre #E5E7EB da 3,90:1 e reprova. Este da 6,10:1. */
+    /* #6B7280 sobre #E5E7EB da 3,90:1 e reprova. Este da 6,5:1 sobre o fundo neutro. */
     --pilula-neutra-texto: #4B5563;
+    --pilula-neutra-fundo: #EDF0F0;
+
+    /* Sobre o cabecalho petroleo. Branco da 9,5:1; o secundario, 6,4:1. */
+    --sobre-escuro: #FFFFFF;
+    --sobre-escuro-2: rgba(255, 255, 255, 0.76);
+    --linha-escuro: rgba(255, 255, 255, 0.18);
+    --superficie-escuro: rgba(255, 255, 255, 0.10);
+    --negativo-sobre-escuro: #FCA5A5;
+    --atencao-sobre-escuro: #FCD34D;
 
     --ok-forte: #15803D;
     --ok-fundo: #DCFCE7;
@@ -40,11 +59,46 @@
     --diario-fundo: #FEF3C7;
     --diario-texto: #92400E;
 
-    --hoje: #D1FAE5;
+    /* Valor que entra: 5,0:1 sobre o branco. So em superficie branca. */
+    --valor-entrada: #15803D;
+    --valor-saida: #B91C1C;
+    --diario-registrado: #1E40AF;
 
-    --raio: 12px;
-    --sombra: 0 1px 2px rgba(31, 41, 51, 0.06);
-    --altura-nav: 58px;
+    --hoje-fundo: #EDF7F1;
+    --hoje-marca: #1F9D55;
+    --sabado-texto: #1D4ED8;
+    --sabado-fundo: #F1F5FE;
+    --domingo-texto: #B91C1C;
+    --domingo-fundo: #FDF2F2;
+
+    /* ---------- Tipografia ---------- */
+    /* Pilha do sistema: SF Pro no iPhone, Segoe no Windows. Sem fonte baixada (ver CLAUDE.md). */
+    --fonte: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --t-xs: 0.75rem;
+    --t-sm: 0.8125rem;
+    --t-base: 0.9375rem;
+    --t-md: 1.0625rem;
+    --t-lg: 1.25rem;
+    --t-xl: 1.5rem;
+
+    /* ---------- Espaco ---------- */
+    --esp-1: 4px;
+    --esp-2: 8px;
+    --esp-3: 12px;
+    --esp-4: 16px;
+    --esp-5: 20px;
+    --esp-6: 24px;
+    --esp-8: 32px;
+    --margem: 16px;
+
+    /* ---------- Forma ---------- */
+    --raio-p: 10px;
+    --raio: 14px;
+    --raio-g: 20px;
+    --raio-total: 999px;
+    --sombra-flutuante: 0 1px 2px rgba(15, 64, 61, 0.06), 0 8px 24px rgba(15, 64, 61, 0.10);
+
+    --altura-nav: 64px;
 
     /* Micro-interacoes entre 150ms e 300ms: abaixo disso nao se percebe, acima atrasa. */
     --transicao: 180ms ease-out;
@@ -68,12 +122,19 @@
     }
 }
 
+/* ---------- Base ---------- */
+
 * {
     box-sizing: border-box;
 }
 
 html {
     -webkit-text-size-adjust: 100%;
+    background: var(--fundo);
+}
+
+html.modal-aberto {
+    overflow: hidden;
 }
 
 body {
@@ -81,58 +142,50 @@ body {
     min-height: 100dvh;
     background: var(--fundo);
     color: var(--texto);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-    font-size: 16px;
+    font-family: var(--fonte);
+    font-size: var(--t-base);
     line-height: 1.45;
     -webkit-tap-highlight-color: transparent;
+    -webkit-font-smoothing: antialiased;
 }
 
 h1, h2, h3 {
     margin: 0;
-    font-weight: 600;
+    font-weight: 650;
     letter-spacing: -0.01em;
+    line-height: 1.25;
 }
 
-h1 {
-    font-size: 1.25rem;
-}
+h1 { font-size: var(--t-lg); }
+h2 { font-size: var(--t-md); }
+h3 { font-size: var(--t-base); }
 
-h2 {
-    font-size: 1.0rem;
-}
-
-h3 {
-    font-size: 0.9rem;
+p {
+    margin: 0;
 }
 
 a {
     color: var(--acento);
 }
 
-/* ---------- Estrutura ---------- */
-
-.topo {
-    position: sticky;
-    top: 0;
-    z-index: 20;
-    background: var(--topo);
-    color: #fff;
-    padding: calc(env(safe-area-inset-top) + 0.7rem) 1rem 0.7rem;
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 0.75rem;
+button {
+    font: inherit;
 }
 
-.topo .marca-nome {
-    font-size: 1.05rem;
-    font-weight: 600;
-    letter-spacing: -0.01em;
+code {
+    font-size: var(--t-xs);
+    word-break: break-all;
+}
+
+.num,
+.dinheiro {
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
 }
 
 /*
-    Visivel so para leitor de tela. Serve para dar um h1 proprio a cada pagina sem
-    repetir o titulo na tela, para quem navega saber onde chegou.
+    Visivel so para leitor de tela. Serve para dar nome a icones e regioes sem repetir
+    na tela o que o desenho ja diz.
 */
 .so-leitor {
     position: absolute;
@@ -146,18 +199,58 @@ a {
     border: 0;
 }
 
-.topo .data-hoje {
-    font-size: 0.8rem;
-    opacity: 0.85;
-    white-space: nowrap;
+/* O anel de foco e o que permite usar o app pelo teclado. Nunca remover sem substituir. */
+a:focus-visible,
+button:focus-visible,
+summary:focus-visible,
+.campo:focus-visible,
+.clicavel:focus-visible,
+[role="switch"]:focus-visible {
+    outline: 2px solid var(--acento);
+    outline-offset: 2px;
+}
+
+.cabecalho a:focus-visible,
+.cabecalho button:focus-visible {
+    outline-color: var(--sobre-escuro);
+}
+
+/*
+    O Blazor foca o h1 a cada navegacao para o leitor de tela anunciar a pagina. O anel de
+    foco ali e ruido: ninguem esta interagindo com o titulo. Elementos com tabindex -1 so
+    recebem foco por programa, entao apagar o anel deles nao tira nada de quem usa teclado.
+*/
+[tabindex="-1"]:focus {
+    outline: none;
+}
+
+/* ---------- Estrutura ---------- */
+
+/* Faixa atras da barra de status do iPhone: o conteudo rola por baixo dela sem sumir o relogio. */
+.faixa-status {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: env(safe-area-inset-top);
+    background: var(--petroleo);
+    z-index: 35;
 }
 
 .conteudo {
-    padding: 1rem;
-    padding-bottom: calc(var(--altura-nav) + env(safe-area-inset-bottom) + 1.5rem);
-    max-width: 920px;
+    padding: 0 var(--margem) calc(var(--altura-nav) + env(safe-area-inset-bottom) + var(--esp-8));
+}
+
+.conteudo.limpo {
+    padding-bottom: calc(env(safe-area-inset-bottom) + var(--esp-8));
+}
+
+.conteudo.limpo .pagina {
+    max-width: 600px;
     margin: 0 auto;
 }
+
+/* ---------- Navegacao: barra de baixo no celular, coluna no PC ---------- */
 
 .nav {
     position: fixed;
@@ -166,9 +259,25 @@ a {
     right: 0;
     z-index: 30;
     display: flex;
-    background: #fff;
+    background: rgba(255, 255, 255, 0.97);
     border-top: 1px solid var(--linha);
-    padding-bottom: env(safe-area-inset-bottom);
+    padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
+}
+
+@supports (backdrop-filter: blur(1px)) {
+    .nav {
+        background: rgba(255, 255, 255, 0.9);
+        backdrop-filter: saturate(1.6) blur(14px);
+    }
+}
+
+/* Com o teclado aberto a barra so atrapalha: no Android ela subiria junto e cobriria o campo. */
+html.teclado-aberto .nav {
+    display: none;
+}
+
+.nav-marca {
+    display: none;
 }
 
 .nav a {
@@ -177,139 +286,620 @@ a {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 2px;
-    height: var(--altura-nav);
-    font-size: 0.68rem;
+    gap: 3px;
+    min-height: 52px;
+    font-size: var(--t-xs);
+    font-weight: 550;
     text-decoration: none;
     color: var(--secundario);
+    border-radius: var(--raio);
+}
+
+.nav-icone {
+    display: grid;
+    place-items: center;
+    width: 56px;
+    height: 30px;
+    border-radius: var(--raio-total);
+    transition: background-color var(--transicao), color var(--transicao);
 }
 
 .nav a.active {
+    color: var(--petroleo);
+    font-weight: 700;
+}
+
+.nav a.active .nav-icone {
+    background: var(--acento-suave);
     color: var(--acento);
-    font-weight: 600;
-    box-shadow: inset 0 2px 0 var(--acento);
 }
 
-.nav .icone {
-    font-size: 1.1rem;
-    line-height: 1;
+/* ---------- Cabecalho de pagina ---------- */
+
+.cabecalho {
+    margin: 0 calc(-1 * var(--margem)) var(--esp-2);
+    padding: calc(env(safe-area-inset-top) + var(--esp-3)) var(--margem) var(--esp-5);
+    background: var(--petroleo);
+    color: var(--sobre-escuro);
+    border-radius: 0 0 24px 24px;
 }
 
-/* ---------- Cartoes ---------- */
-
-.cartao {
-    background: var(--cartao);
-    border: 1px solid var(--linha);
-    border-radius: var(--raio);
-    padding: 0.9rem 1rem;
-    box-shadow: var(--sombra);
+.cabecalho.destaque {
+    padding-bottom: var(--esp-6);
 }
 
-.cartao + .cartao,
-.cartao + .bloco,
-.bloco + .cartao,
-.bloco + .bloco {
-    margin-top: 0.75rem;
+/* Espaco para a barra de acoes que sobe por cima da borda. */
+.cabecalho.com-acoes {
+    padding-bottom: calc(var(--esp-8) + var(--esp-6));
 }
 
-.bloco {
-    border: 1px solid var(--linha);
-    border-radius: var(--raio);
-    overflow: hidden;
-}
-
-.bloco > header {
-    padding: 0.7rem 1rem;
-    background: var(--cartao);
-    border-bottom: 1px solid var(--linha);
+.cabecalho-topo {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 0.5rem;
+    gap: var(--esp-2);
+    min-height: var(--alvo-toque);
 }
 
-.bloco > .corpo {
-    padding: 0.9rem 1rem;
+.cabecalho-titulos {
+    flex: 1;
+    min-width: 0;
 }
 
-.destaque {
-    border-left: 3px solid var(--acento);
-}
-
-.rotulo {
-    font-size: 0.75rem;
-    color: var(--secundario);
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-}
-
-.numero {
-    font-size: 1.7rem;
-    font-weight: 650;
-    font-variant-numeric: tabular-nums;
+.cabecalho h1 {
+    font-size: var(--t-xl);
+    font-weight: 700;
     letter-spacing: -0.02em;
 }
 
-.numero.medio {
-    font-size: 1.25rem;
+.cabecalho .marca {
+    display: block;
+    font-size: var(--t-xl);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
 }
 
-.ajuda {
-    font-size: 0.8rem;
-    color: var(--secundario);
+.cabecalho .marca + h1 {
+    font-size: var(--t-md);
+    font-weight: 500;
+    letter-spacing: 0;
+    color: var(--sobre-escuro-2);
+    margin-top: 2px;
 }
 
-.dinheiro {
+.cabecalho-acoes {
+    display: flex;
+    align-items: center;
+    gap: var(--esp-2);
+    flex-shrink: 0;
+}
+
+/* O botao de voltar encosta na margem: o desenho da seta ja tem respiro proprio. */
+.cabecalho-topo > .btn-icone:first-child {
+    margin-left: -10px;
+}
+
+/* ---------- Destaque dentro do cabecalho ---------- */
+
+.hero {
+    margin-top: var(--esp-5);
+}
+
+.hero-rotulo {
+    margin-bottom: 0;
+}
+
+.hero-rotulo .rotulo-texto {
+    font-size: var(--t-base);
+    font-weight: 500;
+    color: var(--sobre-escuro-2);
+}
+
+/* Painel que explica os numeros do cabecalho: termo em negrito, explicacao embaixo. */
+.ajuda-indicadores {
+    margin: var(--esp-4) 0 0;
+}
+
+.ajuda-indicadores > div + div {
+    margin-top: var(--esp-2);
+}
+
+.ajuda-indicadores dt {
+    font-weight: 700;
+}
+
+.ajuda-indicadores dd {
+    margin: 0;
+}
+
+.valor-hero {
+    display: block;
+    margin-top: 2px;
+    font-size: clamp(2.125rem, 10.5vw, 2.75rem);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+}
+
+.valor-hero .valor-moeda,
+.valor-hero .valor-centavos {
+    font-size: 0.58em;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+}
+
+.hero-nota {
+    margin-top: var(--esp-2);
+    font-size: var(--t-sm);
+    color: var(--sobre-escuro-2);
+}
+
+/* Indicadores de apoio: colunas iguais separadas por fio, quantas houver. */
+.hero-indicadores {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    margin: var(--esp-5) 0 0;
+    padding-top: var(--esp-4);
+    border-top: 1px solid var(--linha-escuro);
+}
+
+.hero-indicador {
+    min-width: 0;
+    padding: 0 var(--esp-3);
+}
+
+.hero-indicador:first-child {
+    padding-left: 0;
+}
+
+.hero-indicador + .hero-indicador {
+    border-left: 1px solid var(--linha-escuro);
+}
+
+.hero-indicador dt {
+    font-size: var(--t-sm);
+    color: var(--sobre-escuro-2);
+    line-height: 1.3;
+}
+
+.hero-indicador dd {
+    margin: 4px 0 0;
+    font-size: clamp(0.875rem, 4.1vw, 1.125rem);
+    font-weight: 650;
+    line-height: 1.25;
+}
+
+/* O R$ menor cabe numa coluna de 360px sem empurrar o numero para a linha de baixo. */
+.hero-indicador .valor-moeda {
+    font-size: 0.8em;
+}
+
+.hero-indicador .indicador-sub {
+    display: block;
+    margin-top: 2px;
+    font-size: var(--t-xs);
+    font-weight: 400;
+    color: var(--sobre-escuro-2);
+}
+
+.cabecalho .valor-negativo { color: var(--negativo-sobre-escuro); }
+.cabecalho .valor-atencao { color: var(--atencao-sobre-escuro); }
+
+/* ---------- Seletor de mes ---------- */
+
+.seletor-mes {
+    display: flex;
+    align-items: center;
+    gap: var(--esp-2);
+    margin-top: var(--esp-4);
+}
+
+.seletor-mes-controle {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 52px;
+    padding: 0 4px;
+    border: 1px solid var(--linha-escuro);
+    background: var(--superficie-escuro);
+    border-radius: var(--raio);
+}
+
+.seletor-mes-nome {
+    flex: 1;
+    min-width: 0;
+    text-align: center;
+    font-size: var(--t-md);
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.seletor-mes .btn-icone {
+    background: transparent;
+    border-color: transparent;
+    color: inherit;
+}
+
+.seletor-mes .btn-icone:disabled {
+    opacity: 0.35;
+}
+
+.seletor-mes.claro .seletor-mes-controle {
+    border-color: var(--linha);
+    background: var(--superficie);
+}
+
+/* ---------- Abas da tela de lancar ---------- */
+
+/*
+    Links, nao botoes: cada secao tem endereco proprio, e /faturas abre direto a terceira.
+    A ativa vira uma pilula branca, para nao restar duvida de onde se esta.
+*/
+.abas {
+    display: flex;
+    gap: 4px;
+    margin-top: var(--esp-4);
+    padding: 4px;
+    background: var(--superficie-escuro);
+    border-radius: var(--raio);
+}
+
+.abas a {
+    flex: 1 1 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: var(--alvo-toque);
+    padding: 4px 10px;
+    border-radius: var(--raio-p);
+    color: var(--sobre-escuro-2);
+    font-size: var(--t-sm);
+    font-weight: 600;
+    text-align: center;
+    text-decoration: none;
+    line-height: 1.2;
+    text-wrap: balance;
+    transition: background-color var(--transicao), color var(--transicao);
+}
+
+.abas a[aria-current="page"] {
+    background: var(--superficie);
+    color: var(--petroleo);
+    font-weight: 700;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.14);
+}
+
+/* ---------- Acoes rapidas: sobem por cima da borda do cabecalho ---------- */
+
+.acoes-rapidas {
+    position: relative;
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    margin: calc(-1 * (var(--esp-8) + var(--esp-2))) 0 0;
+    padding: var(--esp-2);
+    background: var(--superficie);
+    border-radius: var(--raio-g);
+    box-shadow: var(--sombra-flutuante);
+}
+
+.acao-rapida {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    min-height: 72px;
+    padding: var(--esp-2) var(--esp-1);
+    border-radius: var(--raio);
+    color: var(--texto);
+    font-size: var(--t-sm);
+    font-weight: 600;
+    line-height: 1.2;
+    text-align: center;
+    text-decoration: none;
+    transition: background-color var(--transicao);
+}
+
+.acao-rapida:active {
+    background: var(--superficie-suave);
+}
+
+.acao-rapida-icone {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--acento-suave);
+    color: var(--acento);
+}
+
+/* ---------- Grupos: titulo fora, conteudo numa superficie branca ---------- */
+
+.grupo {
+    margin-top: var(--esp-6);
+}
+
+/* Grupo sem titulo logo depois do cabecalho nao precisa do respiro de quem tem titulo. */
+.grupo.sem-titulo {
+    margin-top: var(--esp-4);
+}
+
+.grupo-cabecalho {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--esp-3);
+    min-height: var(--alvo-toque);
+    margin-bottom: var(--esp-1);
+    padding-left: var(--esp-1);
+}
+
+.grupo-cabecalho h2 {
+    display: flex;
+    align-items: center;
+    gap: var(--esp-2);
+    min-width: 0;
+}
+
+.grupo-corpo {
+    background: var(--superficie);
+    border-radius: var(--raio-g);
+    overflow: hidden;
+}
+
+.grupo-corpo > .corpo,
+.corpo {
+    padding: var(--esp-4);
+}
+
+.corpo + .lista,
+.lista + .corpo {
+    border-top: 1px solid var(--linha);
+}
+
+.contador {
+    display: inline-grid;
+    place-items: center;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 6px;
+    border-radius: var(--raio-total);
+    background: var(--pilula-neutra-fundo);
+    color: var(--pilula-neutra-texto);
+    font-size: var(--t-xs);
+    font-weight: 700;
     font-variant-numeric: tabular-nums;
+}
+
+.contador.alerta {
+    background: var(--negativo-fundo);
+    color: var(--negativo-texto);
+}
+
+/* ---------- Listas ---------- */
+
+.lista {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.lista > li + li {
+    border-top: 1px solid var(--linha);
+}
+
+.item {
+    display: flex;
+    align-items: center;
+    gap: var(--esp-3);
+    width: 100%;
+    min-height: 60px;
+    padding: var(--esp-3) var(--esp-4);
+    background: none;
+    border: 0;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    text-decoration: none;
+}
+
+button.item,
+a.item,
+.clicavel {
+    cursor: pointer;
+    transition: background-color var(--transicao);
+}
+
+button.item:active,
+a.item:active {
+    background: var(--superficie-suave);
+}
+
+.item-principal {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.item-titulo {
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
     white-space: nowrap;
 }
 
-.grade2 {
+.item-sub {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 6px;
+    font-size: var(--t-sm);
+    color: var(--secundario);
+}
+
+.item-valor {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+    flex-shrink: 0;
+    font-weight: 650;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    white-space: nowrap;
+}
+
+.item-valor-sub {
+    font-size: var(--t-xs);
+    font-weight: 400;
+    color: var(--secundario);
+}
+
+.item-seta {
+    flex-shrink: 0;
+    color: var(--secundario);
+    margin-right: -4px;
+}
+
+.item.riscado .item-titulo {
+    text-decoration: line-through;
+    color: var(--secundario);
+}
+
+.item.apagado .item-titulo,
+.item.apagado .item-valor {
+    color: var(--secundario);
+}
+
+/* Linha de rotulo e valor, para contas abertas (fatura, detalhe do dia, resumo). */
+.linhas {
+    margin: 0;
+}
+
+.linha {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--esp-3);
+    padding: 10px 0;
+}
+
+.linha + .linha {
+    border-top: 1px solid var(--linha);
+}
+
+.linha dt {
+    min-width: 0;
+    color: var(--texto);
+}
+
+.linha dd {
+    margin: 0;
+    flex-shrink: 0;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    text-align: right;
+}
+
+.linha dt .rotulo-linha {
+    margin-bottom: 0;
+    min-height: 0;
+}
+
+.linha dt .rotulo-texto {
+    font-size: inherit;
+    font-weight: 400;
+    color: var(--texto);
+}
+
+.linha .linha-sub {
+    display: block;
+    font-size: var(--t-xs);
+    color: var(--secundario);
+}
+
+.linha.total dt,
+.linha.total dd {
+    font-weight: 700;
+}
+
+.linha.recuo dt {
+    padding-left: var(--esp-4);
+    color: var(--secundario);
+}
+
+/* ---------- Icone do tipo de lancamento ---------- */
+
+.icone-tipo {
+    flex-shrink: 0;
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0.75rem;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    background: var(--acento-suave);
+    color: var(--acento);
 }
 
-.grade2 > * {
-    margin: 0 !important;
+.icone-tipo.entrada { background: var(--entrada-fundo); color: var(--entrada-texto); }
+.icone-tipo.saida { background: var(--saida-fundo); color: var(--saida-texto); }
+.icone-tipo.cartao { background: var(--cartaotipo-fundo); color: var(--cartaotipo-texto); }
+.icone-tipo.economia { background: var(--economia-fundo); color: var(--economia-texto); }
+.icone-tipo.diario { background: var(--diario-fundo); color: var(--diario-texto); }
+.icone-tipo.neutro { background: var(--pilula-neutra-fundo); color: var(--pilula-neutra-texto); }
+
+/* ---------- Valores ---------- */
+
+.valor {
+    font-variant-numeric: tabular-nums;
 }
 
-@media (max-width: 380px) {
-    .grade2 {
-        grid-template-columns: 1fr;
-    }
+.valor-numero {
+    white-space: nowrap;
 }
 
-/* ---------- Pilulas e farol ---------- */
+.item-valor .valor,
+.linha .valor,
+td .valor {
+    white-space: nowrap;
+}
 
-.pilula {
-    display: inline-block;
-    padding: 0.12rem 0.45rem;
-    border-radius: 999px;
-    font-size: 0.72rem;
+.valor-entrada { color: var(--valor-entrada); }
+.valor-saida { color: var(--valor-saida); }
+.valor-atencao { color: var(--atencao-texto); }
+.valor-negativo { color: var(--negativo-texto); }
+.valor-ok { color: inherit; }
+.valor-zero { color: var(--secundario); }
+
+/* ---------- Pilulas, farol e estado ---------- */
+
+.pilula,
+.farol {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 1px 8px;
+    border-radius: var(--raio-total);
+    font-size: var(--t-xs);
     font-weight: 600;
+    line-height: 1.6;
     white-space: nowrap;
 }
 
 /* Grupo de pilulas numa linha. O Razor nao deixa espaco entre um componente e a marcacao
    seguinte, e sem isto as pilulas saem coladas ("Saidanao pago"). */
-/* Indice de secoes da tela de lancar. Rola na horizontal no celular: quebrar em duas linhas
-   empurraria o conteudo para baixo justamente na tela em que o dono quer chegar rapido. */
-.atalhos-secao {
-    margin-bottom: 0.75rem;
-    overflow-x: auto;
-    flex-wrap: nowrap;
-    scrollbar-width: none;
-}
-
-.atalhos-secao::-webkit-scrollbar { display: none; }
-
-.atalhos-secao > a { white-space: nowrap; }
-
 .pilulas {
     display: inline-flex;
     flex-wrap: wrap;
-    gap: 0.3rem;
+    gap: 4px;
     vertical-align: middle;
 }
 
@@ -318,13 +908,17 @@ a {
 .pilula.cartao { background: var(--cartaotipo-fundo); color: var(--cartaotipo-texto); }
 .pilula.economia { background: var(--economia-fundo); color: var(--economia-texto); }
 .pilula.diario { background: var(--diario-fundo); color: var(--diario-texto); }
-.pilula.neutra { background: var(--linha); color: var(--pilula-neutra-texto); }
+.pilula.neutra { background: var(--pilula-neutra-fundo); color: var(--pilula-neutra-texto); }
+.pilula.sobre-escuro { background: var(--superficie-escuro); color: var(--sobre-escuro); }
+
+.farol.ok { background: var(--ok-fundo); color: var(--ok-texto); }
+.farol.atencao { background: var(--atencao-fundo); color: var(--atencao-texto); }
+.farol.negativo { background: var(--negativo-fundo); color: var(--negativo-texto); }
 
 /*
     Paleta das tags. Nomes fixos, nao cor livre: cada par foi medido e fica entre 6,3:1 e 8,0:1,
     e a cor do texto serve tambem de preenchimento da barra do Resumo (>= 7:1 sobre o branco).
-    A pilula do tipo continua escrita por extenso ao lado, entao a cor da tag nunca e a unica
-    pista do que a linha significa.
+    O nome da tag continua escrito dentro da pilula, entao a cor nunca e a unica pista.
 */
 .pilula.tag-rosa     { background: #FCE7F3; color: #9D174D; }
 .pilula.tag-laranja  { background: #FFEDD5; color: #9A3412; }
@@ -343,313 +937,67 @@ a {
 .barra > span.tag-azul     { background: #1E40AF; }
 .barra > span.tag-indigo   { background: #3730A3; }
 .barra > span.tag-roxo     { background: #5B21B6; }
+.barra > span.neutra       { background: var(--pilula-neutra-texto); }
 
-/* Escolha da cor de uma tag: quadradinhos de 44px, que e o alvo de toque. */
+/* Escolha da cor de uma tag: quadrados de 44px, que e o alvo de toque. */
 .cores {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.4rem;
+    gap: var(--esp-2);
+    border: 0;
+    padding: 0;
+    margin: 0;
+    min-width: 0;
 }
 
 .cores input {
     position: absolute;
     opacity: 0;
-    width: 0;
-    height: 0;
+    width: 1px;
+    height: 1px;
 }
 
 .cores label {
     width: var(--alvo-toque);
     height: var(--alvo-toque);
-    border-radius: var(--raio);
+    padding: 0;
+    border-radius: 12px;
     border: 2px solid transparent;
     cursor: pointer;
-    display: block;
 }
 
 /* O escolhido ganha contorno escuro: so a borda colorida nao se distingue da vizinha. */
 .cores input:checked + label {
     border-color: var(--texto);
-    box-shadow: inset 0 0 0 2px var(--fundo);
+    box-shadow: inset 0 0 0 2px var(--superficie);
 }
 
 .cores input:focus-visible + label {
-    outline: 3px solid var(--acento);
+    outline: 2px solid var(--acento);
     outline-offset: 2px;
 }
 
-.farol {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.3rem;
-    padding: 0.12rem 0.5rem;
-    border-radius: 999px;
-    font-size: 0.72rem;
-    font-weight: 600;
-}
-
-.farol.ok { background: var(--ok-fundo); color: var(--ok-texto); }
-.farol.atencao { background: var(--atencao-fundo); color: var(--atencao-texto); }
-.farol.negativo { background: var(--negativo-fundo); color: var(--negativo-texto); }
-
-.valor-ok { color: var(--ok-forte); }
-.valor-atencao { color: var(--atencao-texto); }
-.valor-negativo { color: var(--negativo-texto); }
-
-/* ---------- Tabelas ---------- */
-
-.tabela {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.85rem;
-}
-
-.tabela th {
-    text-align: left;
-    font-size: 0.7rem;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-    color: var(--secundario);
-    font-weight: 600;
-    padding: 0.4rem 0.5rem;
-    border-bottom: 1px solid var(--linha);
-    background: var(--cartao);
-    position: sticky;
-    top: 0;
-}
-
-.tabela td {
-    padding: 0.45rem 0.5rem;
-    border-bottom: 1px solid var(--linha);
-    vertical-align: middle;
-}
-
-.tabela td.num,
-.tabela th.num {
-    text-align: right;
-    font-variant-numeric: tabular-nums;
-}
-
-.tabela tr.hoje td {
-    background: var(--hoje);
-}
-
-.tabela tr.fim-de-semana td:first-child {
-    color: var(--secundario);
-}
-
-.rolagem {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-}
-
-.lista {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-}
-
-.lista > li {
-    padding: 0.6rem 1rem;
-    border-bottom: 1px solid var(--linha);
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-}
-
-.lista > li:last-child {
-    border-bottom: 0;
-}
-
-.lista .principal {
-    flex: 1;
-    min-width: 0;
-}
-
-.lista .principal .titulo {
-    font-weight: 550;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.lista .principal .sub {
-    font-size: 0.76rem;
-    color: var(--secundario);
-}
-
-.riscado .titulo {
-    text-decoration: line-through;
-    color: var(--secundario);
-}
-
-/* ---------- Formularios ---------- */
-
-.campo-grupo {
-    margin-bottom: 0.8rem;
-}
-
-.campo-grupo > label {
-    display: block;
-    font-size: 0.8rem;
-    font-weight: 600;
-    margin-bottom: 0.25rem;
-}
-
-/*
-    Rotulo com caixa de marcar. A caixa desenhada tem 17px, bem abaixo do alvo de toque, entao
-    quem recebe o toque e a linha inteira do rotulo: por isso o min-height aqui e nao na caixa.
-*/
-.campo-opcao {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-weight: 400;
-    min-height: var(--alvo-toque);
-    cursor: pointer;
-}
-
-.campo-grupo .dica {
-    font-size: 0.75rem;
-    color: var(--secundario);
-    margin-top: 0.2rem;
-}
-
-/* 16px evita o zoom automatico do Safari quando o campo recebe foco. */
-.campo,
-select.campo,
-textarea.campo {
-    width: 100%;
-    font-size: 16px;
-    font-family: inherit;
-    color: var(--texto);
-    background: #fff;
-    padding: 0.55rem 0.65rem;
-    border: 1px solid var(--borda-campo);
-    border-radius: 10px;
-    appearance: none;
-    /* 44px de altura minima: o dedo precisa acertar sem mira. */
-    min-height: 44px;
-    transition: border-color var(--transicao), box-shadow var(--transicao);
-}
-
-.campo:focus {
-    border-color: var(--acento);
-}
-
-/* O anel de foco e o que permite usar o app pelo teclado. Nunca remover sem substituir. */
-.campo:focus-visible,
-.btn:focus-visible,
-.nav a:focus-visible,
-.clicavel:focus-visible,
-.toque-diario:focus-visible,
-a:focus-visible {
-    outline: 2px solid var(--acento);
-    outline-offset: 1px;
-}
-
-/*
-    Linhas e itens clicaveis: sem isto eles so funcionam no mouse e no dedo.
-    Com role, tabindex e tecla Enter, funcionam tambem no teclado e no leitor de tela.
-*/
-.clicavel {
-    cursor: pointer;
-    transition: background-color var(--transicao);
-}
-
-tr.clicavel > td:first-child,
-li.clicavel {
-    min-height: var(--alvo-toque);
-}
-
-li.clicavel {
-    align-items: center;
-}
-
-/* Botao que envolve o valor do diario na tabela, para ele ser tocavel e focavel. */
-.toque-diario {
-    display: inline-flex;
-    align-items: center;
-    justify-content: flex-end;
-    min-height: var(--alvo-toque);
-    min-width: var(--alvo-toque);
-    padding: 0 0.25rem;
-    border: 0;
-    background: none;
-    font: inherit;
-    font-variant-numeric: tabular-nums;
-    cursor: pointer;
-    border-radius: 6px;
-    transition: background-color var(--transicao);
-}
-
-.toque-diario.previsto {
-    color: var(--secundario);
-    font-style: italic;
-}
-
-.toque-diario.registrado {
-    color: #1E40AF;
-    font-weight: 600;
-}
-
-.toque-diario:hover {
-    background: var(--linha);
-}
-
-/* O R$ fica dentro do contorno, a esquerda, e o numero comeca depois dele. Alinhado a
-   direita o campo de dinheiro brigava com o de data ao lado dele no mesmo linha-campos. */
-.campo-dinheiro {
-    position: relative;
-    display: block;
-}
-
-.campo-dinheiro-prefixo {
-    position: absolute;
-    left: 0.65rem;
-    top: 50%;
-    transform: translateY(-50%);
-    font-size: 16px;
-    color: var(--secundario);
-    pointer-events: none;
-}
-
-.campo.dinheiro-campo {
-    text-align: left;
-    padding-left: 2.15rem;
-    font-variant-numeric: tabular-nums;
-}
-
-.campo.erro {
-    border-color: var(--negativo-texto);
-}
-
-.linha-campos {
-    display: flex;
-    gap: 0.5rem;
-}
-
-.linha-campos > * {
-    flex: 1;
-}
+/* ---------- Botoes ---------- */
 
 .btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 0.35rem;
-    font-size: 0.9rem;
-    font-weight: 600;
-    font-family: inherit;
-    padding: 0.6rem 0.9rem;
-    border-radius: 10px;
+    gap: 6px;
+    min-height: var(--alvo-toque);
+    padding: 0 var(--esp-4);
     border: 1px solid transparent;
+    border-radius: var(--raio);
     background: var(--acento);
     color: #fff;
-    cursor: pointer;
+    font-family: inherit;
+    font-size: var(--t-base);
+    font-weight: 600;
+    line-height: 1.2;
+    text-align: center;
     text-decoration: none;
-    min-height: var(--alvo-toque);
-    transition: background-color var(--transicao), filter var(--transicao), transform var(--transicao);
+    cursor: pointer;
+    transition: background-color var(--transicao), color var(--transicao), transform var(--transicao);
 }
 
 /*
@@ -660,90 +1008,560 @@ li.clicavel {
     transform: scale(0.97);
 }
 
+/* Tonal: segunda acao do bloco, sem competir com a principal. */
 .btn.secundario {
-    background: #fff;
+    background: var(--acento-suave);
+    color: var(--acento-forte);
+}
+
+.btn.contorno {
+    background: var(--superficie);
     color: var(--texto);
     border-color: var(--linha);
 }
 
+.btn.texto {
+    background: transparent;
+    color: var(--acento);
+    padding: 0 var(--esp-2);
+}
+
 .btn.perigo {
-    background: #fff;
+    background: transparent;
     color: var(--negativo-texto);
-    border-color: var(--negativo-fundo);
+    border-color: #F1C4C4;
+}
+
+.btn.perigo-cheio {
+    background: var(--negativo-texto);
+    color: #fff;
+}
+
+.btn.sobre-escuro {
+    background: var(--superficie-escuro);
+    border-color: var(--linha-escuro);
+    color: var(--sobre-escuro);
+}
+
+.btn.pequeno {
+    padding: 0 var(--esp-3);
+    font-size: var(--t-sm);
+    border-radius: var(--raio-p);
 }
 
 .btn.largo {
     width: 100%;
 }
 
-.btn.pequeno {
-    font-size: 0.78rem;
-    padding: 0.3rem 0.65rem;
-    /* Continua compacto na horizontal, mas sem perder o alvo de toque na vertical. */
-    min-height: var(--alvo-toque);
-    border-radius: 8px;
+.btn-icone {
+    display: inline-grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: var(--alvo-toque);
+    height: var(--alvo-toque);
+    padding: 0;
+    border: 1px solid transparent;
+    border-radius: 50%;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background-color var(--transicao);
 }
 
-.btn:disabled {
+.btn-icone:active:not(:disabled) {
+    background: var(--superficie-suave);
+}
+
+.cabecalho .btn-icone:active:not(:disabled) {
+    background: var(--superficie-escuro);
+}
+
+.btn:disabled,
+.btn-icone:disabled {
     opacity: 0.5;
     cursor: default;
 }
 
 .acoes {
     display: flex;
-    gap: 0.5rem;
     flex-wrap: wrap;
-    margin-top: 0.75rem;
+    gap: var(--esp-2);
+    margin-top: var(--esp-4);
 }
 
-.acoes.fim {
-    justify-content: flex-end;
+.acoes > .btn {
+    flex: 1 1 auto;
+}
+
+.acoes.inicio > .btn {
+    flex: 0 0 auto;
+}
+
+/* ---------- Formularios ---------- */
+
+.campo-grupo {
+    margin-bottom: var(--esp-4);
+    min-width: 0;
+}
+
+.campo-grupo:last-child {
+    margin-bottom: 0;
+}
+
+.rotulo-linha {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    min-height: 22px;
+    margin-bottom: 6px;
+}
+
+.rotulo-texto {
+    font-size: var(--t-sm);
+    font-weight: 600;
+}
+
+/*
+    O botao de ajuda tem 44px de area de toque, mas a margem negativa impede que ele estique
+    a linha do rotulo: visualmente o (i) fica do tamanho do texto.
+*/
+.botao-ajuda {
+    display: inline-grid;
+    place-items: center;
+    width: var(--alvo-toque);
+    height: var(--alvo-toque);
+    margin: -11px -12px -11px -8px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: none;
+    color: var(--secundario);
+    cursor: pointer;
+}
+
+.botao-ajuda[aria-expanded="true"] {
+    color: var(--acento);
+}
+
+.cabecalho .botao-ajuda {
+    color: var(--sobre-escuro-2);
+}
+
+.cabecalho .botao-ajuda[aria-expanded="true"] {
+    color: var(--sobre-escuro);
+}
+
+.texto-ajuda {
+    margin: 0 0 var(--esp-2);
+    padding: var(--esp-2) var(--esp-3);
+    border-radius: var(--raio-p);
+    background: var(--superficie-suave);
+    color: var(--texto);
+    font-size: var(--t-sm);
+    line-height: 1.45;
+}
+
+.cabecalho .texto-ajuda {
+    margin-top: var(--esp-2);
+    background: var(--superficie-escuro);
+    color: var(--sobre-escuro);
+}
+
+.dica {
+    margin-top: 6px;
+    font-size: var(--t-sm);
+    color: var(--secundario);
+}
+
+/* 16px evita o zoom automatico do Safari quando o campo recebe foco. */
+.campo {
+    display: block;
+    width: 100%;
+    min-height: 48px;
+    padding: 0 var(--esp-3);
+    font-family: inherit;
+    font-size: 16px;
+    color: var(--texto);
+    background: var(--superficie);
+    border: 1px solid var(--borda-campo);
+    border-radius: 12px;
+    appearance: none;
+    transition: border-color var(--transicao), box-shadow var(--transicao);
+}
+
+textarea.campo {
+    padding: var(--esp-3);
+}
+
+select.campo {
+    padding-right: 40px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%235B6670' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+}
+
+input[type="date"].campo {
+    line-height: 46px;
+}
+
+input[type="date"].campo::-webkit-date-and-time-value {
+    text-align: left;
+}
+
+input[type="file"].campo {
+    padding: 6px;
+    line-height: 34px;
+    color: var(--secundario);
+    font-size: var(--t-sm);
+}
+
+input[type="file"].campo::file-selector-button {
+    min-height: 34px;
+    margin-right: var(--esp-3);
+    padding: 0 var(--esp-3);
+    border: 0;
+    border-radius: var(--raio-p);
+    background: var(--acento-suave);
+    color: var(--acento-forte);
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.campo:focus {
+    border-color: var(--acento);
+    box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.18);
+}
+
+.campo.erro,
+.campo[aria-invalid="true"] {
+    border-color: var(--negativo-texto);
+}
+
+.linha-campos {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 0 var(--esp-3);
+}
+
+.linha-campos > .campo-grupo {
+    margin-bottom: var(--esp-4);
+}
+
+.linha-campo-botao {
+    display: flex;
+    gap: var(--esp-2);
+    align-items: stretch;
+}
+
+.linha-campo-botao > :first-child {
+    flex: 1;
+    min-width: 0;
+}
+
+.linha-campo-botao > .btn {
+    flex: 0 0 auto;
+    min-height: 48px;
+}
+
+/* O R$ fica dentro do contorno, a esquerda, e o numero comeca depois dele. */
+.campo-dinheiro {
+    position: relative;
+    display: block;
+}
+
+.campo-dinheiro-prefixo,
+.campo-dinheiro-sufixo {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 16px;
+    color: var(--secundario);
+    pointer-events: none;
+}
+
+.campo-dinheiro-prefixo { left: var(--esp-3); }
+.campo-dinheiro-sufixo { right: var(--esp-3); }
+
+.campo.dinheiro-campo {
+    font-variant-numeric: tabular-nums;
+}
+
+.campo.com-prefixo { padding-left: 2.4rem; }
+.campo.com-sufixo { padding-right: 2.2rem; }
+
+/* Controle segmentado: radios de verdade, entao as setas do teclado ja funcionam. */
+.segmentado {
+    display: flex;
+    gap: 4px;
+    margin: 0;
+    padding: 4px;
+    border: 0;
+    min-width: 0;
+    background: var(--fundo);
+    border-radius: var(--raio);
+}
+
+.segmentado input {
+    position: absolute;
+    opacity: 0;
+    width: 1px;
+    height: 1px;
+}
+
+.segmentado label {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: var(--alvo-toque);
+    padding: 0 6px;
+    border-radius: var(--raio-p);
+    color: var(--secundario);
+    font-size: var(--t-sm);
+    font-weight: 600;
+    text-align: center;
+    cursor: pointer;
+    transition: background-color var(--transicao), color var(--transicao);
+}
+
+.segmentado input:checked + label {
+    background: var(--superficie);
+    color: var(--texto);
+    font-weight: 700;
+    box-shadow: 0 1px 3px rgba(15, 64, 61, 0.16);
+}
+
+.segmentado input:focus-visible + label {
+    outline: 2px solid var(--acento);
+    outline-offset: 1px;
+}
+
+/*
+    Interruptor liga/desliga. A linha inteira recebe o toque, por isso o min-height fica nela.
+    A bolinha e um gradiente, nao um ::before: pseudo-elemento em input nao e garantido.
+*/
+.interruptor {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--esp-3);
+    min-height: var(--alvo-toque);
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.interruptor input {
+    flex-shrink: 0;
+    width: 50px;
+    height: 30px;
+    margin: 0;
+    border-radius: var(--raio-total);
+    appearance: none;
+    cursor: pointer;
+    background: var(--borda-campo) radial-gradient(circle at 15px 50%, #fff 11px, transparent 11.5px) no-repeat;
+    transition: background-color var(--transicao);
+}
+
+.interruptor input:checked {
+    background-color: var(--acento);
+    background-image: radial-gradient(circle at 35px 50%, #fff 11px, transparent 11.5px);
+}
+
+/* Mais opcoes: o que e raro fica a um toque, sem empurrar o essencial para baixo. */
+.detalhes {
+    margin-top: var(--esp-2);
+    border-top: 1px solid var(--linha);
+}
+
+.detalhes > summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--esp-2);
+    min-height: var(--alvo-toque);
+    color: var(--acento);
+    font-weight: 600;
+    cursor: pointer;
+    list-style: none;
+}
+
+.detalhes > summary::-webkit-details-marker {
+    display: none;
+}
+
+.detalhes > summary .icone-svg {
+    transition: transform var(--transicao);
+}
+
+.detalhes[open] > summary .icone-svg {
+    transform: rotate(180deg);
+}
+
+.detalhes[open] > summary {
+    margin-bottom: var(--esp-3);
+}
+
+/* Variante dentro de grupo branco: o resumo vira uma linha da lista. */
+.grupo-corpo > .detalhes {
+    margin: 0;
+    border-top: 1px solid var(--linha);
+}
+
+.grupo-corpo > .detalhes:first-child {
+    border-top: 0;
+}
+
+.grupo-corpo > .detalhes > summary {
+    padding: 0 var(--esp-4);
+    min-height: 52px;
+}
+
+.grupo-corpo > .detalhes[open] > summary {
+    margin-bottom: 0;
+    border-bottom: 1px solid var(--linha);
+}
+
+/* ---------- Filtros da lista: logo acima dela ---------- */
+
+/* Rola na horizontal no celular: quebrar em duas linhas empurraria a lista para baixo. */
+.filtros {
+    display: flex;
+    gap: var(--esp-2);
+    margin: var(--esp-4) calc(-1 * var(--margem)) 0;
+    padding: 2px var(--margem);
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.filtros::-webkit-scrollbar {
+    display: none;
+}
+
+.filtro {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--alvo-toque);
+    padding: 0 var(--esp-4);
+    border: 1px solid var(--linha);
+    border-radius: var(--raio-total);
+    background: var(--superficie);
+    color: var(--texto);
+    font-family: inherit;
+    font-size: var(--t-sm);
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color var(--transicao), color var(--transicao);
+}
+
+.filtro[aria-pressed="true"] {
+    background: var(--petroleo);
+    border-color: var(--petroleo);
+    color: var(--sobre-escuro);
+}
+
+select.filtro-select {
+    appearance: none;
+    padding-right: 34px;
+    border-color: var(--borda-campo);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%235B6670' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+}
+
+.contagem {
+    margin: var(--esp-3) 0 var(--esp-2) var(--esp-1);
+}
+
+/* Frase de apoio com (i): texto comum, nao rotulo de campo. */
+.rotulo-dica .rotulo-texto {
+    font-weight: 400;
+    color: var(--secundario);
 }
 
 /* ---------- Avisos ---------- */
 
 .aviso {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--esp-3);
+    padding: var(--esp-3) var(--esp-4);
     border-radius: var(--raio);
-    padding: 0.7rem 0.9rem;
-    font-size: 0.85rem;
-    border: 1px solid transparent;
+    font-size: var(--t-sm);
+    line-height: 1.45;
 }
 
-.aviso.info { background: var(--cartao); border-color: var(--linha); }
+.aviso > .icone-svg {
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+
+.aviso-texto {
+    flex: 1;
+    min-width: 0;
+}
+
+.aviso strong {
+    font-weight: 700;
+}
+
+.aviso .acoes {
+    margin-top: var(--esp-3);
+}
+
+.aviso.info { background: var(--superficie); color: var(--texto); }
 .aviso.atencao { background: var(--atencao-fundo); color: var(--atencao-texto); }
 .aviso.ruim { background: var(--negativo-fundo); color: var(--negativo-texto); }
 .aviso.bom { background: var(--ok-fundo); color: var(--ok-texto); }
 
-.aviso + .aviso,
-.aviso + .cartao,
-.cartao + .aviso,
-.bloco + .aviso,
-.aviso + .bloco {
-    margin-top: 0.75rem;
+.aviso + .aviso {
+    margin-top: var(--esp-2);
 }
 
+.avisos {
+    margin-top: var(--esp-4);
+}
+
+.corpo > .aviso,
+.modal-corpo .aviso {
+    margin-top: var(--esp-3);
+}
+
+.corpo > .aviso:first-child,
+.modal-corpo > .aviso:first-child {
+    margin-top: 0;
+}
+
+/* ---------- Estado vazio e carregando ---------- */
+
 .vazio {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--esp-3);
+    padding: var(--esp-6) var(--esp-4);
     text-align: center;
     color: var(--secundario);
-    font-size: 0.88rem;
-    padding: 1.5rem 1rem;
+}
+
+.vazio > .icone-svg {
+    color: var(--acento);
+}
+
+.carregando {
+    padding: var(--esp-8) var(--esp-4);
+    text-align: center;
+    color: var(--secundario);
 }
 
 /* ---------- Progresso ---------- */
 
-/* Cabecalho do guia do primeiro acesso: "Passo 4 de 6" de um lado, a saida do outro. */
-.progresso {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.75rem;
-    margin-bottom: 0.4rem;
-    min-height: var(--alvo-toque);
-}
-
 .barra {
     height: 8px;
-    border-radius: 999px;
+    border-radius: var(--raio-total);
     background: var(--linha);
     overflow: hidden;
 }
@@ -751,73 +1569,336 @@ li.clicavel {
 .barra > span {
     display: block;
     height: 100%;
+    border-radius: inherit;
     background: var(--acento);
 }
 
-.barra.cheia > span {
-    background: var(--ok-forte);
+.barra.cheia > span { background: var(--ok-forte); }
+.barra.entrada > span { background: var(--valor-entrada); }
+.barra.saida > span { background: var(--valor-saida); }
+
+/* Linha de proporcao: nome e valor em cima, barra embaixo. */
+.proporcao + .proporcao {
+    margin-top: var(--esp-4);
 }
 
-/* ---------- Modal ---------- */
+.proporcao-topo {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--esp-3);
+    margin-bottom: 6px;
+}
 
+.proporcao-nome {
+    min-width: 0;
+    font-weight: 600;
+}
+
+.proporcao-valor {
+    flex-shrink: 0;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.proporcao-valor small {
+    margin-left: 6px;
+    font-size: var(--t-xs);
+    font-weight: 500;
+    color: var(--secundario);
+}
+
+/* ---------- Indicadores soltos numa superficie clara ---------- */
+
+.destaque-claro .rotulo-texto {
+    font-weight: 500;
+    color: var(--secundario);
+}
+
+.valor-grande {
+    display: block;
+    font-size: 2rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+}
+
+.valor-grande .valor-moeda,
+.valor-grande .valor-centavos {
+    font-size: 0.6em;
+    font-weight: 600;
+}
+
+.indicadores {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: var(--esp-4) var(--esp-3);
+    margin: 0;
+}
+
+.indicadores dt {
+    font-size: var(--t-sm);
+    color: var(--secundario);
+}
+
+.indicadores dd {
+    margin: 2px 0 0;
+    font-size: var(--t-md);
+    font-weight: 650;
+}
+
+.indicadores .indicador-sub {
+    display: block;
+    font-size: var(--t-xs);
+    font-weight: 400;
+    color: var(--secundario);
+}
+
+/* ---------- Calendario: um dia por linha ---------- */
+
+.dias {
+    list-style: none;
+    margin: var(--esp-4) calc(-1 * var(--margem)) 0;
+    padding: 0;
+    background: var(--superficie);
+    border-top: 1px solid var(--linha);
+    border-bottom: 1px solid var(--linha);
+}
+
+.dias > li + li {
+    border-top: 1px solid var(--linha);
+}
+
+.dia {
+    display: grid;
+    grid-template-columns: calc(var(--margem) + 3.25rem) minmax(0, 1fr) auto 18px;
+    align-items: stretch;
+    gap: 0 10px;
+    width: 100%;
+    min-height: 76px;
+    padding: 0 var(--margem) 0 0;
+    background: none;
+    border: 0;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: background-color var(--transicao);
+}
+
+.dia:active {
+    background: var(--superficie-suave);
+}
+
+.dia-data {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    padding: 10px 0 10px var(--margem);
+    border-right: 1px solid var(--linha);
+    line-height: 1.1;
+}
+
+.dia-numero {
+    font-size: var(--t-xl);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+}
+
+.dia-semana {
+    font-size: var(--t-sm);
+    color: var(--secundario);
+}
+
+.dia.sabado .dia-data { background: var(--sabado-fundo); }
+.dia.sabado .dia-numero,
+.dia.sabado .dia-semana { color: var(--sabado-texto); }
+.dia.domingo .dia-data { background: var(--domingo-fundo); }
+.dia.domingo .dia-numero,
+.dia.domingo .dia-semana { color: var(--domingo-texto); }
+
+.dia.hoje {
+    background: var(--hoje-fundo);
+    box-shadow: inset 4px 0 0 var(--hoje-marca);
+}
+
+.dia.hoje .dia-data {
+    background: transparent;
+}
+
+.selo-hoje {
+    margin-top: 4px;
+    padding: 0 6px;
+    border-radius: 6px;
+    background: var(--ok-fundo);
+    color: var(--ok-texto);
+    font-size: var(--t-xs);
+    font-weight: 700;
+    line-height: 1.6;
+}
+
+.dia-valores {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-content: center;
+    gap: 1px 10px;
+    padding: 10px 0;
+    font-size: clamp(0.8125rem, 3.5vw, 0.9375rem);
+}
+
+.dia-valores .rot {
+    color: var(--secundario);
+}
+
+.dia-valores .val {
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.dia-valores .val.zero { color: var(--secundario); }
+.dia-valores .val.entra { color: var(--valor-entrada); font-weight: 600; }
+.dia-valores .val.sai { color: var(--valor-saida); font-weight: 600; }
+.dia-valores .val.previsto { color: var(--secundario); font-style: italic; }
+.dia-valores .val.registrado { color: var(--diario-registrado); font-weight: 650; }
+
+.dia-saldo {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: center;
+    padding: 10px 0;
+    text-align: right;
+}
+
+.dia-saldo .rot {
+    font-size: var(--t-sm);
+    color: var(--secundario);
+}
+
+.dia-saldo .val {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: clamp(0.9375rem, 4.1vw, 1.0625rem);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.dia-seta {
+    align-self: center;
+    color: var(--secundario);
+}
+
+.mostrar-anteriores {
+    display: flex;
+    justify-content: center;
+    padding: var(--esp-2) 0 0;
+}
+
+/* ---------- Modal: folha que sobe de baixo no celular, caixa centrada no PC ---------- */
+
+/*
+    Altura e topo vem da area visivel de verdade (app.js), que desconta o teclado: assim
+    a folha nunca fica com o campo ou o botao de salvar escondidos atras dele.
+*/
 .fundo-modal {
     position: fixed;
-    inset: 0;
+    left: 0;
+    right: 0;
+    top: var(--vv-topo, 0px);
+    height: var(--vv-altura, 100%);
     z-index: 40;
-    background: rgba(31, 41, 51, 0.45);
     display: flex;
     align-items: flex-end;
     justify-content: center;
+    background: rgba(17, 33, 32, 0.45);
 }
 
 .modal {
-    background: #fff;
+    display: flex;
+    flex-direction: column;
     width: 100%;
     max-width: 560px;
-    max-height: 92dvh;
-    overflow-y: auto;
-    border-radius: 16px 16px 0 0;
-    padding: 1rem 1rem calc(1rem + env(safe-area-inset-bottom));
+    max-height: calc(var(--vv-altura, 100dvh) - env(safe-area-inset-top) - 12px);
+    background: var(--superficie);
+    border-radius: 24px 24px 0 0;
+    overflow: hidden;
 }
 
-.modal > header {
+.modal-cabecalho {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 0.8rem;
+    gap: var(--esp-2);
+    min-height: 60px;
+    padding: var(--esp-2) var(--esp-2) var(--esp-2) var(--esp-5);
+    border-bottom: 1px solid var(--linha);
 }
 
-@media (min-width: 640px) {
-    .fundo-modal {
-        align-items: center;
-    }
+.modal-cabecalho h2 {
+    min-width: 0;
+}
 
-    .modal {
-        border-radius: 16px;
-        max-height: 85dvh;
-    }
+.modal-corpo {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    padding: var(--esp-5);
+}
+
+.modal-rodape {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--esp-2);
+    padding: var(--esp-3) var(--esp-5) calc(var(--esp-3) + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--linha);
+    background: var(--superficie);
+}
+
+html.teclado-aberto .modal-rodape {
+    padding-bottom: var(--esp-3);
+}
+
+.modal-rodape > .btn {
+    flex: 1 1 auto;
+}
+
+.modal-rodape > .btn.perigo,
+.modal-rodape > .btn.texto {
+    flex: 0 0 auto;
 }
 
 /* ---------- Grafico ---------- */
 
 .grafico {
     width: 100%;
-    height: 160px;
+    height: 168px;
     display: block;
 }
 
 .grafico .linha-saldo {
     fill: none;
     stroke: var(--acento);
-    stroke-width: 2;
+    stroke-width: 2.5;
     stroke-linejoin: round;
+}
+
+.grafico .area-saldo {
+    fill: var(--acento-suave);
+    opacity: 0.7;
 }
 
 .grafico .linha-simulada {
     fill: none;
     stroke: var(--negativo-texto);
     stroke-width: 2;
-    stroke-dasharray: 1 0;
     stroke-linejoin: round;
 }
 
@@ -832,96 +1913,157 @@ li.clicavel {
     stroke-width: 1;
 }
 
+/* Area de toque do tooltip nativo do ponto: so fica visivel ao passar o mouse. */
+.grafico .ponto {
+    fill: transparent;
+}
+
+.grafico .ponto:hover {
+    fill: var(--acento);
+}
+
+.grafico .ponto.ponto-simulado:hover {
+    fill: var(--negativo-texto);
+}
+
 .legenda {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.75rem;
-    font-size: 0.72rem;
+    gap: var(--esp-2) var(--esp-4);
+    margin-top: var(--esp-2);
+    font-size: var(--t-xs);
     color: var(--secundario);
-    margin-top: 0.4rem;
 }
 
 .legenda span::before {
     content: "";
     display: inline-block;
-    width: 10px;
-    height: 2px;
-    margin-right: 0.3rem;
+    width: 12px;
+    height: 3px;
+    margin-right: 6px;
+    border-radius: 2px;
     vertical-align: middle;
     background: currentColor;
+}
+
+.legenda .faixa::before {
+    display: none;
 }
 
 .legenda .s-saldo { color: var(--acento); }
 .legenda .s-conforto { color: var(--atencao-texto); }
 .legenda .s-compra { color: var(--negativo-texto); }
 
+/* ---------- Tabela (so no PC, onde ha largura) ---------- */
+
+.tabela {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--t-sm);
+}
+
+.tabela th {
+    text-align: left;
+    font-size: var(--t-xs);
+    color: var(--secundario);
+    font-weight: 600;
+    padding: 10px var(--esp-3);
+    border-bottom: 1px solid var(--linha);
+}
+
+.tabela td {
+    padding: 10px var(--esp-3);
+    border-bottom: 1px solid var(--linha);
+    vertical-align: middle;
+}
+
+.tabela tr:last-child td {
+    border-bottom: 0;
+}
+
+.tabela td.num,
+.tabela th.num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.tabela tr.selecionado td {
+    background: var(--acento-suave);
+}
+
+.rolagem {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* ---------- Metas ---------- */
+
+.cartao {
+    background: var(--superficie);
+    border-radius: var(--raio-g);
+    padding: var(--esp-4);
+}
+
+.cartao + .cartao {
+    margin-top: var(--esp-3);
+}
+
+.cartao-topo {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--esp-3);
+}
+
+/* ---------- Guia do primeiro acesso ---------- */
+
+.passos {
+    display: flex;
+    gap: 6px;
+    margin-top: var(--esp-4);
+}
+
+.passos > span {
+    flex: 1;
+    height: 4px;
+    border-radius: var(--raio-total);
+    background: var(--linha-escuro);
+}
+
+.passos > span.feito {
+    background: var(--sobre-escuro);
+}
+
 /* ---------- Erro do Blazor ---------- */
 
 #blazor-error-ui {
     display: none;
     position: fixed;
-    bottom: calc(var(--altura-nav) + env(safe-area-inset-bottom));
-    left: 0;
-    right: 0;
+    bottom: calc(var(--altura-nav) + env(safe-area-inset-bottom) + var(--esp-2));
+    left: var(--esp-3);
+    right: var(--esp-3);
     z-index: 50;
-    background: var(--atencao-fundo);
-    color: var(--atencao-texto);
-    padding: 0.7rem 1rem;
-    font-size: 0.85rem;
-    box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.1);
+    padding: var(--esp-3) var(--esp-4);
+    border-radius: var(--raio);
+    background: var(--texto);
+    color: #fff;
+    font-size: var(--t-sm);
+    box-shadow: var(--sombra-flutuante);
 }
 
 #blazor-error-ui .reload {
     color: inherit;
-    font-weight: 600;
+    font-weight: 700;
+    margin-left: var(--esp-2);
 }
 
 #blazor-error-ui .dismiss {
-    cursor: pointer;
     float: right;
+    cursor: pointer;
+    font-weight: 600;
 }
 
-/* ---------- Blocos que mudam de forma entre celular e PC ---------- */
-
-/* Quatro indicadores: 2 por linha no celular, 4 em linha no PC. */
-.painel-cartoes {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0.75rem;
-}
-
-.painel-cartoes > * {
-    margin: 0 !important;
-}
-
-/* Pares de indicadores dentro de um bloco. */
-.grade-indicadores {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0.5rem 1rem;
-}
-
-/* Empilha no celular, vira duas colunas no PC. */
-.colunas > * + * {
-    margin-top: 0.75rem;
-}
-
-.grade-metas > * + * {
-    margin-top: 0.75rem;
-}
-
-.marca {
-    display: flex;
-    align-items: baseline;
-    gap: 0.5rem;
-    min-width: 0;
-}
-
-.assinatura {
-    font-size: 0.78rem;
-    opacity: 0.75;
-    white-space: nowrap;
-}
+/* ---------- Visibilidade por tamanho de tela ---------- */
 
 /*
     Esconder so abaixo do breakpoint, em vez de redefinir display no PC: assim o elemento
@@ -933,10 +2075,13 @@ li.clicavel {
     }
 }
 
-@media (max-width: 379px) {
-    .painel-cartoes,
-    .grade-indicadores {
-        grid-template-columns: 1fr;
+@media (max-width: 359px) {
+    .linha-campos {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .hero-indicador {
+        padding: 0 var(--esp-2);
     }
 }
 
@@ -944,146 +2089,206 @@ li.clicavel {
 
 @media (min-width: 900px) {
     :root {
-        --altura-topo: 58px;
-        --largura-lateral: 232px;
+        --margem: 32px;
+        --largura-lateral: 248px;
     }
 
-    .topo {
-        height: var(--altura-topo);
-        padding: 0 1.5rem;
-        align-items: center;
-    }
-
-    .topo .marca-nome {
-        font-size: 1.1rem;
+    .faixa-status {
+        display: none;
     }
 
     .nav {
-        top: var(--altura-topo);
+        top: 0;
         bottom: 0;
         right: auto;
         width: var(--largura-lateral);
         flex-direction: column;
+        gap: 2px;
+        padding: var(--esp-6) var(--esp-3);
         border-top: 0;
         border-right: 1px solid var(--linha);
-        padding: 0.75rem 0 0;
+        background: var(--superficie);
+        backdrop-filter: none;
+    }
+
+    html.teclado-aberto .nav {
+        display: flex;
+    }
+
+    .nav-marca {
+        display: block;
+        padding: 0 var(--esp-3) var(--esp-6);
+    }
+
+    .nav-marca strong {
+        display: block;
+        font-size: var(--t-md);
+        color: var(--petroleo);
+    }
+
+    .nav-marca span {
+        font-size: var(--t-sm);
+        color: var(--secundario);
     }
 
     .nav a {
         flex: 0 0 auto;
-        height: auto;
         flex-direction: row;
         justify-content: flex-start;
-        gap: 0.65rem;
-        padding: 0.65rem 1.25rem;
-        font-size: 0.9rem;
+        gap: var(--esp-3);
+        min-height: var(--alvo-toque);
+        padding: 0 var(--esp-3);
+        font-size: var(--t-base);
+    }
+
+    .nav-icone {
+        width: auto;
+        height: auto;
+    }
+
+    .nav a.active .nav-icone {
+        background: none;
     }
 
     .nav a:hover {
-        background: var(--cartao);
+        background: var(--superficie-suave);
         color: var(--texto);
     }
 
     .nav a.active {
-        background: var(--cartao);
-        box-shadow: inset 3px 0 0 var(--acento);
+        background: var(--acento-suave);
+        color: var(--acento-forte);
     }
 
     .conteudo {
         margin-left: var(--largura-lateral);
-        margin-right: auto;
+        padding-top: var(--esp-6);
+        padding-bottom: var(--esp-8);
+    }
+
+    .pagina {
         max-width: 1120px;
-        padding: 1.5rem 2rem 3rem;
+        margin: 0 auto;
     }
 
-    /* O primeiro acesso nao tem navegacao: centraliza numa coluna estreita. */
     .conteudo.limpo {
-        margin-left: auto;
-        max-width: 580px;
+        margin-left: 0;
     }
 
-    #blazor-error-ui {
-        bottom: 0;
-        left: var(--largura-lateral);
+    .cabecalho {
+        margin: 0 0 var(--esp-2);
+        padding: var(--esp-6) var(--esp-8);
+        border-radius: 24px;
+    }
+
+    .cabecalho.com-acoes {
+        padding-bottom: calc(var(--esp-8) + var(--esp-8));
+    }
+
+    /* Esticadas na largura toda, tres acoes e um seletor de mes ficam perdidos no PC. */
+    .acoes-rapidas {
+        max-width: 560px;
+        margin-left: var(--esp-8);
+    }
+
+    .seletor-mes {
+        max-width: 560px;
+    }
+
+    .hero-indicadores {
+        max-width: 720px;
     }
 
     .colunas {
         display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 1rem;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 0 var(--esp-6);
         align-items: start;
-    }
-
-    .colunas > * + * {
-        margin-top: 0;
-    }
-
-    .grade-metas {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 0.75rem;
-        align-items: start;
-    }
-
-    .grade-metas > * {
-        margin-top: 0 !important;
-    }
-
-    .painel-cartoes {
-        grid-template-columns: repeat(4, 1fr);
-    }
-
-    .grade-indicadores {
-        grid-template-columns: repeat(4, 1fr);
     }
 
     .so-celular {
         display: none !important;
     }
 
+    .dias {
+        margin-left: 0;
+        margin-right: 0;
+        border: 0;
+        border-radius: var(--raio-g);
+        overflow: hidden;
+    }
+
+    .dia {
+        grid-template-columns: 5rem minmax(0, 1fr) 12rem 18px;
+        min-height: 64px;
+        padding-right: var(--esp-5);
+    }
+
+    .dia-data {
+        padding-left: 0;
+    }
+
+    /* Com largura sobrando, entrada, saida e diario ficam lado a lado, como colunas. */
+    .dia-valores {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-auto-flow: column;
+        grid-template-rows: auto auto;
+        padding-left: var(--esp-3);
+    }
+
+    .indicadores {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
     .modal {
-        max-width: 620px;
+        max-width: 600px;
+    }
+
+    #blazor-error-ui {
+        bottom: var(--esp-4);
+        left: calc(var(--largura-lateral) + var(--esp-4));
+    }
+
+    button.item:hover,
+    a.item:hover,
+    .dia:hover {
+        background: var(--superficie-suave);
+    }
+
+    .dia.hoje:hover {
+        background: var(--hoje-fundo);
+    }
+
+    .acao-rapida:hover {
+        background: var(--superficie-suave);
     }
 
     .btn:hover:not(:disabled) {
-        filter: brightness(1.08);
+        filter: brightness(1.06);
     }
 
-    .tabela tr[style*="cursor:pointer"]:hover td,
-    .lista > li[style*="cursor:pointer"]:hover {
-        background: var(--cartao);
+    .acoes > .btn,
+    .acoes.inicio > .btn {
+        flex: 0 0 auto;
     }
 
-    /* Com mais espaco, os numeros podem respirar. */
-    .tabela td,
-    .tabela th {
-        padding: 0.55rem 0.75rem;
-    }
-}
-
-/* ---------- Telas bem largas: aproveita para alargar os blocos ---------- */
-
-@media (min-width: 1400px) {
-    .conteudo {
-        max-width: 1280px;
-    }
-}
-
-/* ---------- Acabamento visto na tela ---------- */
-
-/*
-    O Blazor foca o h1 a cada navegacao para o leitor de tela anunciar a pagina. O anel de
-    foco ali e ruido: ninguem esta interagindo com o titulo. Elementos com tabindex -1 so
-    recebem foco por programa, entao apagar o anel deles nao tira nada de quem usa teclado.
-*/
-[tabindex="-1"]:focus {
-    outline: none;
-}
-
-@media (min-width: 900px) {
-    /* Botao de acao principal esticado por 1100px parece quebrado. No celular, largura total. */
     .btn.largo {
         width: auto;
-        min-width: 260px;
+        min-width: 240px;
+    }
+}
+
+@media (min-width: 640px) {
+    .fundo-modal {
+        align-items: center;
+    }
+
+    .modal {
+        max-height: min(88dvh, 780px);
+        border-radius: 24px;
+    }
+
+    .modal-rodape {
+        padding-bottom: var(--esp-3);
     }
 }

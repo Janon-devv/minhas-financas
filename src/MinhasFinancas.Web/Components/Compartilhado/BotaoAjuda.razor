@@ -1,0 +1,22 @@
+@* O (i) sozinho, para quando a explicacao abre num painel compartilhado em vez de logo abaixo
+   do rotulo, como nos indicadores estreitos do cabecalho. *@
+
+<button type="button" class="botao-ajuda" aria-expanded="@(Aberta ? "true" : "false")"
+        aria-controls="@Controla" aria-label="Sobre: @Rotulo" @onclick="AoAlternar">
+    <Icone Nome="info" Tamanho="18" />
+</button>
+
+@code {
+    [Parameter, EditorRequired]
+    public string Rotulo { get; set; } = "";
+
+    [Parameter]
+    public bool Aberta { get; set; }
+
+    /// <summary>Id do painel que mostra a explicacao.</summary>
+    [Parameter]
+    public string? Controla { get; set; }
+
+    [Parameter]
+    public EventCallback AoAlternar { get; set; }
+}

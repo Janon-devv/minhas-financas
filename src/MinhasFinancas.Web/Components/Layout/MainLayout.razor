@@ -1,52 +1,52 @@
 @inherits LayoutComponentBase
-@inject IRelogio Relogio
 
-<header class="topo">
-    <div class="marca">
-        <span class="marca-nome">Minhas Finanças</span>
-        <span class="assinatura so-desktop">Raul Janon</span>
-    </div>
-    <span class="data-hoje">@Formato.DiaSemana(Relogio.Hoje), @Formato.Data(Relogio.Hoje)</span>
-</header>
+<div class="faixa-status" aria-hidden="true"></div>
 
 <main class="conteudo">
-    @Body
+    <div class="pagina">
+        @Body
+    </div>
 </main>
 
 @* No celular esta barra fica embaixo; no PC vira a coluna lateral, pelo CSS. *@
-<nav class="nav">
+<nav class="nav" aria-label="Principal">
+    <div class="nav-marca">
+        <strong>Minhas Finanças</strong>
+        <span>Raul Janon</span>
+    </div>
     <NavLink href="" Match="NavLinkMatch.All">
-        <span class="icone"><Icone Nome="hoje" /></span>
+        <span class="nav-icone"><Icone Nome="hoje" Tamanho="22" /></span>
         Hoje
     </NavLink>
     <NavLink href="calendario">
-        <span class="icone"><Icone Nome="calendario" /></span>
+        <span class="nav-icone"><Icone Nome="calendario" Tamanho="22" /></span>
         Calendário
     </NavLink>
     <NavLink href="lancamentos">
-        <span class="icone"><Icone Nome="plano" /></span>
+        <span class="nav-icone"><Icone Nome="lancar" Tamanho="22" /></span>
         Lançar
     </NavLink>
     <NavLink href="resumo">
-        <span class="icone"><Icone Nome="resumo" /></span>
+        <span class="nav-icone"><Icone Nome="resumo" Tamanho="22" /></span>
         Resumo
     </NavLink>
+    @* No celular, metas e simulação ficam nas ações rápidas da tela Hoje. *@
     <NavLink href="metas" class="so-desktop">
-        <span class="icone"><Icone Nome="meta" /></span>
+        <span class="nav-icone"><Icone Nome="meta" Tamanho="22" /></span>
         Metas
     </NavLink>
     <NavLink href="simulador" class="so-desktop">
-        <span class="icone"><Icone Nome="simulador" /></span>
-        Simulador
+        <span class="nav-icone"><Icone Nome="simulador" Tamanho="22" /></span>
+        Simular compra
     </NavLink>
     <NavLink href="ajustes">
-        <span class="icone"><Icone Nome="ajustes" /></span>
+        <span class="nav-icone"><Icone Nome="ajustes" Tamanho="22" /></span>
         Ajustes
     </NavLink>
 </nav>
 
 <div id="blazor-error-ui" data-nosnippet>
-    Algo deu errado por aqui.
+    Algo deu errado.
     <a href="." class="reload">Recarregar</a>
-    <span class="dismiss">fechar</span>
+    <span class="dismiss">Fechar</span>
 </div>

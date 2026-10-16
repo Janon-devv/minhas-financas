@@ -1,19 +1,16 @@
 @* Layout sem a barra de navegacao, usado no primeiro acesso. *@
 @inherits LayoutComponentBase
 
-<header class="topo">
-    <div class="marca">
-        <span class="marca-nome">Minhas Finanças</span>
-        <span class="assinatura so-desktop">Raul Janon</span>
-    </div>
-</header>
+<div class="faixa-status" aria-hidden="true"></div>
 
-<main class="conteudo limpo" style="padding-bottom: calc(env(safe-area-inset-bottom) + 2rem);">
-    @Body
+<main class="conteudo limpo">
+    <div class="pagina">
+        @Body
+    </div>
 </main>
 
 <div id="blazor-error-ui" data-nosnippet>
-    Algo deu errado por aqui.
+    Algo deu errado.
     <a href="." class="reload">Recarregar</a>
-    <span class="dismiss">fechar</span>
+    <span class="dismiss">Fechar</span>
 </div>

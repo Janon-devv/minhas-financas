@@ -484,7 +484,7 @@ public sealed class PlanejamentoService(IDbContextFactory<FinancasDbContext> fab
 
         if (emUso > 0)
         {
-            return $"Essa carteira esta em {emUso} lancamento(s). Mova ou apague eles antes de excluir.";
+            return $"Essa carteira está em {emUso} {(emUso == 1 ? "lançamento" : "lançamentos")}. Mude a carteira deles antes de excluir.";
         }
 
         await db.DiariosReais.Where(d => d.CarteiraId == id).ExecuteDeleteAsync();
@@ -524,7 +524,7 @@ public sealed class PlanejamentoService(IDbContextFactory<FinancasDbContext> fab
 
         if (emUso > 0)
         {
-            return $"Esse cartao esta em {emUso} lancamento(s). Troque o cartao deles antes de excluir.";
+            return $"Esse cartão está em {emUso} {(emUso == 1 ? "lançamento" : "lançamentos")}. Troque o cartão deles antes de excluir.";
         }
 
         await using var db = await fabrica.CreateDbContextAsync();
@@ -532,7 +532,7 @@ public sealed class PlanejamentoService(IDbContextFactory<FinancasDbContext> fab
 
         if (faturas > 0)
         {
-            return $"Esse cartao tem {faturas} fatura(s) cadastrada(s). Apague elas antes de excluir.";
+            return $"Esse cartão tem {faturas} {(faturas == 1 ? "fatura" : "faturas")}. Apague antes de excluir.";
         }
 
         await db.Cartoes.Where(c => c.Id == id).ExecuteDeleteAsync();

@@ -18,12 +18,12 @@ public static class Validacao
         if (lancamento.CarteiraId is int carteiraId && carteiras is not null &&
             carteiras.All(c => c.Id != carteiraId))
         {
-            erros.Add("A carteira escolhida nao existe mais.");
+            erros.Add("A carteira escolhida não existe mais.");
         }
 
         if (string.IsNullOrWhiteSpace(lancamento.Descricao))
         {
-            erros.Add("Escreva uma descricao.");
+            erros.Add("Escreva uma descrição.");
         }
 
         if (lancamento.ValorCentavos <= 0)
@@ -38,7 +38,7 @@ public static class Validacao
 
         if (lancamento.Vezes is int vezes && vezes < 1)
         {
-            erros.Add("A quantidade de vezes precisa ser pelo menos 1, ou deixe em branco para sem fim.");
+            erros.Add("Quantas vezes precisa ser pelo menos 1.");
         }
 
         // A data efetiva de um lancamento de Cartao e o vencimento da fatura, calculado uma vez
@@ -47,29 +47,29 @@ public static class Validacao
         // semana. Enquanto a R1 nao for aplicada por ocorrencia, semanal so vale fora do cartao.
         if (lancamento.Tipo == TipoLancamento.Cartao && lancamento.Periodicidade == Periodicidade.Semanal)
         {
-            erros.Add("Repeticao semanal ainda nao vale para lancamento de Cartao.");
+            erros.Add("Cartão não aceita repetição semanal: as compras da semana caem na mesma fatura.");
         }
 
         if (lancamento.Tipo == TipoLancamento.Cartao)
         {
             if (lancamento.CartaoId is null)
             {
-                erros.Add("Lancamento de cartao precisa dizer qual cartao.");
+                erros.Add("Escolha o cartão.");
             }
             else if (cartoes.All(c => c.Id != lancamento.CartaoId))
             {
-                erros.Add("O cartao escolhido nao existe mais.");
+                erros.Add("O cartão escolhido não existe mais.");
             }
         }
 
         if (lancamento.Tipo != TipoLancamento.Entrada && lancamento.Certeza is not null)
         {
-            erros.Add("Certeza so vale para Entrada.");
+            erros.Add("Certeza só vale para entrada.");
         }
 
         if (lancamento.Tipo != TipoLancamento.Economia && lancamento.MetaId is not null)
         {
-            erros.Add("Vinculo com meta so vale para Economia.");
+            erros.Add("Meta só vale para economia.");
         }
 
         return erros;
@@ -86,12 +86,12 @@ public static class Validacao
 
         if (cfg.DiarioPrevistoCentavos < 0)
         {
-            erros.Add("O diario previsto nao pode ser negativo.");
+            erros.Add("O diário previsto não pode ser negativo.");
         }
 
         if (cfg.SaldoConfortoCentavos < 0)
         {
-            erros.Add("O saldo de conforto nao pode ser negativo.");
+            erros.Add("O saldo de conforto não pode ser negativo.");
         }
 
         if (cfg.HorizonteMeses is < 1 or > 120)
@@ -108,7 +108,7 @@ public static class Validacao
 
         if (string.IsNullOrWhiteSpace(carteira.Nome))
         {
-            erros.Add("De um nome a carteira.");
+            erros.Add("Dê um nome à carteira.");
         }
 
         if (carteira.DataAncora == default)
@@ -119,17 +119,17 @@ public static class Validacao
         // Beneficio nao entra no cheque especial: o cartao do VA simplesmente recusa a compra.
         if (carteira.Tipo == TipoCarteira.Beneficio && carteira.SaldoAncoraCentavos < 0)
         {
-            erros.Add("Saldo de beneficio nao pode ser negativo.");
+            erros.Add("Saldo de benefício não pode ser negativo.");
         }
 
         if (carteira.DiarioPrevistoCentavos is long diario && diario < 0)
         {
-            erros.Add("O diario previsto da carteira nao pode ser negativo.");
+            erros.Add("O diário previsto da carteira não pode ser negativo.");
         }
 
         if (carteira.SaldoConfortoCentavos < 0)
         {
-            erros.Add("O saldo de conforto da carteira nao pode ser negativo.");
+            erros.Add("O saldo de conforto da carteira não pode ser negativo.");
         }
 
         return erros;
@@ -141,7 +141,7 @@ public static class Validacao
 
         if (string.IsNullOrWhiteSpace(cartao.Nome))
         {
-            erros.Add("De um nome ao cartao.");
+            erros.Add("Dê um nome ao cartão.");
         }
 
         if (cartao.DiaFechamento is < 1 or > 31)
@@ -163,7 +163,7 @@ public static class Validacao
 
         if (string.IsNullOrWhiteSpace(meta.Nome))
         {
-            erros.Add("De um nome a meta.");
+            erros.Add("Dê um nome à meta.");
         }
 
         if (meta.ObjetivoCentavos <= 0)
@@ -173,7 +173,7 @@ public static class Validacao
 
         if (meta.SaldoInicialCentavos < 0)
         {
-            erros.Add("O saldo inicial da meta nao pode ser negativo.");
+            erros.Add("O valor já guardado não pode ser negativo.");
         }
 
         return erros;
@@ -185,12 +185,12 @@ public static class Validacao
 
         if (simulacao.ValorTotalCentavos <= 0)
         {
-            erros.Add("O preco precisa ser maior que zero.");
+            erros.Add("O preço precisa ser maior que zero.");
         }
 
         if (simulacao.EntradaCentavos < 0 || simulacao.EntradaCentavos > simulacao.ValorTotalCentavos)
         {
-            erros.Add("A entrada precisa ficar entre zero e o preco.");
+            erros.Add("A entrada precisa ficar entre zero e o preço.");
         }
 
         if (simulacao.Parcelas is < 1 or > Simulador.MaximoParcelas)
@@ -200,7 +200,7 @@ public static class Validacao
 
         if (simulacao.TaxaMensal < 0)
         {
-            erros.Add("A taxa de juros nao pode ser negativa.");
+            erros.Add("Os juros não podem ser negativos.");
         }
 
         if (simulacao.EntradaCentavos > 0 && simulacao.DataEntrada is null)
@@ -210,7 +210,7 @@ public static class Validacao
 
         if (simulacao.DataEntrada is DateOnly dataEntrada && dataEntrada < hoje)
         {
-            erros.Add("A data da entrada nao pode ser no passado.");
+            erros.Add("A data da entrada não pode estar no passado.");
         }
 
         if (simulacao.ValorFinanciadoCentavos > 0)
@@ -221,11 +221,11 @@ public static class Validacao
             }
             else if (simulacao.PrimeiraParcela < hoje)
             {
-                erros.Add("A primeira parcela nao pode ser no passado.");
+                erros.Add("A primeira parcela não pode estar no passado.");
             }
             else if (simulacao.DataEntrada is DateOnly entrada && simulacao.PrimeiraParcela < entrada)
             {
-                erros.Add("A primeira parcela nao pode vir antes da entrada.");
+                erros.Add("A primeira parcela não pode vir antes da entrada.");
             }
         }
 

@@ -1,26 +1,92 @@
-@* Folha que sobe de baixo no celular e vira caixa centrada no desktop. *@
+@*
+    Folha que sobe de baixo no celular e vira caixa centrada no PC. O rodape com as acoes fica
+    fixo embaixo da folha, e a folha inteira cabe acima do teclado (app.js mede a area visivel):
+    campo, erro e botao de salvar continuam alcancaveis com o teclado aberto.
+    Fecha pelo X, por Esc e por toque fora; o foco fica preso dentro enquanto ela esta aberta
+    e volta para onde estava ao fechar.
+*@
+@inject IJSRuntime JS
+@implements IAsyncDisposable
 
 <div class="fundo-modal" @onclick="Fechar">
-    <div class="modal" @onclick:stopPropagation="true">
-        <header>
-            <h2>@Titulo</h2>
-            <button type="button" class="btn secundario pequeno" @onclick="Fechar" aria-label="Fechar">
-                <Icone Nome="fechar" Tamanho="16" />
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="@_idTitulo" tabindex="-1"
+         @ref="_elementoModal" @onclick:stopPropagation="true" @onkeydown="AoTecla">
+        <div class="modal-cabecalho">
+            <h2 id="@_idTitulo">@Titulo</h2>
+            <button type="button" class="btn-icone" @onclick="Fechar" aria-label="Fechar">
+                <Icone Nome="fechar" Tamanho="22" />
             </button>
-        </header>
-        @ChildContent
+        </div>
+        <div class="modal-corpo">
+            @ChildContent
+        </div>
+        @if (Rodape is not null)
+        {
+            <div class="modal-rodape">@Rodape</div>
+        }
     </div>
 </div>
 
 @code {
+    private readonly string _idTitulo = $"modal-{Guid.NewGuid():N}";
+    private ElementReference _elementoModal;
+    private IJSObjectReference? _modulo;
+    private IJSObjectReference? _armadilha;
+
     [Parameter]
     public string Titulo { get; set; } = "";
 
     [Parameter]
     public RenderFragment? ChildContent { get; set; }
 
+    /// <summary>As acoes do formulario. Ficam sempre a vista, embaixo da folha.</summary>
+    [Parameter]
+    public RenderFragment? Rodape { get; set; }
+
     [Parameter]
     public EventCallback AoFechar { get; set; }
 
+    protected override async Task OnAfterRenderAsync(bool primeiraRenderizacao)
+    {
+        if (!primeiraRenderizacao)
+        {
+            return;
+        }
+
+        try
+        {
+            _modulo = await JS.InvokeAsync<IJSObjectReference>(
+                "import", "./Components/Compartilhado/Modal.razor.js");
+            _armadilha = await _modulo.InvokeAsync<IJSObjectReference>("prenderFoco", _elementoModal);
+        }
+        catch (JSDisconnectedException)
+        {
+            // A conexao caiu antes de o modal terminar de abrir; ao reconectar ele abre de novo.
+        }
+    }
+
     private Task Fechar() => AoFechar.InvokeAsync();
+
+    private Task AoTecla(KeyboardEventArgs e) => e.Key == "Escape" ? Fechar() : Task.CompletedTask;
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            if (_armadilha is not null)
+            {
+                await _armadilha.InvokeVoidAsync("encerrar");
+                await _armadilha.DisposeAsync();
+            }
+
+            if (_modulo is not null)
+            {
+                await _modulo.DisposeAsync();
+            }
+        }
+        catch (JSDisconnectedException)
+        {
+            // A conexao ja caiu (tela do iPhone apagou, por exemplo); nao ha mais o que limpar.
+        }
+    }
 }

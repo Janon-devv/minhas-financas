@@ -90,8 +90,8 @@ public static class Projetor
             if (lancamento.Tipo == TipoLancamento.Cartao &&
                 (lancamento.CartaoId is null || !cartoes.ContainsKey(lancamento.CartaoId.Value)))
             {
-                avisos.Add($"O lancamento \"{lancamento.Descricao}\" e do tipo Cartao mas nao tem cartao valido. " +
-                           "Enquanto isso, ele esta sendo contado na data da compra.");
+                avisos.Add($"\"{lancamento.Descricao}\" é compra no cartão, mas não tem cartão válido. " +
+                           "Por enquanto, conta na data da compra.");
             }
 
             var fora = lancamento.EntradaIncerta && !cfg.ContarEntradasIncertas;
