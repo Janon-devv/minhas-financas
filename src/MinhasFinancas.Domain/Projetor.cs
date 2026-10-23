@@ -49,11 +49,12 @@ public static class Projetor
             .ToList();
 
         var diarios = DiariosDa(entrada, carteira);
+        var cartoes = entrada.Cartoes.ToDictionary(c => c.Id);
 
         // R16: so os ciclos COM fatura cadastrada trocam as compras soltas pelo total dela.
         // Cartao sempre sai da conta corrente, entao as outras carteiras nem olham para isso.
         var ciclosComFatura = carteira.Id == Carteiras.IdPrincipal
-            ? entrada.Faturas.Select(Faturas.Chave).ToHashSet()
+            ? entrada.Faturas.Select(f => Faturas.Chave(f, cartoes)).ToHashSet()
             : [];
 
         var inicio = cfg.DataAncora;
@@ -65,7 +66,6 @@ public static class Projetor
         }
 
         var totalDias = fim.DayNumber - inicio.DayNumber + 1;
-        var cartoes = entrada.Cartoes.ToDictionary(c => c.Id);
         var situacoes = entrada.Situacoes.ToDictionary(x => (x.LancamentoId, x.Data));
         var nomesTags = entrada.Tags.ToDictionary(t => t.Id, t => t.Nome);
         var avisos = new List<string>();
@@ -95,9 +95,8 @@ public static class Projetor
             }
 
             var fora = lancamento.EntradaIncerta && !cfg.ContarEntradasIncertas;
-            var dataEfetiva = Ocorrencias.DataEfetiva(lancamento, cartoes);
 
-            foreach (var data in Ocorrencias.Ate(dataEfetiva, lancamento.Vezes, fim, lancamento.Periodicidade))
+            foreach (var data in Ocorrencias.Do(lancamento, cartoes, fim))
             {
                 // R12: o que foi registrado sobre esta ocorrencia manda sobre o padrao.
                 situacoes.TryGetValue((lancamento.Id, data), out var situacao);
@@ -200,20 +199,28 @@ public static class Projetor
         // R14 e R15: cada fatura entra como um gasto so, no dia em que o dinheiro sai.
         if (ciclosComFatura.Count > 0)
         {
-            foreach (var resumo in Faturas.Resumir(entrada.Faturas, entrada.Lancamentos, entrada.Cartoes, entrada.Hoje))
+            var resumos = Faturas.Resumir(
+                entrada.Faturas, entrada.Lancamentos, entrada.Cartoes, entrada.Hoje, entrada.PagamentosFatura);
+
+            foreach (var resumo in resumos)
             {
-                // A parte ja paga so conta se saiu a partir da ancora: antes dela, o saldo de
-                // partida ja esta sem esse dinheiro.
-                if (resumo.PagoCentavos > 0 &&
-                    resumo.Fatura.PagoEm is DateOnly pagoEm &&
-                    pagoEm >= inicio && pagoEm <= fim)
+                // Cada pagamento conta no dia em que saiu, e so se saiu a partir da ancora: antes
+                // dela, o saldo de partida ja esta sem esse dinheiro. E por isso que cada pagamento
+                // tem a propria data: pagar parte antes de conferir com o banco e o resto depois e
+                // o caso comum, e as duas partes precisam de respostas diferentes.
+                foreach (var pagamento in resumo.Pagamentos)
                 {
-                    var iPago = pagoEm.DayNumber - inicio.DayNumber;
-                    cartao[iPago] += resumo.PagoCentavos;
+                    if (pagamento.ValorCentavos <= 0 || pagamento.Data < inicio || pagamento.Data > fim)
+                    {
+                        continue;
+                    }
+
+                    var iPago = pagamento.Data.DayNumber - inicio.DayNumber;
+                    cartao[iPago] += pagamento.ValorCentavos;
                     (movimentos[iPago] ??= []).Add(new MovimentoDoDia(
                         0, $"Fatura {resumo.NomeCartao}", TipoLancamento.Cartao,
-                        resumo.PagoCentavos, null, resumo.Fatura.CartaoId, null, true, false));
-                    AcumularTag(tagsPorMes, pagoEm, 0, resumo.PagoCentavos);
+                        pagamento.ValorCentavos, null, resumo.Fatura.CartaoId, null, true, false));
+                    AcumularTag(tagsPorMes, pagamento.Data, 0, pagamento.ValorCentavos);
                 }
 
                 if (resumo.ASairCentavos <= 0)

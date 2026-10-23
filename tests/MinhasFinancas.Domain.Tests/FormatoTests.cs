@@ -22,6 +22,7 @@ public class FormatoTests
     [InlineData("1.300", 130_000L)]
     [InlineData("-120,50", -12_050L)]
     [InlineData("0", 0L)]
+    [InlineData("9.999.999.999,99", 999_999_999_999L)]
     public void Le_dinheiro_do_jeito_que_a_pessoa_digita(string texto, long esperado)
     {
         Assert.True(Formato.TentarDinheiro(texto, out var centavos));
@@ -33,6 +34,7 @@ public class FormatoTests
     [InlineData("   ")]
     [InlineData("abc")]
     [InlineData(null)]
+    [InlineData("12.345.678.901,00")] // zero a mais: passa de R$ 9.999.999.999,99
     public void Recusa_o_que_nao_e_numero(string? texto)
     {
         Assert.False(Formato.TentarDinheiro(texto, out _));

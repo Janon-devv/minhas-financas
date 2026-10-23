@@ -27,6 +27,8 @@ public sealed record DadosPlanejamento
 
     public List<FaturaCartao> Faturas { get; init; } = [];
 
+    public List<PagamentoFatura> PagamentosFatura { get; init; } = [];
+
     /// <summary>Ganho variavel registrado mes a mes (R17).</summary>
     public List<GanhoVariavel> GanhosVariaveis { get; init; } = [];
 }
@@ -86,6 +88,7 @@ public sealed class PlanejamentoService(IDbContextFactory<FinancasDbContext> fab
             Situacoes = await db.Situacoes.AsNoTracking().ToListAsync(),
             Carteiras = await db.Carteiras.AsNoTracking().OrderBy(c => c.Ordem).ThenBy(c => c.Id).ToListAsync(),
             Faturas = await db.Faturas.AsNoTracking().OrderBy(f => f.Vencimento).ToListAsync(),
+            PagamentosFatura = await db.PagamentosFatura.AsNoTracking().ToListAsync(),
             GanhosVariaveis = await db.GanhosVariaveis.AsNoTracking()
                 .OrderByDescending(g => g.Ano).ThenByDescending(g => g.Mes).ToListAsync()
         };
@@ -107,6 +110,7 @@ public sealed class PlanejamentoService(IDbContextFactory<FinancasDbContext> fab
             Diarios = dados.Diarios,
             Carteiras = dados.Carteiras,
             Faturas = dados.Faturas,
+            PagamentosFatura = dados.PagamentosFatura,
             GanhosVariaveis = dados.GanhosVariaveis,
             Situacoes = dados.Situacoes,
             Hoje = hoje,
@@ -433,32 +437,45 @@ public sealed class PlanejamentoService(IDbContextFactory<FinancasDbContext> fab
     public async Task ExcluirFaturaAsync(int id)
     {
         await using var db = await fabrica.CreateDbContextAsync();
+        await db.PagamentosFatura.Where(p => p.FaturaId == id).ExecuteDeleteAsync();
         await db.Faturas.Where(f => f.Id == id).ExecuteDeleteAsync();
     }
 
     /// <summary>
-    /// Registra um pagamento, somando ao que ja tinha sido pago. Pagamento parcial e a regra,
-    /// nao a excecao: quem paga o minimo paga varias vezes a mesma fatura.
+    /// Registra um pagamento com a data em que saiu da conta. Pagamento parcial e a regra, nao a
+    /// excecao: quem paga o minimo paga varias vezes a mesma fatura, e cada vez fica registrada.
     /// </summary>
-    public async Task PagarFaturaAsync(int id, long valorCentavos, DateOnly pagoEm)
+    public async Task RegistrarPagamentoFaturaAsync(int faturaId, long valorCentavos, DateOnly pagoEm)
     {
         await using var db = await fabrica.CreateDbContextAsync();
-        var fatura = await db.Faturas.FirstAsync(f => f.Id == id);
-
-        fatura.PagoCentavos += valorCentavos;
-        fatura.PagoEm = pagoEm;
-
+        db.PagamentosFatura.Add(new PagamentoFatura { FaturaId = faturaId, Data = pagoEm, ValorCentavos = valorCentavos });
         await db.SaveChangesAsync();
     }
 
+    /// <summary>Corrige um pagamento lancado errado: apagar e lancar de novo vale mais que pagamento negativo.</summary>
+    public async Task ExcluirPagamentoFaturaAsync(int id)
+    {
+        await using var db = await fabrica.CreateDbContextAsync();
+        await db.PagamentosFatura.Where(p => p.Id == id).ExecuteDeleteAsync();
+    }
+
     public List<ResumoFatura> ResumirFaturas(DadosPlanejamento dados, DateOnly hoje) =>
-        Faturas.Resumir(dados.Faturas, dados.Lancamentos, dados.Cartoes, hoje);
+        Faturas.Resumir(dados.Faturas, dados.Lancamentos, dados.Cartoes, hoje, dados.PagamentosFatura);
 
     // ---------- Carteiras (R13) ----------
 
-    public async Task SalvarCarteiraAsync(Carteira carteira)
+    /// <summary>Devolve o motivo quando nao grava (nome repetido); null quando gravou.</summary>
+    public async Task<string?> SalvarCarteiraAsync(Carteira carteira)
     {
         await using var db = await fabrica.CreateDbContextAsync();
+        carteira.Nome = carteira.Nome.Trim();
+
+        var nomes = await db.Carteiras.Select(c => new NomeExistente(c.Id, c.Nome)).ToListAsync();
+
+        if (NomeEmUso(nomes, carteira.Id, carteira.Nome))
+        {
+            return "Já existe uma carteira com esse nome.";
+        }
 
         if (carteira.Id == 0)
         {
@@ -470,7 +487,35 @@ public sealed class PlanejamentoService(IDbContextFactory<FinancasDbContext> fab
             db.Entry(atual).CurrentValues.SetValues(carteira);
         }
 
-        await db.SaveChangesAsync();
+        return await GravarAsync(db, "Já existe uma carteira com esse nome.");
+    }
+
+    private sealed record NomeExistente(int Id, string Nome);
+
+    /// <summary>
+    /// Nome repetido, sem diferenciar maiusculas de minusculas ("Mercado" e "mercado").
+    /// Conferido aqui, em memoria, e nao so pelo indice unico do banco: o indice do SQLite
+    /// diferencia maiusculas, e quando ele recusa o resultado e uma excecao, nao uma mensagem.
+    /// </summary>
+    private static bool NomeEmUso(IEnumerable<NomeExistente> existentes, int id, string nome) =>
+        existentes.Any(e => e.Id != id &&
+                            string.Equals(e.Nome.Trim(), nome, StringComparison.CurrentCultureIgnoreCase));
+
+    /// <summary>
+    /// Grava e transforma a recusa do banco em mensagem. Sobra para o caso raro de duas telas
+    /// abertas gravando o mesmo nome ao mesmo tempo, que a conferencia acima nao pega.
+    /// </summary>
+    private static async Task<string?> GravarAsync(FinancasDbContext db, string seRepetido)
+    {
+        try
+        {
+            await db.SaveChangesAsync();
+            return null;
+        }
+        catch (DbUpdateException)
+        {
+            return seRepetido;
+        }
     }
 
     /// <summary>
@@ -494,9 +539,18 @@ public sealed class PlanejamentoService(IDbContextFactory<FinancasDbContext> fab
 
     // ---------- Cartoes, tags e metas ----------
 
-    public async Task SalvarCartaoAsync(Cartao cartao)
+    /// <summary>Devolve o motivo quando nao grava (nome repetido); null quando gravou.</summary>
+    public async Task<string?> SalvarCartaoAsync(Cartao cartao)
     {
         await using var db = await fabrica.CreateDbContextAsync();
+        cartao.Nome = cartao.Nome.Trim();
+
+        var nomes = await db.Cartoes.Select(c => new NomeExistente(c.Id, c.Nome)).ToListAsync();
+
+        if (NomeEmUso(nomes, cartao.Id, cartao.Nome))
+        {
+            return "Já existe um cartão com esse nome.";
+        }
 
         if (cartao.Id == 0)
         {
@@ -508,7 +562,7 @@ public sealed class PlanejamentoService(IDbContextFactory<FinancasDbContext> fab
             db.Entry(atual).CurrentValues.SetValues(cartao);
         }
 
-        await db.SaveChangesAsync();
+        return await GravarAsync(db, "Já existe um cartão com esse nome.");
     }
 
     public async Task<int> ContarLancamentosDoCartaoAsync(int cartaoId)
@@ -539,9 +593,18 @@ public sealed class PlanejamentoService(IDbContextFactory<FinancasDbContext> fab
         return null;
     }
 
-    public async Task SalvarTagAsync(Tag tag)
+    /// <summary>Devolve o motivo quando nao grava (nome repetido); null quando gravou.</summary>
+    public async Task<string?> SalvarTagAsync(Tag tag)
     {
         await using var db = await fabrica.CreateDbContextAsync();
+        tag.Nome = tag.Nome.Trim();
+
+        var nomes = await db.Tags.Select(t => new NomeExistente(t.Id, t.Nome)).ToListAsync();
+
+        if (NomeEmUso(nomes, tag.Id, tag.Nome))
+        {
+            return "Já existe uma tag com esse nome.";
+        }
 
         if (tag.Id == 0)
         {
@@ -553,7 +616,7 @@ public sealed class PlanejamentoService(IDbContextFactory<FinancasDbContext> fab
             db.Entry(atual).CurrentValues.SetValues(tag);
         }
 
-        await db.SaveChangesAsync();
+        return await GravarAsync(db, "Já existe uma tag com esse nome.");
     }
 
     /// <summary>Solta a tag dos lancamentos e depois apaga, para nao travar uma limpeza simples.</summary>
@@ -564,9 +627,18 @@ public sealed class PlanejamentoService(IDbContextFactory<FinancasDbContext> fab
         await db.Tags.Where(t => t.Id == id).ExecuteDeleteAsync();
     }
 
-    public async Task SalvarMetaAsync(Meta meta)
+    /// <summary>Devolve o motivo quando nao grava (nome repetido); null quando gravou.</summary>
+    public async Task<string?> SalvarMetaAsync(Meta meta)
     {
         await using var db = await fabrica.CreateDbContextAsync();
+        meta.Nome = meta.Nome.Trim();
+
+        var nomes = await db.Metas.Select(m => new NomeExistente(m.Id, m.Nome)).ToListAsync();
+
+        if (NomeEmUso(nomes, meta.Id, meta.Nome))
+        {
+            return "Já existe uma meta com esse nome, talvez arquivada.";
+        }
 
         if (meta.Id == 0)
         {
@@ -578,7 +650,7 @@ public sealed class PlanejamentoService(IDbContextFactory<FinancasDbContext> fab
             db.Entry(atual).CurrentValues.SetValues(meta);
         }
 
-        await db.SaveChangesAsync();
+        return await GravarAsync(db, "Já existe uma meta com esse nome, talvez arquivada.");
     }
 
     /// <summary>Arquivar preserva o historico. Apagar uma meta com aportes vinculados perderia contexto.</summary>

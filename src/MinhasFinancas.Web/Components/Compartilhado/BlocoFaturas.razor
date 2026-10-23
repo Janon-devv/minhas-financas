@@ -91,9 +91,13 @@ else
                             <div class="linha">
                                 <dt>
                                     Pago
-                                    @if (resumo.Fatura.PagoEm is DateOnly pagoEm)
+                                    @if (resumo.UltimoPagamentoEm is DateOnly pagoEm)
                                     {
-                                        <span class="linha-sub">último em @Formato.Data(pagoEm)</span>
+                                        <span class="linha-sub">
+                                            @(resumo.Pagamentos.Count == 1
+                                                ? $"em {Formato.Data(pagoEm)}"
+                                                : $"{resumo.Pagamentos.Count} pagamentos, último em {Formato.Data(pagoEm)}")
+                                        </span>
                                     }
                                 </dt>
                                 <dd><Valor Centavos="-resumo.PagoCentavos" /></dd>
@@ -187,6 +191,34 @@ else
                 </div>
             }
 
+            @* Pagamento lançado errado se corrige aqui, excluindo: cada um tem a data em que saiu. *@
+            @if (PagamentosDe(_editando.Id) is { Count: > 0 } pagamentos)
+            {
+                <div class="campo-grupo">
+                    <Rotulo Texto="Pagamentos" Ajuda="Cada pagamento conta no dia em que saiu. Para corrigir um valor, exclua e registre de novo." />
+                    <ul class="lista">
+                        @foreach (var pagamento in pagamentos)
+                        {
+                            var confirmando = _pagamentoExcluindo == pagamento.Id;
+
+                            <li>
+                                <div class="item" style="min-height:52px">
+                                    <span class="item-principal">
+                                        <span class="item-titulo">@Formato.Data(pagamento.Data)</span>
+                                    </span>
+                                    <span class="item-valor"><Valor Centavos="pagamento.ValorCentavos" /></span>
+                                    <button type="button" class="btn pequeno @(confirmando ? "perigo-cheio" : "perigo")"
+                                            disabled="@_salvando" @onclick="() => ExcluirPagamento(pagamento)"
+                                            aria-label="@(confirmando ? "Excluir de vez" : "Excluir") o pagamento de @Formato.Moeda(pagamento.ValorCentavos) em @Formato.Data(pagamento.Data)">
+                                        @(confirmando ? "Excluir de vez" : "Excluir")
+                                    </button>
+                                </div>
+                            </li>
+                        }
+                    </ul>
+                </div>
+            }
+
             @if (_erros.Count > 0)
             {
                 <Aviso Tipo="ruim" Papel="alert">
@@ -275,6 +307,7 @@ else
     private List<string> _erros = [];
     private bool _salvando;
     private bool _confirmandoExclusao;
+    private int? _pagamentoExcluindo;
 
     protected override void OnParametersSet()
     {
@@ -289,6 +322,7 @@ else
     {
         _erros = [];
         _confirmandoExclusao = false;
+        _pagamentoExcluindo = null;
 
         if (original is null)
         {
@@ -309,8 +343,6 @@ else
             Fechamento = original.Fechamento,
             Vencimento = original.Vencimento,
             TotalInformadoCentavos = original.TotalInformadoCentavos,
-            PagoCentavos = original.PagoCentavos,
-            PagoEm = original.PagoEm,
             Obs = original.Obs
         };
     }
@@ -319,6 +351,38 @@ else
     {
         _editando = null;
         _confirmandoExclusao = false;
+        _pagamentoExcluindo = null;
+    }
+
+    private IReadOnlyList<PagamentoFatura> PagamentosDe(int faturaId) =>
+        faturaId == 0 ? [] : _resumos.FirstOrDefault(r => r.Fatura.Id == faturaId)?.Pagamentos ?? [];
+
+    /// <summary>Excluir pede um segundo toque, como no resto do app.</summary>
+    private async Task ExcluirPagamento(PagamentoFatura pagamento)
+    {
+        if (_salvando)
+        {
+            return;
+        }
+
+        if (_pagamentoExcluindo != pagamento.Id)
+        {
+            _pagamentoExcluindo = pagamento.Id;
+            return;
+        }
+
+        _salvando = true;
+
+        try
+        {
+            await Servico.ExcluirPagamentoFaturaAsync(pagamento.Id);
+            _pagamentoExcluindo = null;
+            await CarregarAsync();
+        }
+        finally
+        {
+            _salvando = false;
+        }
     }
 
     /// <summary>
@@ -355,34 +419,21 @@ else
 
     private async Task SalvarFatura()
     {
-        if (_editando is null)
+        // Confere a trava antes de tudo: o disabled do botão só chega ao celular depois de uma ida
+        // e volta pela rede, e um toque duplo rápido passaria por ele.
+        if (_editando is null || _dados is null || _salvando)
         {
             return;
         }
 
-        _erros = [];
-
-        if (_cartaoId <= 0)
-        {
-            _erros.Add("Escolha o cartão.");
-        }
-
-        if (_editando.Vencimento == default)
-        {
-            _erros.Add("Informe o vencimento.");
-        }
-
-        if (_editando.TotalInformadoCentavos is long total && total < 0)
-        {
-            _erros.Add("O total da fatura não pode ser negativo.");
-        }
+        _editando.CartaoId = _cartaoId;
+        _erros = Validacao.Fatura(_editando, _dados.Cartoes, _dados.Faturas);
 
         if (_erros.Count > 0)
         {
             return;
         }
 
-        _editando.CartaoId = _cartaoId;
         _salvando = true;
 
         try
@@ -400,7 +451,7 @@ else
     /// <summary>Excluir pede um segundo toque: a fatura some da previsão e o pagamento junto.</summary>
     private async Task ExcluirFatura()
     {
-        if (_editando is not { Id: > 0 } fatura)
+        if (_editando is not { Id: > 0 } fatura || _salvando)
         {
             return;
         }
@@ -426,14 +477,14 @@ else
 
     private async Task ConfirmarPagamento()
     {
-        if (_pagando is null)
+        // Sem esta trava, dois toques rapidos registravam o mesmo pagamento duas vezes.
+        if (_pagando is null || _salvando)
         {
             return;
         }
 
-        // Zero nao muda nada alem da data do ultimo pagamento. Negativo continua aceito: e o
-        // unico jeito de corrigir um pagamento registrado a mais.
-        _erros = _valorPago != 0 ? [] : ["Informe quanto foi pago."];
+        // Pagamento lancado errado se corrige excluindo na edicao da fatura, nao com valor negativo.
+        _erros = Validacao.PagamentoFatura(_valorPago, _dataPagamento);
 
         if (_erros.Count > 0)
         {
@@ -444,7 +495,7 @@ else
 
         try
         {
-            await Servico.PagarFaturaAsync(_pagando.Fatura.Id, _valorPago, _dataPagamento);
+            await Servico.RegistrarPagamentoFaturaAsync(_pagando.Fatura.Id, _valorPago, _dataPagamento);
             _pagando = null;
             await CarregarAsync();
         }

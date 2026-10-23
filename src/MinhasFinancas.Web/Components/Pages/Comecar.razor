@@ -456,9 +456,11 @@ else
     private static string Contagem(int quantos, string singular, string plural) =>
         quantos == 0 ? "Nada cadastrado" : Formato.Quantos(quantos, singular, plural);
 
+    // Cada acao que grava confere a trava antes de tudo: o disabled do botao so chega ao celular
+    // depois de uma ida e volta pela rede, e um toque duplo rapido gravaria duas vezes.
     private async Task SalvarNumerosAsync()
     {
-        if (_cfg is null)
+        if (_cfg is null || _salvando)
         {
             return;
         }
@@ -538,7 +540,7 @@ else
 
     private async Task SalvarItemAsync()
     {
-        if (_novo is null || _dados is null)
+        if (_novo is null || _dados is null || _salvando)
         {
             return;
         }
@@ -554,7 +556,6 @@ else
             return;
         }
 
-        // Trava o botão: dois toques seguidos criariam dois lançamentos iguais.
         _salvando = true;
 
         try
@@ -573,7 +574,7 @@ else
 
     private async Task SalvarCartaoAsync()
     {
-        if (_novoCartao is null)
+        if (_novoCartao is null || _salvando)
         {
             return;
         }
@@ -589,8 +590,13 @@ else
 
         try
         {
+            if (await Servico.SalvarCartaoAsync(_novoCartao) is string recusa)
+            {
+                _errosItem = [recusa];
+                return;
+            }
+
             var nome = _novoCartao.Nome;
-            await Servico.SalvarCartaoAsync(_novoCartao);
             await CarregarDadosAsync();
             _novoCartao = null;
             _confirmacao = $"Cartão {nome} salvo.";

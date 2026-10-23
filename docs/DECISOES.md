@@ -468,3 +468,77 @@ O que foi decidido, e por quê:
   lançamento semanal, porque o texto ignorava a periodicidade.
 - **Pagamento de fatura de zero é recusado.** Não mudava nada além da data do último pagamento.
   Valor negativo continua aceito: é o único jeito de corrigir um pagamento lançado a mais.
+  (Substituído na seção 23: pagamento errado agora se corrige excluindo o registro.)
+
+## 23. Auditoria de 23/10/2026: dinheiro contado duas vezes, travas e rede
+
+Uma auditoria completa achou bugs que mexiam no saldo, reproduzidos chamando o motor direto, e
+lacunas de segurança no uso pela rede. O que mudou e por quê:
+
+### Fatura e compra se casam pelo ciclo, não pela data digitada
+
+`Faturas.Chave` passou a ser o vencimento que as regras do cartão calculam, o mais próximo da data
+da fatura. O banco empurra o vencimento que cai em fim de semana e o dono digita a data real;
+casando pela data exata, a compra (no vencimento calculado) não achava a fatura e o mesmo gasto
+saía duas vezes. A fatura continua saindo da conta na data digitada. Duas faturas no mesmo ciclo
+passaram a ser recusadas (`Validacao.Fatura`), porque receberiam as mesmas compras.
+
+### Compra no cartão usa o dia de vencimento do cartão em todas as parcelas
+
+Cartão que vence dia 30 com a primeira fatura em fevereiro grudava as parcelas seguintes no dia
+28, fora do vencimento e fora da fatura do ciclo. `Ocorrencias.DiaDeReferencia` devolve o dia de
+vencimento do cartão, e `Ocorrencias.Do` é o caminho único para gerar ocorrências de um lançamento.
+
+### Cada pagamento de fatura é um registro, com a própria data
+
+O pago ficava somado na fatura, com a data do último pagamento. Pagar parte antes de conferir com
+o banco e o resto depois fazia a projeção descontar tudo na data do último, e a parte anterior,
+já fora do saldo conferido, saía de novo. Agora existe `PagamentoFatura` (tabela própria, apagada
+junto com a fatura) e só conta na projeção o pagamento a partir da âncora. A migração converte o
+pago antigo num pagamento só, na data do último (é tudo que se sabia). Backup subiu para a versão
+5; arquivo antigo continua abrindo, com a mesma conversão. Valor negativo deixou de ser aceito:
+pagamento errado se exclui na edição da fatura.
+
+### Juros do rotativo param em 100% da dívida
+
+Uma fatura antiga não paga (ou com o ano digitado errado) crescia mês a mês até estourar o `long`,
+e como toda tela projeta o saldo, o app inteiro travava, inclusive Ajustes, onde se restaura o
+backup. O teto segue a Lei 14.690/2023, que desde 2024 limita juros e encargos do rotativo a 100%
+do valor original. Junto vieram faixas em `Validacao`: datas entre 2000 e 2100, valores até
+R$ 9.999.999.999,99, juros até 100% ao mês, até 360 repetições.
+
+### Travas e erros
+
+- Botão que grava confere a trava **antes de tudo**. O `disabled` só chega ao iPhone depois de uma
+  ida e volta pela rede, e um toque duplo passava: criava lançamento repetido e, no pagamento de
+  fatura, somava o pagamento duas vezes.
+- Nome repetido de cartão, tag, meta e carteira volta como mensagem (o serviço devolve `string?`),
+  sem diferenciar maiúsculas. Antes o índice único do banco recusava com exceção e derrubava a tela.
+- `ErrorBoundary` no `MainLayout`: erro inesperado fica na tela, com "Tentar de novo", em vez de
+  derrubar a conexão inteira.
+- A restauração confere tudo que quebraria a gravação ou o cálculo (código e nome repetidos,
+  referência solta, data e valor fora da faixa) e, se o banco ainda recusar, nada muda. Regra de
+  tela que não quebra nada continua de fora, para backup antigo seguir abrindo.
+
+### Uso pela rede
+
+- **PIN** (`Seguranca/ControleDeAcesso`). Este computador entra direto; outro aparelho precisa
+  do PIN, e sem PIN definido a rede só vê um aviso. Seguro por padrão: o dono decide abrir.
+- **Filtro de endereço** (`Seguranca/ProtecaoDeRede`). Só localhost, IP e o nome do PC. Sem isso,
+  um site malicioso aberto no navegador do PC podia apontar o próprio domínio para 127.0.0.1 (DNS
+  rebinding) e ler o app inteiro, inclusive o backup.
+- **Perfil `rede` em Production**, para erro não mostrar detalhes técnicos a outros aparelhos.
+  `UseStaticWebAssets` ficou ligado sempre, porque fora de Development o `dotnet run` não servia o
+  `blazor.web.js`.
+
+### Backup automático
+
+Cópia diária do banco com `VACUUM INTO`, 30 dias guardados, na pasta `backups` ao lado do banco
+(ou em `MinhasFinancas:PastaBackups`). A cópia de antes de migrar passou a usar o mesmo método.
+Antes disso o `financas.db` era a única cópia do histórico.
+
+### Chaves estrangeiras no banco
+
+Situação, diário, fatura e carteira do lançamento passaram a ter chave estrangeira; antes a
+integridade dependia só do código. A migração limpa órfãos antes (que o app nunca cria) e deixa
+fatura de cartão apagado como está, porque apagá-la tiraria uma dívida da previsão.

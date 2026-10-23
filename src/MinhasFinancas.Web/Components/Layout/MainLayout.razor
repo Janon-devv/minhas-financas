@@ -4,7 +4,17 @@
 
 <main class="conteudo">
     <div class="pagina">
-        @Body
+        @* Erro inesperado numa tela fica nela: sem isto, qualquer excecao derrubava a conexao
+           inteira e sobrava só a faixa "Algo deu errado" com recarregar. *@
+        <ErrorBoundary @ref="_falha">
+            <ChildContent>@Body</ChildContent>
+            <ErrorContent>
+                <Cabecalho Titulo="Algo deu errado" />
+                <Vazio Texto="Não deu para concluir nesta tela. O que já estava salvo continua salvo." NomeIcone="erro">
+                    <button type="button" class="btn" @onclick="TentarDeNovo">Tentar de novo</button>
+                </Vazio>
+            </ErrorContent>
+        </ErrorBoundary>
     </div>
 </main>
 
@@ -50,3 +60,12 @@
     <a href="." class="reload">Recarregar</a>
     <span class="dismiss">Fechar</span>
 </div>
+
+@code {
+    private ErrorBoundary? _falha;
+
+    // Trocar de tela limpa o erro da anterior: a falha de uma tela nao pode travar as outras.
+    protected override void OnParametersSet() => _falha?.Recover();
+
+    private void TentarDeNovo() => _falha?.Recover();
+}

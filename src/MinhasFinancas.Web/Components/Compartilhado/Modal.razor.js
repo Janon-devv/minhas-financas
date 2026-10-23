@@ -1,7 +1,7 @@
 // Prende o foco de teclado dentro do modal enquanto ele estiver aberto, para quem navega
 // sem mouse nunca cair sem querer no conteudo por tras. Ao fechar, devolve o foco para o
-// elemento que abriu o modal. Sem biblioteca: so Tab e Shift+Tab.
-export function prenderFoco(elementoModal) {
+// elemento que abriu o modal. Sem biblioteca: so Tab, Shift+Tab e Esc.
+export function prenderFoco(elementoModal, dotnet) {
     const anterior = document.activeElement;
     const raiz = document.documentElement;
 
@@ -38,7 +38,27 @@ export function prenderFoco(elementoModal) {
         }
     }
 
+    // Esc e Tab tambem valem com o foco fora do modal. Isso acontece quando o elemento focado
+    // some da tela (o botao de excluir uma linha que acabou de ser excluida): o foco cai no
+    // body, e um ouvinte so no modal deixaria de fechar no Esc e soltaria o Tab para o fundo.
+    function aoTeclarNoDocumento(evento) {
+        const abertos = document.querySelectorAll('.fundo-modal .modal');
+
+        if (abertos[abertos.length - 1] !== elementoModal) {
+            return;
+        }
+
+        if (evento.key === 'Escape') {
+            evento.preventDefault();
+            dotnet.invokeMethodAsync('FecharPeloTeclado');
+        } else if (evento.key === 'Tab' && !elementoModal.contains(document.activeElement)) {
+            evento.preventDefault();
+            (focaveis()[0] ?? elementoModal).focus();
+        }
+    }
+
     elementoModal.addEventListener('keydown', aoTeclar);
+    document.addEventListener('keydown', aoTeclarNoDocumento);
     raiz.classList.add('modal-aberto');
 
     // Foca a propria folha, nao o primeiro campo: no Android o foco num campo abre o teclado
@@ -48,6 +68,7 @@ export function prenderFoco(elementoModal) {
     return {
         encerrar() {
             elementoModal.removeEventListener('keydown', aoTeclar);
+            document.removeEventListener('keydown', aoTeclarNoDocumento);
 
             if (!document.querySelector('.fundo-modal .modal')) {
                 raiz.classList.remove('modal-aberto');

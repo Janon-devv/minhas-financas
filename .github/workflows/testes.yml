@@ -1,0 +1,30 @@
+# Compila sem aviso e roda os testes a cada push e pull request. Windows, igual ao PC onde o app
+# roda: formatacao de dinheiro e fuso de Sao Paulo saem do mesmo jeito que no dia a dia.
+name: Testes
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  testes:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Compilar
+        run: dotnet build MinhasFinancas.slnx -warnaserror
+
+      - name: Testar
+        run: dotnet test MinhasFinancas.slnx --no-build
+
+      - name: Pacotes com vulnerabilidade conhecida
+        shell: pwsh
+        run: |
+          $saida = dotnet list MinhasFinancas.slnx package --vulnerable --include-transitive
+          $saida
+          if ($saida -match 'tem os seguintes pacotes vulneráveis|has the following vulnerable packages') { exit 1 }

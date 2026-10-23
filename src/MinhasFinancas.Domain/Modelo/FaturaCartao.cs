@@ -30,10 +30,25 @@ public class FaturaCartao
     /// </summary>
     public long? TotalInformadoCentavos { get; set; }
 
-    /// <summary>Quanto ja foi pago desta fatura. Pagamento parcial acumula aqui.</summary>
-    public long PagoCentavos { get; set; }
-
-    public DateOnly? PagoEm { get; set; }
-
     public string? Obs { get; set; }
+}
+
+/// <summary>
+/// Um pagamento de fatura, com o valor e o dia em que saiu da conta. Pagamento parcial e a
+/// regra, nao a excecao: quem paga o minimo paga varias vezes a mesma fatura.
+///
+/// Cada pagamento guarda a propria data porque a projecao precisa saber de cada um se saiu antes
+/// ou depois da ancora. Somar tudo num valor com a data do ultimo descontaria de novo o que foi
+/// pago antes de uma conferencia com o banco, e que ja esta fora do saldo conferido.
+/// </summary>
+public class PagamentoFatura
+{
+    public int Id { get; set; }
+
+    public int FaturaId { get; set; }
+
+    public DateOnly Data { get; set; }
+
+    /// <summary>Sempre maior que zero. Pagamento lancado errado se corrige excluindo o registro.</summary>
+    public long ValorCentavos { get; set; }
 }

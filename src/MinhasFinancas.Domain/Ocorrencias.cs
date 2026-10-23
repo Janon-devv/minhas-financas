@@ -26,17 +26,47 @@ public static class Ocorrencias
     }
 
     /// <summary>
+    /// O dia do mes em que as ocorrencias mensais caem. Para Cartao e o dia de vencimento do
+    /// cartao, e nao o dia da primeira data efetiva: um cartao que vence dia 30 tem a primeira
+    /// fatura em 28/02 quando a compra e de janeiro, e usar esse 28 grudaria todas as parcelas
+    /// seguintes no dia 28, fora do vencimento real e fora da fatura cadastrada para o ciclo.
+    /// </summary>
+    public static int DiaDeReferencia(Lancamento lancamento, IReadOnlyDictionary<int, Cartao> cartoes) =>
+        lancamento.Tipo == TipoLancamento.Cartao &&
+        lancamento.CartaoId is int id &&
+        cartoes.TryGetValue(id, out var cartao)
+            ? cartao.DiaVencimento
+            : lancamento.Data.Day;
+
+    /// <summary>Todas as ocorrencias de um lancamento ate o limite, com data efetiva e dia certos.</summary>
+    public static IEnumerable<DateOnly> Do(
+        Lancamento lancamento,
+        IReadOnlyDictionary<int, Cartao> cartoes,
+        DateOnly limite) =>
+        Ate(DataEfetiva(lancamento, cartoes), lancamento.Vezes, limite, lancamento.Periodicidade,
+            DiaDeReferencia(lancamento, cartoes));
+
+    /// <summary>A ultima ocorrencia de um lancamento, com data efetiva e dia certos. null e sem fim.</summary>
+    public static DateOnly? UltimaVezDo(Lancamento lancamento, IReadOnlyDictionary<int, Cartao> cartoes) =>
+        UltimaVez(DataEfetiva(lancamento, cartoes), lancamento.Vezes, lancamento.Periodicidade,
+            DiaDeReferencia(lancamento, cartoes));
+
+    /// <summary>
     /// Ocorrencias a partir da data efetiva, de mes em mes ou de semana em semana, parando no
     /// limite informado. Cada ocorrencia e derivada da data original, nunca da anterior: somando
     /// na anterior, um mes que cai no dia 30 puxaria todos os seguintes para o dia 30.
     /// </summary>
+    /// <param name="diaDoMes">
+    /// Dia em que as mensais caem. Sem ele, o dia da data efetiva. Ver <see cref="DiaDeReferencia"/>.
+    /// </param>
     public static IEnumerable<DateOnly> Ate(
         DateOnly dataEfetiva,
         int? vezes,
         DateOnly limite,
-        Periodicidade periodicidade = Periodicidade.Mensal)
+        Periodicidade periodicidade = Periodicidade.Mensal,
+        int? diaDoMes = null)
     {
-        var dia = dataEfetiva.Day;
+        var dia = diaDoMes ?? dataEfetiva.Day;
         var total = vezes is null ? (int?)null : Math.Max(1, vezes.Value);
 
         for (var k = 0; total is null || k < total.Value; k++)
@@ -61,7 +91,8 @@ public static class Ocorrencias
     public static DateOnly? UltimaVez(
         DateOnly dataEfetiva,
         int? vezes,
-        Periodicidade periodicidade = Periodicidade.Mensal)
+        Periodicidade periodicidade = Periodicidade.Mensal,
+        int? diaDoMes = null)
     {
         if (vezes is null)
         {
@@ -72,6 +103,6 @@ public static class Ocorrencias
 
         return periodicidade == Periodicidade.Semanal
             ? dataEfetiva.AddDays(7 * ultima)
-            : Calendario.AdicionarMeses(dataEfetiva, ultima, dataEfetiva.Day);
+            : Calendario.AdicionarMeses(dataEfetiva, ultima, diaDoMes ?? dataEfetiva.Day);
     }
 }

@@ -445,7 +445,7 @@ else
         .Select(l =>
         {
             var efetiva = Ocorrencias.DataEfetiva(l, cartoes);
-            return new LinhaPlano(l, efetiva, Ocorrencias.UltimaVez(efetiva, l.Vezes, l.Periodicidade));
+            return new LinhaPlano(l, efetiva, Ocorrencias.UltimaVezDo(l, cartoes));
         })
         .OrderBy(linha => linha.CaiEm)
         .ToList();
@@ -572,7 +572,9 @@ else
 
     private async Task SalvarAsync()
     {
-        if (_editando is null || _dados is null)
+        // A trava vem antes de tudo: o disabled do botao chega ao celular so depois de uma ida e
+        // volta pela rede, e um toque duplo rapido criaria dois lancamentos iguais.
+        if (_editando is null || _dados is null || _salvando)
         {
             return;
         }
@@ -606,7 +608,6 @@ else
             return;
         }
 
-        // Trava o botao: dois toques seguidos criariam dois lancamentos iguais.
         _salvando = true;
 
         try
@@ -624,7 +625,7 @@ else
     /// <summary>Excluir pede um segundo toque: apagar um lançamento recorrente não tem desfazer.</summary>
     private async Task ExcluirAsync()
     {
-        if (_editando is not { Id: > 0 })
+        if (_editando is not { Id: > 0 } || _salvando)
         {
             return;
         }
@@ -635,8 +636,17 @@ else
             return;
         }
 
-        await Servico.ExcluirLancamentoAsync(_editando.Id);
-        Fechar();
-        await CarregarAsync();
+        _salvando = true;
+
+        try
+        {
+            await Servico.ExcluirLancamentoAsync(_editando.Id);
+            Fechar();
+            await CarregarAsync();
+        }
+        finally
+        {
+            _salvando = false;
+        }
     }
 }

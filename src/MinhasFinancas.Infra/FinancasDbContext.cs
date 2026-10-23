@@ -25,6 +25,8 @@ public class FinancasDbContext(DbContextOptions<FinancasDbContext> options) : Db
 
     public DbSet<FaturaCartao> Faturas => Set<FaturaCartao>();
 
+    public DbSet<PagamentoFatura> PagamentosFatura => Set<PagamentoFatura>();
+
     public DbSet<GanhoVariavel> GanhosVariaveis => Set<GanhoVariavel>();
 
     protected override void OnModelCreating(ModelBuilder modelo)
@@ -47,6 +49,9 @@ public class FinancasDbContext(DbContextOptions<FinancasDbContext> options) : Db
         {
             e.HasKey(d => d.Id);
             e.HasIndex(d => new { d.CarteiraId, d.Data }).IsUnique();
+
+            // O gasto do dia de uma carteira so existe com ela; null e a conta corrente.
+            e.HasOne<Carteira>().WithMany().HasForeignKey(d => d.CarteiraId).OnDelete(DeleteBehavior.Cascade);
         });
 
         // Um registro de ganho variavel por mes: a tela preenche um campo so, e dois registros
@@ -57,7 +62,19 @@ public class FinancasDbContext(DbContextOptions<FinancasDbContext> options) : Db
         // Uma fatura por cartao por vencimento. O indice unico evita duas faturas do mesmo
         // ciclo, que fariam a projecao descontar a mesma divida duas vezes.
         modelo.Entity<FaturaCartao>(e =>
-            e.HasIndex(f => new { f.CartaoId, f.Vencimento }).IsUnique());
+        {
+            e.HasIndex(f => new { f.CartaoId, f.Vencimento }).IsUnique();
+
+            // Restrict: apagar um cartao com fatura tem que ser recusado, nao levar a divida junto.
+            e.HasOne<Cartao>().WithMany().HasForeignKey(f => f.CartaoId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // Pagamento so existe dentro da fatura: apagar a fatura leva os pagamentos junto.
+        modelo.Entity<PagamentoFatura>(e =>
+        {
+            e.HasIndex(p => p.FaturaId);
+            e.HasOne<FaturaCartao>().WithMany().HasForeignKey(p => p.FaturaId).OnDelete(DeleteBehavior.Cascade);
+        });
 
         modelo.Entity<Carteira>(e =>
         {
@@ -68,7 +85,13 @@ public class FinancasDbContext(DbContextOptions<FinancasDbContext> options) : Db
         // Uma ocorrencia so pode ter uma situacao. O indice unico evita que dois toques no
         // botao de pagar gravem dois registros e o pagamento conte duas vezes.
         modelo.Entity<SituacaoOcorrencia>(e =>
-            e.HasIndex(x => new { x.LancamentoId, x.Data }).IsUnique());
+        {
+            e.HasIndex(x => new { x.LancamentoId, x.Data }).IsUnique();
+
+            // Situacao sem lancamento e lixo perigoso: um Id reaproveitado herdaria pagamentos de
+            // outra conta. Apagar o lancamento leva as situacoes dele junto.
+            e.HasOne<Lancamento>().WithMany().HasForeignKey(x => x.LancamentoId).OnDelete(DeleteBehavior.Cascade);
+        });
 
         modelo.Entity<Cartao>(e =>
         {
@@ -101,6 +124,7 @@ public class FinancasDbContext(DbContextOptions<FinancasDbContext> options) : Db
             e.HasOne<Cartao>().WithMany().HasForeignKey(l => l.CartaoId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne<Tag>().WithMany().HasForeignKey(l => l.TagId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne<Meta>().WithMany().HasForeignKey(l => l.MetaId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<Carteira>().WithMany().HasForeignKey(l => l.CarteiraId).OnDelete(DeleteBehavior.Restrict);
         });
     }
 }

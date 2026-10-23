@@ -3,7 +3,8 @@
 App pessoal de fluxo de caixa projetado. Responde uma pergunta todo dia: **como vai estar meu saldo
 em cada dia daqui pra frente, e qual é o pior dia que vem aí?**
 
-Roda local, um usuário, sem login e sem nuvem. Os dados ficam num arquivo SQLite no seu computador.
+Roda local, um usuário, sem nuvem. No computador abre direto; pela rede de casa pede um PIN. Os
+dados ficam num arquivo SQLite no seu computador.
 
 ## Como rodar
 
@@ -22,6 +23,11 @@ Abre em <http://localhost:5080>.
 ```bash
 dotnet run --project src/MinhasFinancas.Web --launch-profile rede
 ```
+
+**Antes, defina um PIN** em **Ajustes > Acesso pela rede**, no próprio PC. Sem PIN o app só
+abre no computador: qualquer outro aparelho vê apenas o aviso "Acesso pela rede desligado". Com
+PIN, o celular pede o número uma vez e fica conectado por 90 dias. Trocar o PIN desconecta todos
+os aparelhos; cinco erros seguidos bloqueiam novas tentativas por um tempo que dobra a cada leva.
 
 No iPhone, conectado ao mesmo Wi-Fi, abra `http://192.168.1.31:5080`
 (troque pelo IP do seu PC, que você descobre com `ipconfig` ou com o comando abaixo).
@@ -44,8 +50,17 @@ do navegador.
 Duas coisas para saber sobre o uso no celular:
 
 - É HTTP, não HTTPS. De propósito: um certificado autoassinado faria o Safari reclamar em toda
-  abertura. Como só trafega na sua rede local, tudo bem. O custo é que não dá para ter modo offline
-  (service worker exige HTTPS).
+  abertura. Como só trafega na sua rede local, tudo bem. Os custos: não dá para ter modo offline
+  (service worker exige HTTPS), e o PIN trafega sem criptografia na rede, então use o perfil
+  `rede` só no Wi-Fi de casa (a regra de firewall acima já é só para redes privadas). Para usar
+  fora de casa, ou com HTTPS de verdade, o caminho é o Tailscale: ele liga o iPhone ao PC com
+  criptografia e só os seus aparelhos entram. Se acessar pelo nome que o Tailscale dá ao PC,
+  libere esse nome em `MinhasFinancas:HostsPermitidos` (vários separados por `;`).
+- O app só aceita ser aberto por `localhost`, pelo IP ou pelo nome do PC. Outro endereço recebe
+  "Endereço não reconhecido": é a proteção contra um site malicioso que tente ler o app pelo
+  navegador do PC.
+- O perfil `rede` roda em modo Production: um erro mostra "Algo deu errado" sem detalhes técnicos
+  para quem está na rede. O perfil `local` continua em Development, com os detalhes.
 - Quando a tela do iPhone apaga, a conexão com o servidor cai. Ao voltar, aparece "Reconectando..."
   por um instante e a tela volta de onde estava. Se o PC tiver sido desligado nesse meio tempo, é só
   recarregar.
@@ -68,12 +83,27 @@ $env:MinhasFinancas__CaminhoBanco = "C:\caminho\teste.db"; dotnet run --project 
 
 ## Backup
 
-Em **Ajustes > Backup** você baixa um JSON com tudo: configuração, lançamentos, diários, cartões,
-tags e metas. Faça isso antes de passar a depender do app de verdade.
+**Automático.** Com o app aberto, ele copia o banco uma vez por dia (na subida e de hora em hora,
+para pegar a virada do dia) e guarda os últimos 30 dias em `%LOCALAPPDATA%\MinhasFinancas\backups\`,
+como `diaria-AAAA-MM-DD.db`. A cópia é feita pelo próprio SQLite (`VACUUM INTO`), então sai inteira
+mesmo com o app gravando. Antes de cada migração de banco sai também uma `antes-de-migrar-*.db`
+(ficam as 10 últimas).
 
-A restauração é integral e substitui tudo. Ela primeiro mostra o que tem no arquivo e só mexe no
-banco depois que você confirma. Antes de substituir, ela salva sozinha o estado atual em
-`%LOCALAPPDATA%\MinhasFinancas\backups\`.
+Para as cópias irem para uma pasta sincronizada, como o OneDrive, aponte a pasta de backups:
+
+```powershell
+$env:MinhasFinancas__PastaBackups = "$env:OneDrive\Backups\MinhasFinancas"; dotnet run --project src/MinhasFinancas.Web --launch-profile local
+```
+
+Para voltar para uma cópia `.db`: feche o app, renomeie o `financas.db` atual (para guardar) e
+copie a cópia escolhida no lugar dele com o nome `financas.db`.
+
+**Manual.** Em **Ajustes > Backup** você baixa um JSON com tudo: configuração, lançamentos,
+diários, cartões, tags, metas, carteiras e faturas.
+
+A restauração do JSON é integral e substitui tudo. Ela primeiro mostra o que tem no arquivo e só
+mexe no banco depois que você confirma. Antes de substituir, ela salva sozinha o estado atual na
+mesma pasta de backups, como `antes-de-restaurar-*.json` (ficam as 20 últimas).
 
 ## Layout
 
@@ -99,7 +129,7 @@ A troca acontece em 900px de largura.
 | **Resumo** | Resultado do mês, entradas contra saídas, para onde foi o dinheiro, custo de vida, economizado, tags, saldo do mês com gráfico e os próximos 12 meses |
 | **Simular compra** | Compra à vista ou parcelada, com entrada e juros ao mês, comparando as duas curvas de saldo |
 | **Metas** | Objetivo, prazo, progresso, quanto guardar por mês e aviso quando as economias lançadas não alcançam o objetivo |
-| **Ajustes** | Conferir saldo com o banco, saldo e previsão, carteiras, cartões, tags, backup e restauração |
+| **Ajustes** | Conferir saldo com o banco, saldo e previsão, carteiras, cartões, tags, PIN de acesso pela rede, backup e restauração |
 
 O motor de cálculo implementa as regras R1 a R11 de [docs/CONTEXTO.md](docs/CONTEXTO.md) seção 6 e
 bate 100% com o cenário conferido em `docs/fixtures`.
@@ -111,7 +141,7 @@ bate 100% com o cenário conferido em `docs/fixtures`.
 - Simulador calculando sozinho o vencimento da fatura quando a compra é no cartão (hoje você informa
   a data em que a parcela cai).
 - Converter uma simulação em lançamentos de verdade com um botão.
-- Várias contas bancárias, login, sincronização.
+- Várias contas bancárias, contas de usuário, sincronização.
 
 ## Testes
 
@@ -119,8 +149,9 @@ bate 100% com o cenário conferido em `docs/fixtures`.
 dotnet test
 ```
 
-São 48 testes: os dourados comparam o motor dia a dia com `docs/fixtures` (811 dias e 12 meses, em
-centavos exatos), mais os casos de borda das regras e a leitura de valores digitados.
+São 81 testes: os dourados comparam o motor dia a dia com `docs/fixtures` (811 dias e 12 meses, em
+centavos exatos), mais os casos de borda das regras e a leitura de valores digitados. O GitHub
+Actions (`.github/workflows/testes.yml`) compila sem aviso e roda os testes a cada push.
 
 ## Cenário de exemplo
 
@@ -140,7 +171,7 @@ estão seus dados de verdade: ele apaga o que encontra antes de carregar.
 ```
 src/MinhasFinancas.Domain/   motor puro: regras R1 a R11, sem banco, sem tela, sem ler a data do sistema
 src/MinhasFinancas.Infra/    EF Core + SQLite, migrações, serviços de planejamento e backup
-src/MinhasFinancas.Web/      Blazor Server, interface em português, mobile first
+src/MinhasFinancas.Web/      Blazor Server, interface em português, mobile first; Seguranca/ tem PIN e filtro de rede
 tests/              xUnit: testes dourados contra os fixtures e casos de borda
 tools/              utilitários: gerador de ícones e semeador do cenário de exemplo
 docs/               especificação, fixtures, planilha de referência e decisões

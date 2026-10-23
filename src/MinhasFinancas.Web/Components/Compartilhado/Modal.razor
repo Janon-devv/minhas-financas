@@ -10,7 +10,7 @@
 
 <div class="fundo-modal" @onclick="Fechar">
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="@_idTitulo" tabindex="-1"
-         @ref="_elementoModal" @onclick:stopPropagation="true" @onkeydown="AoTecla">
+         @ref="_elementoModal" @onclick:stopPropagation="true">
         <div class="modal-cabecalho">
             <h2 id="@_idTitulo">@Titulo</h2>
             <button type="button" class="btn-icone" @onclick="Fechar" aria-label="Fechar">
@@ -32,6 +32,7 @@
     private ElementReference _elementoModal;
     private IJSObjectReference? _modulo;
     private IJSObjectReference? _armadilha;
+    private DotNetObjectReference<Modal>? _referencia;
 
     [Parameter]
     public string Titulo { get; set; } = "";
@@ -55,9 +56,10 @@
 
         try
         {
+            _referencia = DotNetObjectReference.Create(this);
             _modulo = await JS.InvokeAsync<IJSObjectReference>(
                 "import", "./Components/Compartilhado/Modal.razor.js");
-            _armadilha = await _modulo.InvokeAsync<IJSObjectReference>("prenderFoco", _elementoModal);
+            _armadilha = await _modulo.InvokeAsync<IJSObjectReference>("prenderFoco", _elementoModal, _referencia);
         }
         catch (JSDisconnectedException)
         {
@@ -67,7 +69,9 @@
 
     private Task Fechar() => AoFechar.InvokeAsync();
 
-    private Task AoTecla(KeyboardEventArgs e) => e.Key == "Escape" ? Fechar() : Task.CompletedTask;
+    /// <summary>Esc, ouvido no documento inteiro pelo Modal.razor.js, com o foco onde estiver.</summary>
+    [JSInvokable]
+    public Task FecharPeloTeclado() => InvokeAsync(Fechar);
 
     public async ValueTask DisposeAsync()
     {
@@ -88,5 +92,7 @@
         {
             // A conexao ja caiu (tela do iPhone apagou, por exemplo); nao ha mais o que limpar.
         }
+
+        _referencia?.Dispose();
     }
 }

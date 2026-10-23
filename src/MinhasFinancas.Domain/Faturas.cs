@@ -9,6 +9,8 @@ namespace MinhasFinancas.Domain;
 /// <param name="InformadoCentavos">O total que o dono digitou olhando o banco. 0 quando nao informou.</param>
 /// <param name="AcrescentadoCentavos">Itens marcados como novo lancamento: entram ALEM do informado.</param>
 /// <param name="DetalhadoCentavos">Itens que so descrevem o que ja esta dentro do informado.</param>
+/// <param name="PagoCentavos">Soma de todos os pagamentos, antes ou depois da ancora.</param>
+/// <param name="Pagamentos">Os pagamentos um a um, do mais antigo ao mais novo.</param>
 /// <param name="DevedorCentavos">O que ainda falta sair da conta.</param>
 public sealed record ResumoFatura(
     FaturaCartao Fatura,
@@ -21,6 +23,7 @@ public sealed record ResumoFatura(
     int QuantidadeDetalhada,
     long TotalCentavos,
     long PagoCentavos,
+    IReadOnlyList<PagamentoFatura> Pagamentos,
     long DevedorCentavos,
     bool EmAtraso,
     int MesesDeAtraso,
@@ -28,17 +31,52 @@ public sealed record ResumoFatura(
 {
     /// <summary>O que a projecao desconta: o devedor mais os juros do atraso.</summary>
     public long ASairCentavos => DevedorCentavos + JurosCentavos;
+
+    public DateOnly? UltimoPagamentoEm => Pagamentos.Count == 0 ? null : Pagamentos[^1].Data;
 }
 
 /// <summary>R14 a R16: a fatura como gasto previsto, no lugar de cada compra solta.</summary>
 public static class Faturas
 {
     /// <summary>
-    /// Chave de um ciclo. A data de vencimento identifica a fatura porque e ela que o saldo
-    /// precisa saber: e o dia em que o dinheiro sai da conta.
+    /// Chave de um ciclo: o cartao e o vencimento que as regras do cartao calculam para ele.
+    ///
+    /// Nao e o vencimento digitado na fatura de proposito. O banco empurra o vencimento que cai
+    /// em fim de semana ou feriado, e o dono digita a data real: com a chave na data digitada,
+    /// as compras do ciclo (que caem no vencimento calculado) deixariam de casar com a fatura,
+    /// e o mesmo gasto sairia duas vezes, uma pela fatura e outra compra por compra.
     /// </summary>
-    public static (int CartaoId, DateOnly Vencimento) Chave(FaturaCartao fatura) =>
-        (fatura.CartaoId, fatura.Vencimento);
+    public static (int CartaoId, DateOnly Vencimento) Chave(
+        FaturaCartao fatura,
+        IReadOnlyDictionary<int, Cartao> cartoes) =>
+        (fatura.CartaoId,
+         cartoes.TryGetValue(fatura.CartaoId, out var cartao)
+             ? VencimentoDoCiclo(fatura.Vencimento, cartao)
+             : fatura.Vencimento);
+
+    /// <summary>
+    /// O vencimento calculado mais proximo da data informada: o do mesmo mes, o do anterior ou o
+    /// do seguinte. Cobre o vencimento de 30/03 empurrado para 01/04, que muda ate o mes.
+    /// </summary>
+    public static DateOnly VencimentoDoCiclo(DateOnly vencimentoInformado, Cartao cartao)
+    {
+        var mes = Calendario.PrimeiroDiaDoMes(vencimentoInformado);
+        var melhor = Calendario.NoMes(mes.Year, mes.Month, cartao.DiaVencimento);
+
+        foreach (var deslocamento in new[] { -1, 1 })
+        {
+            var outroMes = mes.AddMonths(deslocamento);
+            var candidato = Calendario.NoMes(outroMes.Year, outroMes.Month, cartao.DiaVencimento);
+
+            if (Math.Abs(candidato.DayNumber - vencimentoInformado.DayNumber) <
+                Math.Abs(melhor.DayNumber - vencimentoInformado.DayNumber))
+            {
+                melhor = candidato;
+            }
+        }
+
+        return melhor;
+    }
 
     /// <summary>
     /// R14. Total efetivo de cada fatura, com a conta aberta.
@@ -52,16 +90,21 @@ public static class Faturas
         IEnumerable<FaturaCartao> faturas,
         IEnumerable<Lancamento> lancamentos,
         IReadOnlyList<Cartao> cartoes,
-        DateOnly hoje)
+        DateOnly hoje,
+        IEnumerable<PagamentoFatura>? pagamentos = null)
     {
         var indiceCartoes = cartoes.ToDictionary(c => c.Id);
         var itens = ItensPorCiclo(lancamentos, indiceCartoes, faturas);
+        var pagamentosPorFatura = (pagamentos ?? []).ToLookup(p => p.FaturaId);
         var resumos = new List<ResumoFatura>();
 
         foreach (var fatura in faturas.OrderBy(f => f.Vencimento).ThenBy(f => f.CartaoId))
         {
-            itens.TryGetValue(Chave(fatura), out var doCiclo);
+            itens.TryGetValue(Chave(fatura, indiceCartoes), out var doCiclo);
             doCiclo ??= [];
+
+            var pagos = pagamentosPorFatura[fatura.Id].OrderBy(p => p.Data).ThenBy(p => p.Id).ToList();
+            var pago = pagos.Sum(p => p.ValorCentavos);
 
             var acrescentados = doCiclo.Where(i => i.Papel == PapelNaFatura.NovoLancamento).ToList();
             var detalhados = doCiclo.Where(i => i.Papel == PapelNaFatura.Detalhamento).ToList();
@@ -73,7 +116,7 @@ public static class Faturas
             var informado = fatura.TotalInformadoCentavos ?? 0;
             var total = informou ? informado + acrescentado : acrescentado + detalhado;
 
-            var devedor = Math.Max(0, total - fatura.PagoCentavos);
+            var devedor = Math.Max(0, total - pago);
             var cartao = indiceCartoes.TryGetValue(fatura.CartaoId, out var c) ? c : null;
 
             // R15: passou do vencimento e ainda falta pagar. Os juros do rotativo contam por mes
@@ -93,7 +136,8 @@ public static class Faturas
                 detalhado,
                 detalhados.Count,
                 total,
-                fatura.PagoCentavos,
+                pago,
+                pagos,
                 devedor,
                 EmAtraso: devedor > 0 && fatura.Vencimento < hoje,
                 meses,
@@ -114,7 +158,7 @@ public static class Faturas
         IReadOnlyDictionary<int, Cartao> cartoes,
         IEnumerable<FaturaCartao> faturas)
     {
-        var ciclos = faturas.Select(Chave).ToHashSet();
+        var ciclos = faturas.Select(f => Chave(f, cartoes)).ToHashSet();
         var limite = ciclos.Count == 0 ? DateOnly.MinValue : ciclos.Max(c => c.Vencimento);
         var itens = new Dictionary<(int, DateOnly), List<ItemDeFatura>>();
 
@@ -127,9 +171,7 @@ public static class Faturas
                 continue;
             }
 
-            var efetiva = Ocorrencias.DataEfetiva(lancamento, cartoes);
-
-            foreach (var data in Ocorrencias.Ate(efetiva, lancamento.Vezes, limite, lancamento.Periodicidade))
+            foreach (var data in Ocorrencias.Do(lancamento, cartoes, limite))
             {
                 var chave = (cartaoId, data);
 
@@ -165,8 +207,17 @@ public static class Faturas
     }
 
     /// <summary>
-    /// Juros compostos ao mes, em centavos. Arredonda uma vez no fim: arredondar a cada mes
-    /// acumularia erro no sentido do app, e o banco cobra o que cobra.
+    /// Teto da divida com juros: o dobro do que estava devendo. Desde 2024 a Lei 14.690/2023
+    /// limita juros e encargos do rotativo e do parcelamento da fatura a 100% do valor original.
+    /// O teto tambem e o que impede uma fatura antiga esquecida (ou com o ano digitado errado)
+    /// de crescer ate estourar a conta e derrubar todas as telas que projetam o saldo.
+    /// </summary>
+    public const decimal TetoDoFatorDeJuros = 2m;
+
+    /// <summary>
+    /// Juros compostos ao mes, em centavos, limitados a <see cref="TetoDoFatorDeJuros"/>.
+    /// Arredonda uma vez no fim: arredondar a cada mes acumularia erro no sentido do app, e o
+    /// banco cobra o que cobra.
     /// </summary>
     public static long ComJuros(long centavos, decimal jurosMensal, int meses)
     {
@@ -176,12 +227,14 @@ public static class Faturas
         }
 
         var fator = 1m;
+        var taxa = Math.Min(jurosMensal, Validacao.JurosMaximoMensal);
 
-        for (var i = 0; i < meses; i++)
+        for (var i = 0; i < meses && fator < TetoDoFatorDeJuros; i++)
         {
-            fator *= 1m + jurosMensal;
+            fator *= 1m + taxa;
         }
 
+        fator = Math.Min(fator, TetoDoFatorDeJuros);
         return (long)Math.Round(centavos * fator, MidpointRounding.AwayFromZero);
     }
 }

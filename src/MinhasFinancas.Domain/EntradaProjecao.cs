@@ -25,6 +25,9 @@ public sealed record EntradaProjecao
     /// </summary>
     public IReadOnlyList<FaturaCartao> Faturas { get; init; } = [];
 
+    /// <summary>Pagamentos das faturas, cada um com a data em que saiu da conta (R14).</summary>
+    public IReadOnlyList<PagamentoFatura> PagamentosFatura { get; init; } = [];
+
     /// <summary>
     /// Ganho variavel registrado mes a mes (R17). Nao mexe no saldo projetado: e registro do que
     /// ja caiu, e o saldo conferido com o banco ja o contem. Entra so nos ganhos DO MES (R8).
@@ -71,7 +74,8 @@ public sealed record EntradaProjecao
         IEnumerable<SituacaoOcorrencia>? situacoes = null,
         IEnumerable<Carteira>? carteiras = null,
         IEnumerable<FaturaCartao>? faturas = null,
-        IEnumerable<GanhoVariavel>? ganhosVariaveis = null) => new()
+        IEnumerable<GanhoVariavel>? ganhosVariaveis = null,
+        IEnumerable<PagamentoFatura>? pagamentosFatura = null) => new()
         {
             Configuracao = configuracao,
             Hoje = hoje,
@@ -82,6 +86,7 @@ public sealed record EntradaProjecao
             Diarios = diarios?.ToList() ?? [],
             Carteiras = carteiras?.ToList() ?? [],
             Faturas = faturas?.ToList() ?? [],
+            PagamentosFatura = pagamentosFatura?.ToList() ?? [],
             GanhosVariaveis = ganhosVariaveis?.ToList() ?? [],
             FimHorizonte = fimHorizonte,
             Simulacao = simulacao,

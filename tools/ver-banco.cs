@@ -35,6 +35,10 @@ Console.WriteLine($"Cartoes:       {await db.Cartoes.CountAsync()}");
 Console.WriteLine($"Tags:          {await db.Tags.CountAsync()}");
 Console.WriteLine($"Metas:         {await db.Metas.CountAsync()}");
 Console.WriteLine($"Ancoras:       {await db.Ancoras.CountAsync()}");
+Console.WriteLine($"Carteiras:     {await Contar(db.Carteiras)}");
+Console.WriteLine($"Faturas:       {await Contar(db.Faturas)}");
+Console.WriteLine($"Pagamentos:    {await Contar(db.PagamentosFatura)}");
+Console.WriteLine($"Renda variavel:{await Contar(db.GanhosVariaveis),2}");
 
 var cfg = await db.Configuracoes.FirstOrDefaultAsync();
 
@@ -50,4 +54,17 @@ if (cfg is not null)
 foreach (var lancamento in await db.Lancamentos.OrderBy(l => l.Data).ToListAsync())
 {
     Console.WriteLine($"  {lancamento.Data} {lancamento.Tipo,-8} {lancamento.ValorCentavos,10} {lancamento.Descricao}");
+}
+
+// Banco de uma versao antiga ainda nao tem as tabelas novas: o app cria na proxima abertura.
+static async Task<string> Contar<T>(IQueryable<T> tabela)
+{
+    try
+    {
+        return (await tabela.CountAsync()).ToString();
+    }
+    catch (Microsoft.Data.Sqlite.SqliteException)
+    {
+        return "tabela ainda nao existe (o app cria ao abrir)";
+    }
 }

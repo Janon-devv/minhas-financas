@@ -103,7 +103,9 @@ public static class Formato
             inteiros = "0";
         }
 
-        if (inteiros.Length > 15)
+        // Dez digitos de reais: ate R$ 9.999.999.999,99, o teto do dominio (Validacao.ValorMaximoCentavos).
+        // Mais que isso e zero a mais, e o campo recusar e melhor que gravar um valor mil vezes maior.
+        if (inteiros.TrimStart('0').Length > 10)
         {
             return false;
         }

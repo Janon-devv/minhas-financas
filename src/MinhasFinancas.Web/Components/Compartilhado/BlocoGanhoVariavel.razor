@@ -37,6 +37,18 @@
             }
         </div>
 
+        @if (_erros.Count > 0)
+        {
+            <div style="margin-top:12px">
+                <Aviso Tipo="ruim" Papel="alert">
+                    @foreach (var erro in _erros)
+                    {
+                        <div>@erro</div>
+                    }
+                </Aviso>
+            </div>
+        }
+
         @if (_confirmacao is not null)
         {
             <div style="margin-top:12px">
@@ -93,6 +105,7 @@
     private long _valor;
     private string _obs = "";
     private bool _salvando;
+    private List<string> _erros = [];
     private string? _confirmacao;
     private GanhoVariavel? _registrado;
     private List<GanhoVariavel> _historico = [];
@@ -130,8 +143,23 @@
         Ler();
     }
 
+    // Sem a trava antes de tudo, dois toques rapidos gravavam o mes duas vezes ao mesmo tempo, e o
+    // segundo batia no indice unico do mes e derrubava a tela.
     private async Task Salvar()
     {
+        if (_salvando)
+        {
+            return;
+        }
+
+        _erros = Validacao.GanhoVariavel(_valor);
+
+        if (_erros.Count > 0)
+        {
+            _confirmacao = null;
+            return;
+        }
+
         _salvando = true;
 
         try
@@ -148,6 +176,12 @@
 
     private async Task Limpar()
     {
+        if (_salvando)
+        {
+            return;
+        }
+
+        _erros = [];
         _salvando = true;
 
         try

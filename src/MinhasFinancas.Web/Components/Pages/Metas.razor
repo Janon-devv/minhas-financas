@@ -252,7 +252,9 @@ else
 
     private async Task SalvarAsync()
     {
-        if (_editando is null)
+        // A trava vem antes de tudo: o disabled do botao chega ao celular so depois de uma ida e
+        // volta pela rede, e um toque duplo rapido criaria a mesma meta duas vezes.
+        if (_editando is null || _salvando)
         {
             return;
         }
@@ -268,7 +270,12 @@ else
 
         try
         {
-            await Servico.SalvarMetaAsync(_editando);
+            if (await Servico.SalvarMetaAsync(_editando) is string recusa)
+            {
+                _erros = [recusa];
+                return;
+            }
+
             Fechar();
             await CarregarAsync();
         }
@@ -280,8 +287,22 @@ else
 
     private async Task Arquivar(int id, bool arquivar)
     {
-        await Servico.ArquivarMetaAsync(id, arquivar);
-        Fechar();
-        await CarregarAsync();
+        if (_salvando)
+        {
+            return;
+        }
+
+        _salvando = true;
+
+        try
+        {
+            await Servico.ArquivarMetaAsync(id, arquivar);
+            Fechar();
+            await CarregarAsync();
+        }
+        finally
+        {
+            _salvando = false;
+        }
     }
 }

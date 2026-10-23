@@ -54,7 +54,37 @@ Verificadas com medição, não no olho. Mudanças de UI precisam continuar resp
   chega ao leitor de tela.
 - **`prefers-reduced-motion`** está tratado globalmente no fim do `app.css`. Transições novas
   devem usar `--transicao` (180ms) para entrarem nessa regra.
-- **Botão que grava desabilita enquanto grava.** No Plano, dois toques criariam dois lançamentos.
+- **Botão que grava desabilita enquanto grava, e o handler confere a trava na primeira linha**
+  (`if (... || _salvando) return;`). Só o `disabled` não basta: ele chega ao iPhone depois de uma
+  ida e volta pela rede, e um toque duplo passa. Vale para salvar, excluir, pagar e restaurar.
+- **Modal fecha por Esc com o foco onde estiver.** O `Modal.razor.js` ouve o documento, porque o
+  elemento focado pode sumir (excluir uma linha da lista dentro do modal) e o foco cair no body.
+- **Erro inesperado fica na tela.** O `MainLayout` tem um `ErrorBoundary` com "Tentar de novo";
+  ele não substitui tratar o erro esperado (nome repetido, validação) com mensagem.
+
+## Regras de dados e segurança
+
+- **Validação no domínio, com faixa.** `Validacao` recusa data fora de 2000 a 2100, valor acima de
+  R$ 9.999.999.999,99, juros acima de 100% ao mês e mais de 360 repetições. Data ou valor absurdo
+  não é só número errado: já travou o app inteiro (juros de uma fatura de 2006 estourando o long).
+- **Nome único volta como mensagem.** `Salvar{Cartao,Tag,Meta,Carteira}Async` devolve `string?`
+  com o motivo; a tela mostra no `Aviso`. Comparação sem diferenciar maiúsculas.
+- **Ocorrências de um lançamento saem de `Ocorrencias.Do`.** Ele aplica a data efetiva e o dia de
+  referência (vencimento do cartão). Chamar `Ocorrencias.Ate` direto com a data efetiva de uma
+  compra no cartão erra o dia quando o vencimento é 29 a 31.
+- **Fatura e compra se casam por `Faturas.Chave(fatura, cartoes)`**, o ciclo calculado, nunca pela
+  data digitada na fatura. Cada pagamento de fatura é um `PagamentoFatura` com a própria data.
+- **Migração gerada pelo EF precisa ser lida antes de rodar.** Na de pagamentos ele apagava as
+  colunas antes de copiar os dados. Confira com `dotnet dotnet-ef migrations script <anterior> <nova>`
+  e teste numa cópia de um banco no formato antigo. O app copia o banco antes de migrar.
+- **Backup automático** (`CopiaDeSeguranca`, `CopiaDiaria`): cópia diária com `VACUUM INTO`, 30
+  dias, na pasta de backups do banco em uso. Campo novo de backup sobe `BackupService.VersaoSchema`
+  e arquivo antigo tem que continuar abrindo.
+- **Rede.** `Seguranca/ProtecaoDeRede` roda antes de tudo: cabeçalhos, filtro de Host (só
+  localhost, IP e nome do PC; extras em `MinhasFinancas:HostsPermitidos`) e PIN para quem não é
+  este computador. Endpoint ou arquivo novo fica atrás do PIN automaticamente; só entra em
+  `LiberadosSemPin` o que a tela de entrada precisa e não tem dado. O perfil `rede` roda em
+  Production.
 
 ### Lacunas conhecidas
 
@@ -123,9 +153,9 @@ No código, `DiaProjetado.SaidaTotalCentavos` corresponde à primeira e
 ## Comandos
 
 ```bash
-dotnet test                                              # 73 testes
+dotnet test                                              # 81 testes
 dotnet run --project src/MinhasFinancas.Web --launch-profile local # http://localhost:5080
-dotnet run --project src/MinhasFinancas.Web --launch-profile rede  # 0.0.0.0:5080, para o iPhone
+dotnet run --project src/MinhasFinancas.Web --launch-profile rede  # 0.0.0.0:5080, para o iPhone (pede PIN)
 dotnet dotnet-ef migrations add <Nome> --project src/MinhasFinancas.Infra --startup-project src/MinhasFinancas.Infra --output-dir Migracoes
 ```
 
