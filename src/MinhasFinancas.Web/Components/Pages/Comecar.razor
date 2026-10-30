@@ -7,352 +7,320 @@
 
 @if (_cfg is null)
 {
-    <p class="vazio">Carregando...</p>
+    <Cabecalho Titulo="Começar" Marca="true" />
+    <Carregando />
 }
 else
 {
     @* O guia inteiro mostra em que passo está e quanto falta. Sem isso o cadastro parece não
        ter fim, e quem desiste no meio desiste sem saber o que ainda faltava. *@
-    <div class="progresso">
-        <span class="rotulo">Passo @Math.Min(_passo, TotalPassos) de @TotalPassos</span>
-        @if (_passo > PassoNumeros3 && _passo < PassoPronto)
-        {
-            @* Link, nao botao: sair do guia e navegacao, e com botao o Ctrl+clique e o clique
-               do meio param de abrir em outra aba. *@
-            <a class="btn pequeno secundario" href="">Sair do guia</a>
-        }
-    </div>
-    <div class="barra" aria-hidden="true">
-        <span style="width:@(Math.Min(_passo, TotalPassos) * 100 / TotalPassos)%"></span>
-    </div>
+    <Cabecalho Titulo="@TituloDoPasso()" Marca="true">
+        <Acoes>
+            @if (_passo > PassoNumeros3 && _passo < PassoPronto)
+            {
+                @* Link, nao botao: sair do guia e navegacao, e com botao o Ctrl+clique e o clique
+                   do meio param de abrir em outra aba. *@
+                <a class="btn sobre-escuro pequeno" href="">Sair do guia</a>
+            }
+        </Acoes>
+        <ChildContent>
+            @if (_passo < PassoPronto)
+            {
+                <p class="hero-nota" style="margin-top:12px">Passo @_passo de @TotalPassos</p>
+                <div class="passos" aria-hidden="true">
+                    @for (var i = 1; i <= TotalPassos; i++)
+                    {
+                        <span class="@(i <= _passo ? "feito" : "")"></span>
+                    }
+                </div>
+            }
+        </ChildContent>
+    </Cabecalho>
 
     @if (_passo == PassoNumeros1)
     {
-        <h1>Planeje seu saldo antes de gastar</h1>
-        <p class="ajuda" style="margin-top:0.4rem">
-            Primeiro seus números, depois o que entra e o que sai. Dá para pular qualquer etapa.
-        </p>
+        <Grupo>
+            <div class="corpo">
+                <p class="dica" style="margin:0 0 16px">Primeiro seus números, depois o que entra e o que sai. Dá para pular o cadastro.</p>
 
-        <div class="cartao" style="margin-top:1rem">
-            <div class="campo-grupo">
-                <label for="saldo">Quanto tem na conta agora?</label>
-                <CampoDinheiro Valor="_cfg.SaldoAncoraCentavos" ValorChanged="v => _cfg.SaldoAncoraCentavos = v" Id="saldo" />
-                <div class="dica">
-                    É o saldo no <strong>início</strong> do dia de hoje, antes dos gastos de hoje.
-                    Se o banco já mostra um gasto de hoje, não registre esse gasto de novo no diário.
-                    Pode ser negativo.
+                <div class="campo-grupo">
+                    <Rotulo Texto="Saldo na conta" Para="saldo"
+                            Ajuda="O saldo no início do dia, antes dos gastos desse dia. Se o banco já mostra um gasto de hoje, não registre esse gasto de novo no gasto do dia. Pode ser negativo." />
+                    <CampoDinheiro Valor="_cfg.SaldoAncoraCentavos" ValorChanged="v => _cfg.SaldoAncoraCentavos = v" Id="saldo" />
+                </div>
+
+                <div class="campo-grupo">
+                    <Rotulo Texto="No início de" Para="data" />
+                    <CampoData Valor="_cfg.DataAncora" ValorChanged="v => _cfg.DataAncora = v ?? Relogio.Hoje" Id="data" />
+                    <div class="dica">Normalmente hoje, @Formato.Data(Relogio.Hoje).</div>
                 </div>
             </div>
+        </Grupo>
 
-            <div class="campo-grupo">
-                <label for="data">A partir de qual dia?</label>
-                <CampoData Valor="_cfg.DataAncora" ValorChanged="v => _cfg.DataAncora = v ?? Relogio.Hoje" Id="data" />
-                <div class="dica">Normalmente hoje, @Formato.Data(Relogio.Hoje).</div>
-            </div>
-        </div>
-
-        <div class="acoes fim">
-            <button type="button" class="btn" @onclick="() => _passo = PassoNumeros2">Continuar</button>
+        <div class="acoes">
+            <button type="button" class="btn largo" @onclick="() => _passo = PassoNumeros2">Continuar</button>
         </div>
     }
     else if (_passo == PassoNumeros2)
     {
-        <h1>Quanto você gasta por dia, de miudeza?</h1>
-        <p class="ajuda" style="margin-top:0.4rem">
-            Lanche, transporte, mercado de passagem. Nada que já esteja em Lançamentos.
-        </p>
+        <Grupo>
+            <div class="corpo">
+                <div class="campo-grupo">
+                    <Rotulo Texto="Gasto diário previsto" Para="diario"
+                            Ajuda="Gastos miúdos de todo dia: lanche, transporte, mercado de passagem. Nada que vá ser cadastrado como conta. Na dúvida, erre para mais." />
+                    <CampoDinheiro Valor="_cfg.DiarioPrevistoCentavos" ValorChanged="v => _cfg.DiarioPrevistoCentavos = v" Id="diario" />
+                </div>
 
-        <div class="cartao" style="margin-top:1rem">
-            <div class="campo-grupo">
-                <label for="diario">Diário previsto</label>
-                <CampoDinheiro Valor="_cfg.DiarioPrevistoCentavos" ValorChanged="v => _cfg.DiarioPrevistoCentavos = v" Id="diario" />
-                <div class="dica">
-                    @if (_cfg.DiarioPrevistoAtivo)
-                    {
-                        <text>
-                            Todo dia sem registro vai usar esse valor. Na dúvida, erre pra mais:
-                            é melhor o app ser pessimista do que te prometer dinheiro que não existe.
-                        </text>
-                    }
-                    else
-                    {
-                        <text>
-                            Guardado só como referência: com a contagem desligada ele não desce do saldo.
-                        </text>
-                    }
+                <div class="campo-grupo">
+                    <label class="interruptor">
+                        Descontar todo dia
+                        <input type="checkbox" role="switch" @bind="_cfg.DiarioPrevistoAtivo" />
+                    </label>
+                    <div class="dica">
+                        @(_cfg.DiarioPrevistoAtivo
+                            ? "Dia sem registro conta esse valor."
+                            : "Dia sem registro conta zero. Bom para quem gasta em compras de vez em quando, que entram como conta no próximo passo.")
+                    </div>
                 </div>
             </div>
-
-            <div class="campo-grupo">
-                <label class="campo-opcao">
-                    <input type="checkbox" @bind="_cfg.DiarioPrevistoAtivo"
-                           style="width:1.1rem; height:1.1rem" />
-                    Descontar esse valor todo dia
-                </label>
-                <div class="dica">
-                    Desligue se você gasta em compras de vez em quando, não um pouco por dia.
-                    Aí o dia só desconta o que você registrar, e compra de semana entra como
-                    conta na etapa seguinte.
-                </div>
-            </div>
-        </div>
+        </Grupo>
 
         <div class="acoes">
-            <button type="button" class="btn secundario" @onclick="() => _passo = PassoNumeros1">Voltar</button>
+            <button type="button" class="btn contorno" @onclick="() => _passo = PassoNumeros1">Voltar</button>
             <button type="button" class="btn" @onclick="() => _passo = PassoNumeros3">Continuar</button>
         </div>
     }
     else if (_passo == PassoNumeros3)
     {
-        <h1>Qual saldo te deixa tranquilo?</h1>
-        <p class="ajuda" style="margin-top:0.4rem">
-            Abaixo desse valor o app acende o alerta, mesmo sem ficar negativo.
-        </p>
-
-        <div class="cartao" style="margin-top:1rem">
-            <div class="campo-grupo">
-                <label for="conforto">Saldo de conforto</label>
-                <CampoDinheiro Valor="_cfg.SaldoConfortoCentavos" ValorChanged="v => _cfg.SaldoConfortoCentavos = v" Id="conforto" />
-                <div class="dica">Pode ser zero, se você preferir só o alerta de saldo negativo.</div>
-            </div>
-
-            <div class="campo-grupo">
-                <label for="guardado">Já tem algo guardado?</label>
-                <CampoDinheiro Valor="_cfg.JaGuardadoCentavos" ValorChanged="v => _cfg.JaGuardadoCentavos = v" Id="guardado" />
-                <div class="dica">
-                    Só para acompanhar o quanto você vem economizando. Não entra no saldo da conta corrente.
+        <Grupo>
+            <div class="corpo">
+                <div class="campo-grupo">
+                    <Rotulo Texto="Saldo de conforto" Para="conforto"
+                            Ajuda="Abaixo dele, o app avisa, mesmo sem ficar negativo. Pode ser zero, se você só quer o aviso de saldo negativo." />
+                    <CampoDinheiro Valor="_cfg.SaldoConfortoCentavos" ValorChanged="v => _cfg.SaldoConfortoCentavos = v" Id="conforto" />
                 </div>
+
+                <div class="campo-grupo">
+                    <Rotulo Texto="Já guardado" Para="guardado"
+                            Ajuda="Só para acompanhar o que você economiza. Não entra no saldo da conta." />
+                    <CampoDinheiro Valor="_cfg.JaGuardadoCentavos" ValorChanged="v => _cfg.JaGuardadoCentavos = v" Id="guardado" />
+                </div>
+
+                @if (_erros.Count > 0)
+                {
+                    <Aviso Tipo="ruim" Papel="alert">
+                        @foreach (var erro in _erros)
+                        {
+                            <div>@erro</div>
+                        }
+                    </Aviso>
+                }
             </div>
-        </div>
+        </Grupo>
 
         <div class="acoes">
-            <button type="button" class="btn secundario" @onclick="() => _passo = PassoNumeros2">Voltar</button>
+            <button type="button" class="btn contorno" @onclick="() => _passo = PassoNumeros2">Voltar</button>
             <button type="button" class="btn" @onclick="SalvarNumerosAsync" disabled="@_salvando">
                 @(_salvando ? "Salvando..." : "Salvar e continuar")
             </button>
         </div>
-
-        @if (_erros.Count > 0)
-        {
-            <div class="aviso ruim" role="alert">
-                @foreach (var erro in _erros)
-                {
-                    <div>@erro</div>
-                }
-            </div>
-        }
     }
     else if (_passo == PassoEntradas || _passo == PassoFixas)
     {
         var ehEntrada = _passo == PassoEntradas;
         var itens = ItensDoPasso();
 
-        <h1>@(ehEntrada ? "O que entra na conta" : "As contas que saem todo mês")</h1>
-        <p class="ajuda" style="margin-top:0.4rem">
-            @(ehEntrada
-                ? "Salário, freela, aluguel que você recebe. Comece pelo que é certo todo mês."
-                : "Aluguel, internet, assinatura, academia, a compra da semana. O que sai sozinho da conta.")
-        </p>
-
         @if (_confirmacao is not null)
         {
-            <div class="aviso bom" role="status" aria-live="polite" style="margin-top:0.75rem">
-                <Icone Nome="check" Tamanho="16" /> @_confirmacao
+            <div style="margin-top:16px">
+                <Aviso Tipo="bom" Papel="status">@_confirmacao</Aviso>
             </div>
         }
 
         @if (itens.Count > 0)
         {
-            <ul class="lista bloco" style="margin-top:0.75rem">
-                @foreach (var item in itens)
-                {
-                    <li>
-                        <div class="principal">
-                            <div class="titulo">@item.Descricao</div>
-                            <div class="sub">
-                                @(ehEntrada ? "Cai em " : "Sai em ")@Formato.Data(item.Data)
-                                &middot; @Formato.TextoVezes(item.Vezes)
+            <Grupo Titulo="@(ehEntrada ? "Entradas" : "Contas")">
+                <ul class="lista">
+                    @foreach (var item in itens)
+                    {
+                        <li>
+                            <div class="item">
+                                <IconeTipo Tipo="item.Tipo" />
+                                <span class="item-principal">
+                                    <span class="item-titulo">@item.Descricao</span>
+                                    <span class="item-sub">@(ehEntrada ? "Cai em " : "Sai em ")@Formato.Data(item.Data)</span>
+                                </span>
+                                <span class="item-valor">
+                                    <Valor Centavos="item.ValorCentavos" Classe="@(ehEntrada ? "valor-entrada" : null)" />
+                                    <span class="item-valor-sub">@Formato.Repeticao(item.Vezes, item.Periodicidade)</span>
+                                </span>
                             </div>
-                        </div>
-                        <div class="dinheiro @(ehEntrada ? "valor-ok" : "")">@Formato.Moeda(item.ValorCentavos)</div>
-                    </li>
-                }
-            </ul>
-        }
-        else if (_novo is null)
-        {
-            <p class="vazio">
-                @(ehEntrada
-                    ? "Nada aqui ainda. Comece pelo salário: é ele que segura o mês."
-                    : "Nada aqui ainda. Comece pela maior conta fixa, que costuma ser o aluguel.")
-            </p>
+                        </li>
+                    }
+                </ul>
+            </Grupo>
         }
 
         @if (_novo is null)
         {
             <div class="acoes">
                 <button type="button" class="btn secundario largo" @onclick="AbrirFormulario">
-                    <Icone Nome="mais" Tamanho="16" />
-                    @(itens.Count > 0
-                        ? (ehEntrada ? "Adicionar outra entrada" : "Adicionar outra conta")
-                        : (ehEntrada ? "Adicionar uma entrada" : "Adicionar uma conta"))
+                    <Icone Nome="mais" Tamanho="18" />
+                    @(ehEntrada ? "Adicionar entrada" : "Adicionar conta")
                 </button>
             </div>
         }
         else
         {
-            <div class="cartao" style="margin-top:0.75rem">
-                <div class="campo-grupo">
-                    <label for="descricao">Descrição</label>
-                    <input id="descricao" class="campo" @bind="_novo.Descricao"
-                           placeholder="@(ehEntrada ? "Salário" : "Aluguel")" />
-                </div>
+            <Grupo Titulo="@(ehEntrada ? "Nova entrada" : "Nova conta")">
+                <div class="corpo">
+                    <p class="dica" style="margin:0 0 16px">
+                        @(ehEntrada
+                            ? "Salário, freela, aluguel que você recebe. Comece pelo que é certo."
+                            : "Aluguel, internet, academia, a compra da semana. Comece pela maior.")
+                    </p>
 
-                <div class="linha-campos">
                     <div class="campo-grupo">
-                        <label for="valor">Valor de cada vez</label>
-                        <CampoDinheiro Valor="_novo.ValorCentavos" ValorChanged="v => _novo.ValorCentavos = v" Id="valor" />
+                        <Rotulo Texto="Descrição" Para="descricao" />
+                        <input id="descricao" class="campo" @bind="_novo.Descricao" autocomplete="off"
+                               placeholder="@(ehEntrada ? "Salário" : "Aluguel")" />
                     </div>
+
+                    <div class="linha-campos">
+                        <div class="campo-grupo">
+                            <Rotulo Texto="Valor de cada vez" Para="valor"
+                                    Ajuda="O valor de uma vez, não o total do ano." />
+                            <CampoDinheiro Valor="_novo.ValorCentavos" ValorChanged="v => _novo.ValorCentavos = v" Id="valor" />
+                        </div>
+                        <div class="campo-grupo">
+                            <Rotulo Texto="@(ehEntrada ? "Cai em" : "Sai em")" Para="data-item" />
+                            <CampoData Valor="_novo.Data" ValorChanged="v => _novo.Data = v ?? Relogio.Hoje" Id="data-item" />
+                        </div>
+                    </div>
+
                     <div class="campo-grupo">
-                        <label for="data-item">@(ehEntrada ? "Dia que cai na conta" : "Dia que sai da conta")</label>
-                        <CampoData Valor="_novo.Data" ValorChanged="v => _novo.Data = v ?? Relogio.Hoje" Id="data-item" />
+                        <Rotulo Texto="Repetição" Para="repeticao" />
+                        <select id="repeticao" class="campo" value="@_repeticao" @onchange="TrocarRepeticao">
+                            <option value="mensal">Todo mês</option>
+                            <option value="uma">Uma vez</option>
+                        </select>
+                    </div>
+
+                    @if (_errosItem.Count > 0)
+                    {
+                        <Aviso Tipo="ruim" Papel="alert">
+                            @foreach (var erro in _errosItem)
+                            {
+                                <div>@erro</div>
+                            }
+                        </Aviso>
+                    }
+
+                    <div class="acoes">
+                        <button type="button" class="btn" @onclick="SalvarItemAsync" disabled="@_salvando">
+                            @(_salvando ? "Salvando..." : "Salvar")
+                        </button>
+                        <button type="button" class="btn contorno" @onclick="FecharFormulario">Cancelar</button>
                     </div>
                 </div>
-
-                <div class="campo-grupo">
-                    <label for="repeticao">Repetição</label>
-                    <select id="repeticao" class="campo" value="@_repeticao" @onchange="TrocarRepeticao">
-                        <option value="mensal">Todo mês, sem fim</option>
-                        <option value="uma">Uma vez só</option>
-                    </select>
-                    <div class="dica">O valor é o de cada vez, não o total do ano.</div>
-                </div>
-
-                @if (_errosItem.Count > 0)
-                {
-                    <div class="aviso ruim" role="alert">
-                        @foreach (var erro in _errosItem)
-                        {
-                            <div>@erro</div>
-                        }
-                    </div>
-                }
-
-                <div class="acoes">
-                    <button type="button" class="btn" @onclick="SalvarItemAsync" disabled="@_salvando">
-                        @(_salvando ? "Salvando..." : "Salvar")
-                    </button>
-                    <button type="button" class="btn secundario" @onclick="FecharFormulario">Cancelar</button>
-                </div>
-            </div>
+            </Grupo>
         }
 
-        <div class="acoes" style="margin-top:1.25rem">
-            <button type="button" class="btn secundario" @onclick="Voltar">Voltar</button>
-            @if (itens.Count > 0)
-            {
-                <button type="button" class="@ClasseAvancar" @onclick="Avancar">Continuar</button>
-            }
-            else
-            {
-                <button type="button" class="@ClasseAvancar" @onclick="Avancar">Pular esta etapa</button>
-            }
+        <div class="acoes" style="margin-top:24px">
+            <button type="button" class="btn contorno" @onclick="Voltar">Voltar</button>
+            <button type="button" class="@ClasseAvancar" @onclick="Avancar">
+                @(itens.Count > 0 ? "Continuar" : "Pular")
+            </button>
         </div>
     }
     else if (_passo == PassoCartoes)
     {
         var cartoes = _dados?.Cartoes ?? [];
 
-        <h1>Seus cartões de crédito</h1>
-        <p class="ajuda" style="margin-top:0.4rem">
-            Com o dia que fecha e o dia que vence, o app sabe em que dia a fatura sai da conta.
-        </p>
-
         @if (_confirmacao is not null)
         {
-            <div class="aviso bom" role="status" aria-live="polite" style="margin-top:0.75rem">
-                <Icone Nome="check" Tamanho="16" /> @_confirmacao
+            <div style="margin-top:16px">
+                <Aviso Tipo="bom" Papel="status">@_confirmacao</Aviso>
             </div>
         }
 
         @if (cartoes.Count > 0)
         {
-            <ul class="lista bloco" style="margin-top:0.75rem">
-                @foreach (var cartao in cartoes)
-                {
-                    <li>
-                        <div class="principal">
-                            <div class="titulo">@cartao.Nome</div>
-                            <div class="sub">Fecha dia @cartao.DiaFechamento, vence dia @cartao.DiaVencimento</div>
-                        </div>
-                    </li>
-                }
-            </ul>
-        }
-        else if (_novoCartao is null)
-        {
-            <p class="vazio">Nenhum cartão ainda. Sem cartão, compra no crédito não tem como ser projetada.</p>
+            <Grupo Titulo="Cartões">
+                <ul class="lista">
+                    @foreach (var cartao in cartoes)
+                    {
+                        <li>
+                            <div class="item">
+                                <span class="icone-tipo cartao"><Icone Nome="cartao" Tamanho="20" /></span>
+                                <span class="item-principal">
+                                    <span class="item-titulo">@cartao.Nome</span>
+                                    <span class="item-sub">Fecha dia @cartao.DiaFechamento, vence dia @cartao.DiaVencimento</span>
+                                </span>
+                            </div>
+                        </li>
+                    }
+                </ul>
+            </Grupo>
         }
 
         @if (_novoCartao is null)
         {
             <div class="acoes">
                 <button type="button" class="btn secundario largo" @onclick="AbrirFormularioCartao">
-                    <Icone Nome="mais" Tamanho="16" />
-                    @(cartoes.Count > 0 ? "Adicionar outro cartão" : "Adicionar um cartão")
+                    <Icone Nome="mais" Tamanho="18" /> Adicionar cartão
                 </button>
             </div>
         }
         else
         {
-            <div class="cartao" style="margin-top:0.75rem">
-                <div class="campo-grupo">
-                    <label for="nome-cartao">Nome</label>
-                    <input id="nome-cartao" class="campo" @bind="_novoCartao.Nome" placeholder="Principal" />
-                </div>
+            <Grupo Titulo="Novo cartão">
+                <div class="corpo">
+                    <p class="dica" style="margin:0 0 16px">Com o dia que fecha e o que vence, o app sabe quando a fatura sai da conta.</p>
 
-                <div class="linha-campos">
                     <div class="campo-grupo">
-                        <label for="fechamento">Dia que fecha</label>
-                        <input id="fechamento" type="number" inputmode="numeric" min="1" max="31" class="campo"
-                               @bind="_novoCartao.DiaFechamento" />
+                        <Rotulo Texto="Nome" Para="nome-cartao" />
+                        <input id="nome-cartao" class="campo" @bind="_novoCartao.Nome" autocomplete="off" placeholder="Principal" />
                     </div>
-                    <div class="campo-grupo">
-                        <label for="vencimento">Dia que vence</label>
-                        <input id="vencimento" type="number" inputmode="numeric" min="1" max="31" class="campo"
-                               @bind="_novoCartao.DiaVencimento" />
+
+                    <div class="linha-campos">
+                        <div class="campo-grupo">
+                            <Rotulo Texto="Fecha dia" Para="fechamento" />
+                            <input id="fechamento" type="number" inputmode="numeric" min="1" max="31" class="campo"
+                                   @bind="_novoCartao.DiaFechamento" />
+                        </div>
+                        <div class="campo-grupo">
+                            <Rotulo Texto="Vence dia" Para="vencimento" />
+                            <input id="vencimento" type="number" inputmode="numeric" min="1" max="31" class="campo"
+                                   @bind="_novoCartao.DiaVencimento" />
+                        </div>
+                    </div>
+
+                    @if (_errosItem.Count > 0)
+                    {
+                        <Aviso Tipo="ruim" Papel="alert">
+                            @foreach (var erro in _errosItem)
+                            {
+                                <div>@erro</div>
+                            }
+                        </Aviso>
+                    }
+
+                    <div class="acoes">
+                        <button type="button" class="btn" @onclick="SalvarCartaoAsync" disabled="@_salvando">
+                            @(_salvando ? "Salvando..." : "Salvar")
+                        </button>
+                        <button type="button" class="btn contorno" @onclick="FecharFormulario">Cancelar</button>
                     </div>
                 </div>
-
-                @if (_errosItem.Count > 0)
-                {
-                    <div class="aviso ruim" role="alert">
-                        @foreach (var erro in _errosItem)
-                        {
-                            <div>@erro</div>
-                        }
-                    </div>
-                }
-
-                <div class="acoes">
-                    <button type="button" class="btn" @onclick="SalvarCartaoAsync" disabled="@_salvando">
-                        @(_salvando ? "Salvando..." : "Salvar")
-                    </button>
-                    <button type="button" class="btn secundario" @onclick="FecharFormulario">Cancelar</button>
-                </div>
-            </div>
+            </Grupo>
         }
 
-        <div class="acoes" style="margin-top:1.25rem">
-            <button type="button" class="btn secundario" @onclick="Voltar">Voltar</button>
-            @if (cartoes.Count > 0)
-            {
-                <button type="button" class="@ClasseAvancar" @onclick="Avancar">Continuar</button>
-            }
-            else
-            {
-                <button type="button" class="@ClasseAvancar" @onclick="Avancar">Pular esta etapa</button>
-            }
+        <div class="acoes" style="margin-top:24px">
+            <button type="button" class="btn contorno" @onclick="Voltar">Voltar</button>
+            <button type="button" class="@ClasseAvancar" @onclick="Avancar">
+                @(cartoes.Count > 0 ? "Continuar" : "Pular")
+            </button>
         </div>
     }
     else
@@ -360,40 +328,43 @@ else
         @* Nada de projeção aqui. Sem lançamento nenhum o menor saldo é só o saldo de partida
            menos o diário vezes 730 dias: um número assustador que não diz nada. A projeção
            aparece na tela Hoje, onde o número tem contexto. *@
-        <h1>Tudo pronto</h1>
-        <p class="ajuda" style="margin-top:0.4rem">
-            O que você pulou dá para cadastrar depois, em Lançamentos e em Ajustes.
-        </p>
-
-        <ul class="lista bloco" style="margin-top:0.75rem">
-            <li>
-                <div class="principal">
-                    <div class="titulo">Seus números</div>
-                    <div class="sub">Saldo de partida, diário previsto e saldo de conforto</div>
-                </div>
-                <span class="farol ok"><Icone Nome="check" Tamanho="14" /> feito</span>
-            </li>
-            @foreach (var etapa in Resumo())
-            {
+        <Grupo>
+            <ul class="lista">
                 <li>
-                    <div class="principal">
-                        <div class="titulo">@etapa.Titulo</div>
-                        <div class="sub">@etapa.Detalhe</div>
-                    </div>
-                    @if (etapa.Quantidade > 0)
-                    {
+                    <div class="item">
+                        <span class="item-principal">
+                            <span class="item-titulo">Seus números</span>
+                            <span class="item-sub">Saldo, gasto diário e conforto</span>
+                        </span>
                         <span class="farol ok"><Icone Nome="check" Tamanho="14" /> feito</span>
-                    }
-                    else
-                    {
-                        <span class="pilula neutra">pulado</span>
-                    }
+                    </div>
                 </li>
-            }
-        </ul>
+                @foreach (var etapa in Resumo())
+                {
+                    <li>
+                        <div class="item">
+                            <span class="item-principal">
+                                <span class="item-titulo">@etapa.Titulo</span>
+                                <span class="item-sub">@etapa.Detalhe</span>
+                            </span>
+                            @if (etapa.Quantidade > 0)
+                            {
+                                <span class="farol ok"><Icone Nome="check" Tamanho="14" /> feito</span>
+                            }
+                            else
+                            {
+                                <span class="pilula neutra">pulado</span>
+                            }
+                        </div>
+                    </li>
+                }
+            </ul>
+        </Grupo>
+
+        <p class="dica" style="margin-top:12px">O que ficou para depois dá para cadastrar em Lançar e em Ajustes.</p>
 
         <div class="acoes">
-            <a class="btn largo" href="">Ir para a tela Hoje</a>
+            <a class="btn largo" href="">Ir para Hoje</a>
         </div>
     }
 }
@@ -422,7 +393,18 @@ else
 
     // Com o formulário aberto, salvar é a ação principal. Dois botões de destaque na mesma
     // tela fazem a pessoa parar para descobrir qual dos dois é o caminho.
-    private string ClasseAvancar => _novo is null && _novoCartao is null ? "btn" : "btn secundario";
+    private string ClasseAvancar => _novo is null && _novoCartao is null ? "btn" : "btn contorno";
+
+    private string TituloDoPasso() => _passo switch
+    {
+        PassoNumeros1 => "Quanto tem na conta?",
+        PassoNumeros2 => "Quanto gasta por dia?",
+        PassoNumeros3 => "Qual saldo te deixa tranquilo?",
+        PassoEntradas => "O que entra na conta",
+        PassoFixas => "Contas de todo mês",
+        PassoCartoes => "Cartões de crédito",
+        _ => "Tudo pronto"
+    };
 
     protected override async Task OnInitializedAsync()
     {
@@ -465,18 +447,20 @@ else
 
         return
         [
-            new("O que entra", Contagem(entradas, "entrada cadastrada", "entradas cadastradas"), entradas),
-            new("Contas fixas", Contagem(saidas, "conta cadastrada", "contas cadastradas"), saidas),
-            new("Cartões", Contagem(cartoes, "cartão cadastrado", "cartões cadastrados"), cartoes)
+            new("Entradas", Contagem(entradas, "entrada", "entradas"), entradas),
+            new("Contas de todo mês", Contagem(saidas, "conta", "contas"), saidas),
+            new("Cartões", Contagem(cartoes, "cartão", "cartões"), cartoes)
         ];
     }
 
     private static string Contagem(int quantos, string singular, string plural) =>
-        quantos == 0 ? "Nada cadastrado" : $"{quantos} {(quantos == 1 ? singular : plural)}";
+        quantos == 0 ? "Nada cadastrado" : Formato.Quantos(quantos, singular, plural);
 
+    // Cada acao que grava confere a trava antes de tudo: o disabled do botao so chega ao celular
+    // depois de uma ida e volta pela rede, e um toque duplo rapido gravaria duas vezes.
     private async Task SalvarNumerosAsync()
     {
-        if (_cfg is null)
+        if (_cfg is null || _salvando)
         {
             return;
         }
@@ -556,7 +540,7 @@ else
 
     private async Task SalvarItemAsync()
     {
-        if (_novo is null || _dados is null)
+        if (_novo is null || _dados is null || _salvando)
         {
             return;
         }
@@ -572,7 +556,6 @@ else
             return;
         }
 
-        // Trava o botão: dois toques seguidos criariam dois lançamentos iguais.
         _salvando = true;
 
         try
@@ -581,7 +564,7 @@ else
             await Servico.SalvarLancamentoAsync(_novo);
             await CarregarDadosAsync();
             _novo = null;
-            _confirmacao = $"{descricao} entrou na lista.";
+            _confirmacao = $"{descricao} salvo.";
         }
         finally
         {
@@ -591,7 +574,7 @@ else
 
     private async Task SalvarCartaoAsync()
     {
-        if (_novoCartao is null)
+        if (_novoCartao is null || _salvando)
         {
             return;
         }
@@ -607,11 +590,16 @@ else
 
         try
         {
+            if (await Servico.SalvarCartaoAsync(_novoCartao) is string recusa)
+            {
+                _errosItem = [recusa];
+                return;
+            }
+
             var nome = _novoCartao.Nome;
-            await Servico.SalvarCartaoAsync(_novoCartao);
             await CarregarDadosAsync();
             _novoCartao = null;
-            _confirmacao = $"Cartão {nome} cadastrado.";
+            _confirmacao = $"Cartão {nome} salvo.";
         }
         finally
         {

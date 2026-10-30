@@ -1,236 +1,244 @@
 @page "/resumo"
 @inject PlanejamentoService Servico
 @inject IRelogio Relogio
+@inject IJSRuntime JS
 
 <PageTitle>Resumo | Minhas Finanças</PageTitle>
 
-<h1 class="so-leitor">Resumo do mês</h1>
-
 @if (_dados is null || _projecao is null)
 {
-    <p class="vazio">Carregando...</p>
+    <Cabecalho Titulo="Resumo" />
+    <Carregando />
 }
 else
 {
     var conforto = _dados.Configuracao.SaldoConfortoCentavos;
     var mes = _projecao.Mes(_mes.Year, _mes.Month);
 
-    <div class="bloco">
-        <header>
-            <button type="button" class="btn secundario pequeno" @onclick="() => Mover(-1)" disabled="@(!PodeVoltar)"
-                    aria-label="Mês anterior">
-                <Icone Nome="voltar" Tamanho="16" />
-            </button>
-            <h2 style="flex:1; text-align:center">@Formato.MesAno(_mes.Year, _mes.Month)</h2>
-            <button type="button" class="btn secundario pequeno" @onclick="() => Mover(1)" disabled="@(!PodeAvancar)"
-                    aria-label="Mês seguinte">
-                <span style="transform:rotate(180deg); display:inline-flex"><Icone Nome="voltar" Tamanho="16" /></span>
-            </button>
-        </header>
-    </div>
+    <Cabecalho Titulo="Resumo">
+        <SeletorMes Mes="_mes" PodeVoltar="PodeVoltar" PodeAvancar="PodeAvancar" AoMover="Mover" />
+    </Cabecalho>
 
     @if (mes is null)
     {
-        <p class="vazio">Este mês está fora da projeção.</p>
+        <Vazio Texto="Este mês está fora da previsão." />
     }
     else
     {
-        <div class="painel-cartoes" style="margin-top:0.75rem">
-            <div class="cartao">
-                <div class="rotulo">Performance</div>
-                <div class="numero medio @(mes.PerformanceCentavos < 0 ? "valor-negativo" : "valor-ok")">
-                    @Formato.Moeda(mes.PerformanceCentavos)
+        var totalSaidas = mes.SaidasCentavos + mes.CartaoCentavos + mes.DiarioCentavos + mes.EconomiasCentavos;
+        var maiorLado = Math.Max(1, Math.Max(mes.EntradasCentavos, totalSaidas));
+
+        @* ---------- Entrou contra saiu ---------- *@
+        <Grupo Id="resumo-mes" Classe="sem-titulo">
+            <div class="corpo">
+                <Rotulo Texto="Resultado do mês"
+                        Ajuda="Entradas menos tudo que saiu no mês: contas, cartão, diário e o que foi guardado." />
+                <Valor Centavos="mes.PerformanceCentavos" Mais="true"
+                       Classe="@($"valor-grande {(mes.PerformanceCentavos < 0 ? "valor-negativo" : "valor-entrada")}")" />
+
+                <div style="margin-top:20px">
+                    <div class="proporcao">
+                        <div class="proporcao-topo">
+                            <span class="proporcao-nome">Entradas</span>
+                            <span class="proporcao-valor"><Valor Centavos="mes.EntradasCentavos" /></span>
+                        </div>
+                        <div class="barra entrada" aria-hidden="true"><span style="width:@Largura(mes.EntradasCentavos, maiorLado)"></span></div>
+                        @if (mes.GanhoVariavelCentavos > 0)
+                        {
+                            @* A composição, e não só o total: o resto das entradas é previsão e esta
+                               parte é número digitado. *@
+                            <p class="dica">Inclui @Formato.Moeda(mes.GanhoVariavelCentavos) de renda variável.</p>
+                        }
+                    </div>
+                    <div class="proporcao">
+                        <div class="proporcao-topo">
+                            <span class="proporcao-nome">Saídas</span>
+                            <span class="proporcao-valor"><Valor Centavos="totalSaidas" /></span>
+                        </div>
+                        <div class="barra saida" aria-hidden="true"><span style="width:@Largura(totalSaidas, maiorLado)"></span></div>
+                    </div>
                 </div>
-                <div class="ajuda">O que entrou menos tudo que saiu, inclusive o que você guardou.</div>
             </div>
-            <div class="cartao">
-                <div class="rotulo">Custo de vida</div>
-                <div class="numero medio">@Formato.Moeda(mes.CustoDeVidaCentavos)</div>
-                <div class="ajuda">Contas, cartão e diário. Economia não entra.</div>
+        </Grupo>
+
+        <div class="colunas">
+            <div>
+                @* ---------- Para onde foi ---------- *@
+                <Grupo Titulo="Para onde foi">
+                    <div class="corpo">
+                        @foreach (var (nome, valor, detalhe) in Composicao(mes))
+                        {
+                            <div class="proporcao">
+                                <div class="proporcao-topo">
+                                    <span class="proporcao-nome">@nome</span>
+                                    <span class="proporcao-valor">
+                                        <Valor Centavos="valor" /><small>@Formato.Porcento(totalSaidas == 0 ? 0 : (decimal)valor / totalSaidas)</small>
+                                    </span>
+                                </div>
+                                <div class="barra" aria-hidden="true"><span style="width:@Largura(valor, Math.Max(1, totalSaidas))"></span></div>
+                                @if (detalhe is not null)
+                                {
+                                    <p class="dica">@detalhe</p>
+                                }
+                            </div>
+                        }
+
+                        <dl class="linhas" style="margin-top:16px">
+                            <div class="linha">
+                                <dt><Rotulo Texto="Custo de vida" Classe="rotulo-dica" Ajuda="Contas, cartão e diário. O que foi guardado não entra." /></dt>
+                                <dd><Valor Centavos="mes.CustoDeVidaCentavos" /></dd>
+                            </div>
+                            <div class="linha">
+                                <dt><Rotulo Texto="Economizado" Classe="rotulo-dica" Ajuda="O que foi guardado dividido pelas entradas do mês." /></dt>
+                                <dd>@Formato.Porcento(mes.EconomizadoFracao)</dd>
+                            </div>
+                            @if (mes.EntradasIncertasForaCentavos > 0)
+                            {
+                                <div class="linha">
+                                    <dt><Rotulo Texto="Entradas incertas" Classe="rotulo-dica" Ajuda="Entradas marcadas como incertas neste mês. Ficaram fora do saldo previsto e das entradas acima." /></dt>
+                                    <dd><Valor Centavos="mes.EntradasIncertasForaCentavos" /></dd>
+                                </div>
+                            }
+                        </dl>
+                    </div>
+                </Grupo>
+
+                @* ---------- Por tag ---------- *@
+                <Grupo Titulo="Por tag">
+                    <div class="corpo">
+                        @if (mes.SaidasPorTag.Count == 0)
+                        {
+                            <p class="dica" style="margin:0">Nenhuma saída com tag neste mês.</p>
+                        }
+                        else
+                        {
+                            @foreach (var tag in mes.SaidasPorTag)
+                            {
+                                var classe = Formato.ClasseTag(
+                                    tag.TagId is int id ? _dados.Tags.FirstOrDefault(t => t.Id == id)?.Cor : null);
+
+                                <div class="proporcao">
+                                    <div class="proporcao-topo">
+                                        <span class="pilula @classe">@tag.Nome</span>
+                                        <span class="proporcao-valor">
+                                            <Valor Centavos="tag.ValorCentavos" /><small>@Formato.Porcento(tag.Fracao)</small>
+                                        </span>
+                                    </div>
+                                    <div class="barra" aria-hidden="true">
+                                        <span class="@classe" style="width:@((tag.Fracao * 100).ToString("N1", CultureInfo.InvariantCulture))%"></span>
+                                    </div>
+                                </div>
+                            }
+                            <p class="dica" style="margin-top:12px">Saídas, cartão e economias. O diário não tem tag.</p>
+                        }
+                    </div>
+                </Grupo>
             </div>
-            <div class="cartao">
-                <div class="rotulo">Saldo no fim do mês</div>
-                <div class="numero medio @Formato.ClasseValor(mes.SaldoFimCentavos ?? 0, conforto)">
-                    @Formato.Moeda(mes.SaldoFimCentavos)
-                </div>
-                <div class="ajuda">Em @Formato.Data(mes.UltimoDia)</div>
-            </div>
-            <div class="cartao">
-                <div class="rotulo">Menor saldo do mês</div>
-                <div class="numero medio @Formato.ClasseValor(mes.MenorSaldoCentavos ?? 0, conforto)">
-                    @Formato.Moeda(mes.MenorSaldoCentavos)
-                </div>
-                <div class="ajuda">
-                    @if (mes.DataMenorSaldo is DateOnly dataMenorCartao)
-                    {
-                        <text>Em @Formato.Data(dataMenorCartao) &middot; </text>
-                    }
-                    <FarolTag Farol="mes.Farol" />
-                </div>
+
+            <div>
+                @* ---------- Saldo do mês ---------- *@
+                <Grupo Titulo="Saldo">
+                    <div class="corpo">
+                        <dl class="indicadores" style="grid-template-columns:1fr 1fr">
+                            <div>
+                                <dt>No fim do mês</dt>
+                                <dd>
+                                    <Valor Centavos="mes.SaldoFimCentavos" Classe="@Formato.ClasseValor(mes.SaldoFimCentavos ?? 0, conforto)" />
+                                    <span class="indicador-sub">@Formato.Data(mes.UltimoDia)</span>
+                                </dd>
+                            </div>
+                            <div>
+                                <dt>Menor saldo</dt>
+                                <dd>
+                                    <Valor Centavos="mes.MenorSaldoCentavos" Classe="@Formato.ClasseValor(mes.MenorSaldoCentavos ?? 0, conforto)" />
+                                    @if (mes.DataMenorSaldo is DateOnly dataMenor)
+                                    {
+                                        <span class="indicador-sub">@Formato.Data(dataMenor)</span>
+                                    }
+                                </dd>
+                            </div>
+                        </dl>
+                        <div style="margin:12px 0 16px"><FarolTag Farol="mes.Farol" /></div>
+                        <GraficoSaldo Serie="SerieDoMes()" Conforto="conforto" />
+                    </div>
+                </Grupo>
             </div>
         </div>
+    }
 
-        @* No PC: detalhamento de um lado, gráfico e tags do outro. *@
-        <div class="colunas" style="margin-top:0.75rem">
+    @* ---------- Próximos 12 meses ---------- *@
+    <Grupo Titulo="Próximos 12 meses">
+        <ul class="lista so-celular">
+            @foreach (var linha in _projecao.Meses.Take(12))
+            {
+                var atual = linha.Ano == _mes.Year && linha.Mes == _mes.Month;
 
-        <div class="bloco">
-            <header><h2>Como foi o mês</h2></header>
+                <li>
+                    <button type="button" class="item" @onclick="() => Selecionar(linha.Ano, linha.Mes)"
+                            aria-current="@(atual ? "true" : null)"
+                            style="@(atual ? "background:var(--acento-suave)" : null)">
+                        <span class="item-principal">
+                            <span class="item-titulo">@Formato.MesAno(linha.Ano, linha.Mes)</span>
+                            <span class="item-sub">
+                                Resultado <Valor Centavos="linha.PerformanceCentavos" Mais="true" Classe="@(linha.PerformanceCentavos < 0 ? "valor-negativo" : null)" />
+                            </span>
+                        </span>
+                        <span class="item-valor">
+                            <Valor Centavos="linha.SaldoFimCentavos" />
+                            <span class="item-valor-sub">
+                                menor <Valor Centavos="linha.MenorSaldoCentavos" Classe="@Formato.ClasseValor(linha.MenorSaldoCentavos ?? 0, conforto)" />
+                            </span>
+                        </span>
+                    </button>
+                </li>
+            }
+        </ul>
+
+        <div class="rolagem so-desktop">
             <table class="tabela">
+                <thead>
+                    <tr>
+                        <th scope="col">Mês</th>
+                        <th scope="col" class="num">Entradas</th>
+                        <th scope="col" class="num">Contas, cartão e diário</th>
+                        <th scope="col" class="num">Guardado</th>
+                        <th scope="col" class="num">Resultado</th>
+                        <th scope="col" class="num">Saldo no fim</th>
+                        <th scope="col" class="num">Menor saldo</th>
+                    </tr>
+                </thead>
                 <tbody>
-                    <tr>
-                        <td>Entradas</td>
-                        <td class="num valor-ok">@Formato.Moeda(mes.EntradasCentavos)</td>
-                    </tr>
-                    @if (mes.GanhoVariavelCentavos > 0)
+                    @foreach (var linha in _projecao.Meses.Take(12))
                     {
-                        @* Mostrar a composicao, e nao so o total: o resto das entradas e
-                           projecao e esta parte e numero que o dono digitou. Somar sem dizer
-                           deixaria ele sem como reconstruir o numero de cima. *@
-                        <tr>
-                            <td class="secundario" style="padding-left:1rem">
-                                sendo ganho variável
-                            </td>
-                            <td class="num secundario">@Formato.Moeda(mes.GanhoVariavelCentavos)</td>
-                        </tr>
-                    }
-                    <tr>
-                        <td>Saídas</td>
-                        <td class="num">@Formato.Moeda(mes.SaidasCentavos)</td>
-                    </tr>
-                    <tr>
-                        <td>Cartão</td>
-                        <td class="num">@Formato.Moeda(mes.CartaoCentavos)</td>
-                    </tr>
-                    <tr>
-                        <td>Diário</td>
-                        <td class="num">@Formato.Moeda(mes.DiarioCentavos)</td>
-                    </tr>
-                    <tr>
-                        <td>Economias</td>
-                        <td class="num">@Formato.Moeda(mes.EconomiasCentavos)</td>
-                    </tr>
-                    <tr>
-                        <td>Economizado</td>
-                        <td class="num">@Formato.Porcento(mes.EconomizadoFracao)</td>
-                    </tr>
-                    <tr>
-                        <td>
-                            Diário médio
-                            <div class="ajuda">Só nos dias já vividos do mês</div>
-                        </td>
-                        <td class="num">
-                            @(mes.DiarioMedioCentavos is long media ? Formato.Moeda(media) : "-")
-                            <div class="ajuda">@mes.DiasComDiarioReal dia(s) registrado(s)</div>
-                        </td>
-                    </tr>
-                    @if (mes.EntradasIncertasForaCentavos > 0)
-                    {
-                        <tr>
+                        var atual = linha.Ano == _mes.Year && linha.Mes == _mes.Month;
+
+                        <tr class="@(atual ? "selecionado" : "")">
                             <td>
-                                Entradas incertas de fora
-                                <div class="ajuda">Não entraram no saldo projetado</div>
+                                <button type="button" class="btn texto pequeno" style="padding:0"
+                                        aria-current="@(atual ? "true" : null)"
+                                        @onclick="() => Selecionar(linha.Ano, linha.Mes)">
+                                    @Formato.MesAno(linha.Ano, linha.Mes)
+                                </button>
                             </td>
-                            <td class="num">@Formato.Moeda(mes.EntradasIncertasForaCentavos)</td>
+                            <td class="num"><Valor Centavos="linha.EntradasCentavos" /></td>
+                            <td class="num"><Valor Centavos="linha.SaidasECartaoCentavos + linha.DiarioCentavos" /></td>
+                            <td class="num"><Valor Centavos="linha.EconomiasCentavos" /></td>
+                            <td class="num"><Valor Centavos="linha.PerformanceCentavos" Classe="@(linha.PerformanceCentavos < 0 ? "valor-negativo" : null)" /></td>
+                            <td class="num"><Valor Centavos="linha.SaldoFimCentavos" /></td>
+                            <td class="num"><Valor Centavos="linha.MenorSaldoCentavos" Classe="@Formato.ClasseValor(linha.MenorSaldoCentavos ?? 0, conforto)" /></td>
                         </tr>
                     }
                 </tbody>
             </table>
         </div>
-
-        <div>
-
-        @* ---------- Grafico do mes ---------- *@
-        <div class="bloco">
-            <header><h2>Saldo dia a dia</h2></header>
-            <div class="corpo">
-                <GraficoSaldo Serie="SerieDoMes()" Conforto="conforto" />
-            </div>
-        </div>
-
-        @* ---------- Saidas por tag ---------- *@
-        <div class="bloco" style="margin-top:0.75rem">
-            <header><h2>Para onde foi o dinheiro</h2></header>
-            @if (mes.SaidasPorTag.Count == 0)
-            {
-                <p class="vazio">Nenhuma saída neste mês.</p>
-            }
-            else
-            {
-                <div class="corpo">
-                    @foreach (var tag in mes.SaidasPorTag)
-                    {
-                        var classe = Formato.ClasseTag(
-                            tag.TagId is int id ? _dados.Tags.FirstOrDefault(t => t.Id == id)?.Cor : null);
-
-                        <div style="margin-bottom:0.7rem">
-                            <div style="display:flex; justify-content:space-between; gap:0.5rem; font-size:0.85rem">
-                                <span class="pilula @classe">@tag.Nome</span>
-                                <span class="dinheiro">
-                                    @Formato.Moeda(tag.ValorCentavos)
-                                    <span class="ajuda">@Formato.Porcento(tag.Fracao)</span>
-                                </span>
-                            </div>
-                            <div class="barra" style="margin-top:0.2rem">
-                                <span class="@classe"
-                                      style="width:@((tag.Fracao * 100).ToString("N1", CultureInfo.InvariantCulture))%"></span>
-                            </div>
-                        </div>
-                    }
-                    <p class="ajuda" style="margin:0">
-                        Conta Saída, Cartão e Economia. O diário não tem tag: ele aparece como diário.
-                    </p>
-                </div>
-            }
-        </div>
-
-        </div>
-        </div>
-    }
-
-    @* ---------- Horizonte de 12 meses ---------- *@
-    <div class="bloco rolagem" style="margin-top:0.75rem">
-        <header><h2>Próximos 12 meses</h2></header>
-        <table class="tabela">
-            <thead>
-                <tr>
-                    <th>Mês</th>
-                    <th class="num">Entra</th>
-                    <th class="num">Sai</th>
-                    <th class="num">Guarda</th>
-                    <th class="num">Fim</th>
-                    <th class="num">Menor</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var linha in _projecao.Meses.Take(12))
-                {
-                    <tr class="clicavel @(linha.Ano == _mes.Year && linha.Mes == _mes.Month ? "hoje" : "")"
-                        @onclick="() => _mes = new DateOnly(linha.Ano, linha.Mes, 1)"
-                        @onkeydown="evento => TeclaNoMes(evento, linha.Ano, linha.Mes)"
-                        tabindex="0" role="button"
-                        aria-label="Abrir @Formato.MesAno(linha.Ano, linha.Mes)">
-                        <td>@Formato.MesAnoCurto(linha.Ano, linha.Mes)</td>
-                        <td class="num">@Formato.Numero(linha.EntradasCentavos)</td>
-                        <td class="num">@Formato.Numero(linha.SaidasECartaoCentavos + linha.DiarioCentavos)</td>
-                        <td class="num">@Formato.Numero(linha.EconomiasCentavos)</td>
-                        <td class="num">@Formato.Numero(linha.SaldoFimCentavos ?? 0)</td>
-                        <td class="num @Formato.ClasseValor(linha.MenorSaldoCentavos ?? 0, _dados.Configuracao.SaldoConfortoCentavos)">
-                            @Formato.Numero(linha.MenorSaldoCentavos ?? 0)
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-        <p class="ajuda" style="padding:0.5rem 1rem; margin:0">
-            Valores sem o R$. A coluna Sai inclui contas, cartão e diário. Toque no mês para abrir os detalhes.
-        </p>
-    </div>
+    </Grupo>
 }
 
 @code {
     private DadosPlanejamento? _dados;
     private ResultadoProjecao? _projecao;
     private DateOnly _mes;
+    private bool _rolarParaTopo;
 
     private bool PodeVoltar => _projecao is not null && _mes > MinhasFinancas.Domain.Calendario.PrimeiroDiaDoMes(_projecao.Inicio);
 
@@ -244,16 +252,38 @@ else
             MinhasFinancas.Domain.Calendario.Maior(Relogio.Hoje, _projecao.Inicio));
     }
 
-    private void Mover(int meses) => _mes = _mes.AddMonths(meses);
-
-    /// <summary>Enter abre o mes escolhido na lista do horizonte.</summary>
-    private void TeclaNoMes(KeyboardEventArgs evento, int ano, int mes)
+    protected override async Task OnAfterRenderAsync(bool primeiraRenderizacao)
     {
-        if (evento.Key == "Enter")
+        if (_rolarParaTopo)
         {
-            _mes = new DateOnly(ano, mes, 1);
+            _rolarParaTopo = false;
+            await JS.InvokeVoidAsync("window.scrollTo", 0, 0);
         }
     }
+
+    private void Mover(int meses) => _mes = _mes.AddMonths(meses);
+
+    /// <summary>Abre o mês tocado na lista e volta ao topo, onde estão os números dele.</summary>
+    private void Selecionar(int ano, int mes)
+    {
+        _mes = new DateOnly(ano, mes, 1);
+        _rolarParaTopo = true;
+    }
+
+    /// <summary>As quatro saídas do mês, na ordem em que costumam pesar.</summary>
+    private static IEnumerable<(string Nome, long Valor, string? Detalhe)> Composicao(ResumoMes mes)
+    {
+        yield return ("Contas", mes.SaidasCentavos, null);
+        yield return ("Cartão", mes.CartaoCentavos, null);
+        yield return ("Diário", mes.DiarioCentavos,
+            mes.DiarioMedioCentavos is long media
+                ? $"Média de {Formato.Moeda(media)} por dia vivido, {Formato.Quantos(mes.DiasComDiarioReal, "dia registrado", "dias registrados")}."
+                : null);
+        yield return ("Guardado", mes.EconomiasCentavos, null);
+    }
+
+    private static string Largura(long valor, long total) =>
+        (Math.Clamp((double)valor / total, 0, 1) * 100).ToString("N1", CultureInfo.InvariantCulture) + "%";
 
     private List<PontoGrafico> SerieDoMes() =>
         (_projecao?.Dias ?? [])

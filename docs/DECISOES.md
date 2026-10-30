@@ -423,3 +423,122 @@ atalho salvo na tela do iPhone e trocar o endereço quebraria o atalho.
 lista de lançamentos, e campo que ninguém acha é campo que ninguém preenche. O índice leva a cada
 seção. O caminho vai inteiro no `href` de propósito: com o `<base href="/">` do Blazor, um href só
 com fragmento é resolvido contra a base e joga o dono na tela Hoje.
+
+## 22. Refatoração visual: menos texto, um número por vez
+
+Em 15/10/2026 a interface inteira foi refeita a partir de uma referência de calendário com
+cabeçalho verde-petróleo e de outras telas de apps financeiros. Motor, banco e regras não
+mudaram: os 73 testes, inclusive os dourados, continuam passando sem tocar em nada do domínio
+além do texto das mensagens de erro, que estavam sem acento.
+
+O que foi decidido, e por quê:
+
+- **Cabeçalho petróleo em toda página, grande só onde há um número que manda.** Hoje (saldo
+  previsto) e Calendário (saldo no fim do mês) têm o destaque; o resto tem cabeçalho compacto.
+  Repetir o bloco grande em Ajustes ou num formulário seria decoração.
+- **Barra de status `black-translucent`.** O relógio do iPhone fica branco sobre o petróleo. O
+  custo é que nenhuma página pode começar sem `<Cabecalho>`, e a `.faixa-status` cobre a área
+  quando o conteúdo rola por baixo.
+- **Explicação no (i), regra à vista.** Parágrafos explicativos viraram ajuda que abre por toque
+  ou teclado (`Rotulo`, `BotaoAjuda`). O que muda dinheiro continua escrito na tela numa linha:
+  "no saldo inicial" na lista, "por mês, 4x" ao lado do valor, "Não muda o saldo previsto" na
+  renda variável, o aviso das contas fora da previsão. No destaque da tela Hoje há um (i) só para
+  os quatro números: um por número quebrava os rótulos das colunas estreitas.
+- **O farol diz a regra.** "Tranquilo" virou "acima do conforto". O aviso verde da tela Hoje só
+  aparece quando nada está fora da conta: conta vencida sem resposta ou cadastro com problema
+  deixam a previsão incompleta, e aí afirmar que está tudo bem seria falso.
+- **Calendário começa em hoje.** Os dias que já passaram no mês ficam a um toque ("Mostrar os 2
+  dias anteriores"), para registrar o gasto de ontem. Cada dia é uma linha com data, entrada,
+  saída, diário e saldo; o detalhe e a edição do gasto do dia abrem numa folha.
+- **Entradas do mês dizem quanto é renda variável**, também no Calendário: ali os dias somam
+  zero de entrada e o total do mês não, e sem a composição a conta não fecha (R17).
+- **Lançar em três abas com endereço próprio** (`?secao=renda`, `?secao=faturas`). Os atalhos
+  antigos `/plano` e `/faturas` continuam abrindo a seção certa.
+- **Contas do mês abrem numa folha.** Antes cada linha tinha dois ou três botões; agora a linha
+  mostra o estado e as ações ficam juntas, com a regra do saldo inicial escrita quando importa.
+  As resolvidas ficam recolhidas.
+- **Folha com rodapé fixo acima do teclado.** `app.js` mede a área visível de verdade
+  (`visualViewport`) e o modal cabe nela; com 420px de altura o botão de salvar continua a vista.
+  O modal também passou a fechar com Esc e a prender o foco, que eram lacunas conhecidas.
+- **Excluir pede um segundo toque** em lançamento, fatura, carteira, cartão e tag. Antes um toque
+  apagava um lançamento recorrente sem volta.
+- **Tag é editada numa folha**, com nome e cor. Renomear passou a existir; antes só dava para
+  trocar a cor, com oito quadrados por linha na tela de Ajustes.
+- **Repetição semanal aparece como semanal.** A lista mostrava "todo mês, sem fim" para um
+  lançamento semanal, porque o texto ignorava a periodicidade.
+- **Pagamento de fatura de zero é recusado.** Não mudava nada além da data do último pagamento.
+  Valor negativo continua aceito: é o único jeito de corrigir um pagamento lançado a mais.
+  (Substituído na seção 23: pagamento errado agora se corrige excluindo o registro.)
+
+## 23. Auditoria de 23/10/2026: dinheiro contado duas vezes, travas e rede
+
+Uma auditoria completa achou bugs que mexiam no saldo, reproduzidos chamando o motor direto, e
+lacunas de segurança no uso pela rede. O que mudou e por quê:
+
+### Fatura e compra se casam pelo ciclo, não pela data digitada
+
+`Faturas.Chave` passou a ser o vencimento que as regras do cartão calculam, o mais próximo da data
+da fatura. O banco empurra o vencimento que cai em fim de semana e o dono digita a data real;
+casando pela data exata, a compra (no vencimento calculado) não achava a fatura e o mesmo gasto
+saía duas vezes. A fatura continua saindo da conta na data digitada. Duas faturas no mesmo ciclo
+passaram a ser recusadas (`Validacao.Fatura`), porque receberiam as mesmas compras.
+
+### Compra no cartão usa o dia de vencimento do cartão em todas as parcelas
+
+Cartão que vence dia 30 com a primeira fatura em fevereiro grudava as parcelas seguintes no dia
+28, fora do vencimento e fora da fatura do ciclo. `Ocorrencias.DiaDeReferencia` devolve o dia de
+vencimento do cartão, e `Ocorrencias.Do` é o caminho único para gerar ocorrências de um lançamento.
+
+### Cada pagamento de fatura é um registro, com a própria data
+
+O pago ficava somado na fatura, com a data do último pagamento. Pagar parte antes de conferir com
+o banco e o resto depois fazia a projeção descontar tudo na data do último, e a parte anterior,
+já fora do saldo conferido, saía de novo. Agora existe `PagamentoFatura` (tabela própria, apagada
+junto com a fatura) e só conta na projeção o pagamento a partir da âncora. A migração converte o
+pago antigo num pagamento só, na data do último (é tudo que se sabia). Backup subiu para a versão
+5; arquivo antigo continua abrindo, com a mesma conversão. Valor negativo deixou de ser aceito:
+pagamento errado se exclui na edição da fatura.
+
+### Juros do rotativo param em 100% da dívida
+
+Uma fatura antiga não paga (ou com o ano digitado errado) crescia mês a mês até estourar o `long`,
+e como toda tela projeta o saldo, o app inteiro travava, inclusive Ajustes, onde se restaura o
+backup. O teto segue a Lei 14.690/2023, que desde 2024 limita juros e encargos do rotativo a 100%
+do valor original. Junto vieram faixas em `Validacao`: datas entre 2000 e 2100, valores até
+R$ 9.999.999.999,99, juros até 100% ao mês, até 360 repetições.
+
+### Travas e erros
+
+- Botão que grava confere a trava **antes de tudo**. O `disabled` só chega ao iPhone depois de uma
+  ida e volta pela rede, e um toque duplo passava: criava lançamento repetido e, no pagamento de
+  fatura, somava o pagamento duas vezes.
+- Nome repetido de cartão, tag, meta e carteira volta como mensagem (o serviço devolve `string?`),
+  sem diferenciar maiúsculas. Antes o índice único do banco recusava com exceção e derrubava a tela.
+- `ErrorBoundary` no `MainLayout`: erro inesperado fica na tela, com "Tentar de novo", em vez de
+  derrubar a conexão inteira.
+- A restauração confere tudo que quebraria a gravação ou o cálculo (código e nome repetidos,
+  referência solta, data e valor fora da faixa) e, se o banco ainda recusar, nada muda. Regra de
+  tela que não quebra nada continua de fora, para backup antigo seguir abrindo.
+
+### Uso pela rede
+
+- **PIN** (`Seguranca/ControleDeAcesso`). Este computador entra direto; outro aparelho precisa
+  do PIN, e sem PIN definido a rede só vê um aviso. Seguro por padrão: o dono decide abrir.
+- **Filtro de endereço** (`Seguranca/ProtecaoDeRede`). Só localhost, IP e o nome do PC. Sem isso,
+  um site malicioso aberto no navegador do PC podia apontar o próprio domínio para 127.0.0.1 (DNS
+  rebinding) e ler o app inteiro, inclusive o backup.
+- **Perfil `rede` em Production**, para erro não mostrar detalhes técnicos a outros aparelhos.
+  `UseStaticWebAssets` ficou ligado sempre, porque fora de Development o `dotnet run` não servia o
+  `blazor.web.js`.
+
+### Backup automático
+
+Cópia diária do banco com `VACUUM INTO`, 30 dias guardados, na pasta `backups` ao lado do banco
+(ou em `MinhasFinancas:PastaBackups`). A cópia de antes de migrar passou a usar o mesmo método.
+Antes disso o `financas.db` era a única cópia do histórico.
+
+### Chaves estrangeiras no banco
+
+Situação, diário, fatura e carteira do lançamento passaram a ter chave estrangeira; antes a
+integridade dependia só do código. A migração limpa órfãos antes (que o app nunca cria) e deixa
+fatura de cartão apagado como está, porque apagá-la tiraria uma dívida da previsão.

@@ -23,7 +23,7 @@ public static class Simulador
         var entradaPaga = Math.Clamp(simulacao.EntradaCentavos, 0, Math.Max(0, simulacao.ValorTotalCentavos));
         var financiado = Math.Max(0, simulacao.ValorTotalCentavos - entradaPaga);
         var quantidade = Math.Clamp(simulacao.Parcelas, 1, MaximoParcelas);
-        var taxa = simulacao.TaxaMensal < 0 ? 0m : simulacao.TaxaMensal;
+        var taxa = Math.Clamp(simulacao.TaxaMensal, 0m, Validacao.JurosMaximoMensal);
 
         List<ParcelaSimulada> parcelas = financiado == 0
             ? []
@@ -130,12 +130,17 @@ public static class Simulador
         decimal taxaMensal,
         DateOnly primeiraParcela)
     {
-        var parcelas = new List<ParcelaSimulada>(quantidade);
+        quantidade = Math.Min(quantidade, MaximoParcelas);
+        var parcelas = new List<ParcelaSimulada>(Math.Max(0, quantidade));
 
         if (financiadoCentavos <= 0 || quantidade <= 0)
         {
             return parcelas;
         }
+
+        // Com o teto de 100% ao mes e 36 parcelas, o fator fica em 2^36 e cabe folgado no decimal.
+        // Sem teto, uma taxa digitada errada (9999%) estourava o decimal e derrubava a tela.
+        taxaMensal = Math.Clamp(taxaMensal, 0m, Validacao.JurosMaximoMensal);
 
         if (taxaMensal == 0m)
         {

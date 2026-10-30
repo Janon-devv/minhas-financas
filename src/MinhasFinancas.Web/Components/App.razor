@@ -11,7 +11,9 @@
     <!-- Adicionar a tela de inicio do iPhone abre em tela cheia, sem a barra do Safari. -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <!-- Barra de status sobre o cabecalho petroleo, com texto claro. Toda pagina comeca com o
+         cabecalho escuro, e a .faixa-status cobre essa area quando o conteudo rola por baixo. -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Finanças" />
     <link rel="apple-touch-icon" href="icone-180.png" />
     <link rel="icon" href="icone-180.png" />
@@ -32,6 +34,7 @@
     *@
     <Routes @rendermode="InteractiveServer" />
     <ReconnectModal />
+    <script src="@Assets["app.js"]"></script>
     <script src="@Assets["_framework/blazor.web.js"]"></script>
 </body>
 

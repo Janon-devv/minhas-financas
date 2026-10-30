@@ -3,22 +3,16 @@
 
 <PageTitle>Erro | Minhas Finanças</PageTitle>
 
-<h1>Algo deu errado</h1>
+<Cabecalho Titulo="Algo deu errado" />
 
-<div class="aviso ruim" style="margin-top:0.75rem">
-    Não consegui processar essa ação. Seus dados continuam salvos no banco local.
-</div>
+<Vazio Texto="Não deu para concluir essa ação. Seus dados continuam salvos." NomeIcone="erro">
+    <a class="btn" href="">Voltar para Hoje</a>
+</Vazio>
 
 @if (ShowRequestId)
 {
-    <p class="ajuda">
-        Código desta ocorrência: <code>@RequestId</code>
-    </p>
+    <p class="dica" style="text-align:center">Código: <code>@RequestId</code></p>
 }
-
-<div class="acoes">
-    <a class="btn" href="">Voltar para a tela Hoje</a>
-</div>
 
 @code {
     [CascadingParameter]

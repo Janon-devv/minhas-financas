@@ -19,7 +19,9 @@ public static class Calendario
     /// </summary>
     public static DateOnly AdicionarMeses(DateOnly referencia, int meses, int? diaDesejado = null)
     {
-        var dia = diaDesejado ?? referencia.Day;
+        // Dia abaixo de 1 cai no dia 1, como em NoMes: um cartao com dia zero vindo de um arquivo
+        // antigo nao pode derrubar a projecao inteira.
+        var dia = Math.Max(1, diaDesejado ?? referencia.Day);
         var destino = PrimeiroDiaDoMes(referencia).AddMonths(meses);
         var ultimo = UltimoDiaDoMes(destino.Year, destino.Month);
         return new DateOnly(destino.Year, destino.Month, Math.Min(dia, ultimo));

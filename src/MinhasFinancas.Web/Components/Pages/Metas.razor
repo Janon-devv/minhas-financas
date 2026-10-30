@@ -4,191 +4,203 @@
 
 <PageTitle>Metas | Minhas Finanças</PageTitle>
 
-<h1 class="so-leitor">Metas</h1>
+<Cabecalho Titulo="Metas" Voltar="">
+    <Acoes>
+        @if (_dados is not null && _resumos.Count > 0)
+        {
+            <button type="button" class="btn sobre-escuro pequeno" @onclick="() => Abrir(null)">
+                <Icone Nome="mais" Tamanho="18" /> Nova
+            </button>
+        }
+    </Acoes>
+</Cabecalho>
 
 @if (_dados is null)
 {
-    <p class="vazio">Carregando...</p>
+    <Carregando />
 }
 else
 {
-    <div class="bloco">
-        <header>
-            <h2>Metas</h2>
-            <button type="button" class="btn pequeno" @onclick="() => Abrir(null)">
-                <Icone Nome="mais" Tamanho="16" /> Nova
-            </button>
-        </header>
-        <div class="corpo">
-            <div class="rotulo">Guardado até hoje, no total</div>
-            <div class="numero medio">@Formato.Moeda(_guardadoTotal)</div>
-            <div class="ajuda">
-                Soma do que você já tinha com os aportes de Economia que já passaram.
-                Não precisa bater com a soma das metas: uma meta pode ter começado depois.
-            </div>
+    <Grupo>
+        <div class="corpo destaque-claro">
+            <Rotulo Texto="Guardado até hoje"
+                    Ajuda="O que você já tinha guardado mais as economias que já passaram da data. Não precisa bater com a soma das metas: uma meta pode ter começado depois." />
+            <Valor Centavos="_guardadoTotal" Classe="valor-grande" />
         </div>
-    </div>
+    </Grupo>
 
     @if (_resumos.Count == 0)
     {
-        <p class="vazio">
-            Nenhuma meta ainda. Uma meta serve para dar nome e prazo ao dinheiro que você guarda.
-        </p>
+        <Vazio Texto="Nenhuma meta cadastrada." NomeIcone="meta">
+            <button type="button" class="btn" @onclick="() => Abrir(null)">Adicionar</button>
+        </Vazio>
     }
     else
     {
-        <div class="grade-metas" style="margin-top:0.75rem">
-        @foreach (var meta in _resumos)
-        {
-            <div class="cartao">
-                <div style="display:flex; justify-content:space-between; align-items:baseline; gap:0.5rem">
-                    <h2>@meta.Nome</h2>
-                    <span class="pilula @(meta.Situacao == SituacaoMeta.Concluida ? "entrada"
-                                          : meta.Situacao == SituacaoMeta.PrazoVencido ? "saida" : "neutra")">
-                        @Formato.TextoSituacaoMeta(meta.Situacao)
-                    </span>
-                </div>
-
-                <div class="numero medio" style="margin-top:0.3rem">@Formato.Moeda(meta.GuardadoCentavos)</div>
-                <div class="ajuda">
-                    de @Formato.Moeda(meta.ObjetivoCentavos)
-                    @if (meta.Prazo is DateOnly prazo)
-                    {
-                        <text> até @Formato.Data(prazo)</text>
-                    }
-                </div>
-
-                <div class="barra @(meta.Progresso >= 1 ? "cheia" : "")" style="margin-top:0.5rem">
-                    <span style="width:@(Math.Min(100m, meta.Progresso * 100).ToString("N1", CultureInfo.InvariantCulture))%"></span>
-                </div>
-                <div class="ajuda" style="margin-top:0.2rem">@Formato.Porcento(meta.Progresso) do objetivo</div>
-
-                @if (meta.Situacao != SituacaoMeta.Concluida)
+        <Grupo SemSuperficie="true">
+            <div class="colunas">
+                @foreach (var meta in _resumos)
                 {
-                    <table class="tabela" style="margin-top:0.6rem">
-                        <tbody>
-                            <tr>
-                                <td>Falta reservar</td>
-                                <td class="num">@Formato.Moeda(meta.FaltaCentavos)</td>
-                            </tr>
-                            <tr>
-                                <td>
-                                    Aporte sugerido
-                                    <div class="ajuda">Por mês, em @meta.MesesRestantes mês(es)</div>
-                                </td>
-                                <td class="num">@Formato.Moeda(meta.AporteMensalSugeridoCentavos)</td>
-                            </tr>
-                            @if (meta.Prazo is not null)
-                            {
-                                <tr>
-                                    <td>
-                                        Onde chega no prazo
-                                        <div class="ajuda">Mantendo os aportes já cadastrados</div>
-                                    </td>
-                                    <td class="num @(meta.PlanoInsuficiente ? "valor-atencao" : "valor-ok")">
-                                        @Formato.Moeda(meta.ProjetadoNoPrazoCentavos)
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
+                    var cheia = meta.Progresso >= 1;
 
-                    @if (meta.PlanoInsuficiente)
-                    {
-                        <div class="aviso atencao" style="margin-top:0.5rem">
-                            Os aportes que estão no Plano de Contas não chegam ao objetivo até o prazo.
-                            Faltam @Formato.Moeda(meta.ObjetivoCentavos - meta.ProjetadoNoPrazoCentavos).
+                    <article class="cartao" style="margin-bottom:12px" aria-labelledby="meta-@meta.Id">
+                        <div class="cartao-topo">
+                            <div style="min-width:0">
+                                <h3 id="meta-@meta.Id">@meta.Nome</h3>
+                                <p class="dica" style="margin-top:2px">
+                                    @(meta.Prazo is DateOnly prazo ? $"até {Formato.Data(prazo)}" : "sem prazo")
+                                </p>
+                            </div>
+                            <span class="pilula @(meta.Situacao == SituacaoMeta.Concluida ? "entrada"
+                                                  : meta.Situacao == SituacaoMeta.PrazoVencido ? "saida" : "neutra")">
+                                @Formato.TextoSituacaoMeta(meta.Situacao)
+                            </span>
                         </div>
-                    }
+
+                        <div style="display:flex; align-items:baseline; justify-content:space-between; gap:8px; margin-top:12px">
+                            <span>
+                                <Valor Centavos="meta.GuardadoCentavos" Classe="valor-grande" />
+                            </span>
+                            <span class="dica" style="margin:0; white-space:nowrap">de @Formato.Moeda(meta.ObjetivoCentavos)</span>
+                        </div>
+                        <div class="barra @(cheia ? "cheia" : "")" style="margin-top:8px" role="progressbar"
+                             aria-valuenow="@Math.Round(Math.Min(100m, meta.Progresso * 100))" aria-valuemin="0" aria-valuemax="100"
+                             aria-label="Progresso de @meta.Nome">
+                            <span style="width:@(Math.Min(100m, meta.Progresso * 100).ToString("N1", CultureInfo.InvariantCulture))%"></span>
+                        </div>
+                        <p class="dica">@Formato.Porcento(meta.Progresso) do objetivo</p>
+
+                        @if (meta.Situacao != SituacaoMeta.Concluida)
+                        {
+                            <dl class="linhas" style="margin-top:8px">
+                                <div class="linha">
+                                    <dt>Falta</dt>
+                                    <dd><Valor Centavos="meta.FaltaCentavos" /></dd>
+                                </div>
+                                <div class="linha">
+                                    <dt>
+                                        Guardar por mês
+                                        <span class="linha-sub">por @Formato.Quantos(meta.MesesRestantes, "mês", "meses")</span>
+                                    </dt>
+                                    <dd><Valor Centavos="meta.AporteMensalSugeridoCentavos" /></dd>
+                                </div>
+                                @if (meta.Prazo is not null)
+                                {
+                                    <div class="linha">
+                                        <dt>
+                                            No prazo
+                                            <span class="linha-sub">com as economias já lançadas</span>
+                                        </dt>
+                                        <dd class="@(meta.PlanoInsuficiente ? "valor-atencao" : "")">
+                                            <Valor Centavos="meta.ProjetadoNoPrazoCentavos" />
+                                        </dd>
+                                    </div>
+                                }
+                            </dl>
+
+                            @if (meta.PlanoInsuficiente)
+                            {
+                                <div style="margin-top:8px">
+                                    <Aviso Tipo="atencao">
+                                        As economias lançadas não chegam ao objetivo no prazo.
+                                        Faltam @Formato.Moeda(meta.ObjetivoCentavos - meta.ProjetadoNoPrazoCentavos).
+                                    </Aviso>
+                                </div>
+                            }
+                        }
+
+                        <div class="acoes">
+                            <a class="btn secundario pequeno" href="lancamentos?novo=1&tipo=Economia&meta=@meta.Id">
+                                <Icone Nome="mais" Tamanho="16" /> Lançar economia
+                            </a>
+                            <button type="button" class="btn contorno pequeno" @onclick="() => AbrirPorId(meta.Id)">
+                                Editar
+                            </button>
+                        </div>
+                    </article>
                 }
-
-                <div class="acoes">
-                    <a class="btn pequeno" href="plano?novo=1">Criar aporte</a>
-                    <button type="button" class="btn secundario pequeno" @onclick="() => AbrirPorId(meta.Id)">
-                        Editar
-                    </button>
-                </div>
             </div>
-        }
-        </div>
+        </Grupo>
 
-        <p class="ajuda" style="margin-top:0.5rem">
-            O que já passou da data conta como guardado. O que está no futuro é plano, e aparece
-            separado de propósito: intenção de guardar não é dinheiro guardado.
-        </p>
+        <p class="dica">Só conta como guardado o que já passou da data. O que está no futuro é plano.</p>
     }
 
     @if (_arquivadas.Count > 0)
     {
-        <div class="bloco" style="margin-top:0.75rem">
-            <header><h2>Arquivadas</h2></header>
-            <ul class="lista">
-                @foreach (var meta in _arquivadas)
-                {
-                    <li>
-                        <div class="principal">
-                            <div class="titulo">@meta.Nome</div>
-                            <div class="sub">Objetivo de @Formato.Moeda(meta.ObjetivoCentavos)</div>
-                        </div>
-                        <button type="button" class="btn secundario pequeno" @onclick="() => Arquivar(meta.Id, false)">
-                            Reativar
-                        </button>
-                    </li>
-                }
-            </ul>
-        </div>
+        <Grupo>
+            <details class="detalhes">
+                <summary>
+                    Arquivadas (@_arquivadas.Count)
+                    <Icone Nome="abrir" Tamanho="18" />
+                </summary>
+                <ul class="lista">
+                    @foreach (var meta in _arquivadas)
+                    {
+                        <li>
+                            <div class="item">
+                                <span class="item-principal">
+                                    <span class="item-titulo">@meta.Nome</span>
+                                    <span class="item-sub">Objetivo de @Formato.Moeda(meta.ObjetivoCentavos)</span>
+                                </span>
+                                <button type="button" class="btn secundario pequeno" @onclick="() => Arquivar(meta.Id, false)">
+                                    Reativar
+                                </button>
+                            </div>
+                        </li>
+                    }
+                </ul>
+            </details>
+        </Grupo>
     }
 }
 
 @if (_editando is not null)
 {
     <Modal Titulo="@(_editando.Id == 0 ? "Nova meta" : "Editar meta")" AoFechar="Fechar">
-        <div class="campo-grupo">
-            <label for="nome">Nome</label>
-            <input id="nome" class="campo" @bind="_editando.Nome" placeholder="Reserva de emergência, viagem" />
-        </div>
-
-        <div class="campo-grupo">
-            <label for="objetivo">Quanto quer juntar</label>
-            <CampoDinheiro Valor="_editando.ObjetivoCentavos" ValorChanged="v => _editando.ObjetivoCentavos = v" Id="objetivo" />
-        </div>
-
-        <div class="campo-grupo">
-            <label for="prazo">Até quando (opcional)</label>
-            <CampoData Valor="_editando.Prazo" ValorChanged="v => _editando.Prazo = v" Id="prazo" />
-        </div>
-
-        <div class="campo-grupo">
-            <label for="inicial">Quanto já tem guardado para ela</label>
-            <CampoDinheiro Valor="_editando.SaldoInicialCentavos" ValorChanged="v => _editando.SaldoInicialCentavos = v" Id="inicial" />
-            <div class="dica">
-                O que já estava separado antes de você começar a usar o app.
+        <ChildContent>
+            <div class="campo-grupo">
+                <Rotulo Texto="Nome" Para="nome" />
+                <input id="nome" class="campo" @bind="_editando.Nome" autocomplete="off" placeholder="Reserva de emergência" />
             </div>
-        </div>
 
-        @if (_erros.Count > 0)
-        {
-            <div class="aviso ruim" role="alert">
-                @foreach (var erro in _erros)
-                {
-                    <div>@erro</div>
-                }
+            <div class="linha-campos">
+                <div class="campo-grupo">
+                    <Rotulo Texto="Objetivo" Para="objetivo" />
+                    <CampoDinheiro Valor="_editando.ObjetivoCentavos" ValorChanged="v => _editando.ObjetivoCentavos = v" Id="objetivo" />
+                </div>
+                <div class="campo-grupo">
+                    <Rotulo Texto="Prazo (opcional)" Para="prazo" />
+                    <CampoData Valor="_editando.Prazo" ValorChanged="v => _editando.Prazo = v" Id="prazo" />
+                </div>
             </div>
-        }
 
-        <div class="acoes">
+            <div class="campo-grupo">
+                <Rotulo Texto="Já guardado para ela" Para="inicial"
+                        Ajuda="O que já estava separado para esta meta antes do saldo inicial do app." />
+                <CampoDinheiro Valor="_editando.SaldoInicialCentavos" ValorChanged="v => _editando.SaldoInicialCentavos = v" Id="inicial" />
+            </div>
+
+            @if (_erros.Count > 0)
+            {
+                <Aviso Tipo="ruim" Papel="alert">
+                    @foreach (var erro in _erros)
+                    {
+                        <div>@erro</div>
+                    }
+                </Aviso>
+            }
+        </ChildContent>
+        <Rodape>
             <button type="button" class="btn" @onclick="SalvarAsync" disabled="@_salvando">
                 @(_salvando ? "Salvando..." : "Salvar")
             </button>
-            <button type="button" class="btn secundario" @onclick="Fechar">Cancelar</button>
             @if (_editando.Id != 0)
             {
-                <button type="button" class="btn perigo" style="margin-left:auto"
-                        @onclick="() => Arquivar(_editando.Id, true)">
+                <button type="button" class="btn perigo" @onclick="() => Arquivar(_editando.Id, true)">
                     Arquivar
                 </button>
             }
-        </div>
+        </Rodape>
     </Modal>
 }
 
@@ -240,7 +252,9 @@ else
 
     private async Task SalvarAsync()
     {
-        if (_editando is null)
+        // A trava vem antes de tudo: o disabled do botao chega ao celular so depois de uma ida e
+        // volta pela rede, e um toque duplo rapido criaria a mesma meta duas vezes.
+        if (_editando is null || _salvando)
         {
             return;
         }
@@ -256,7 +270,12 @@ else
 
         try
         {
-            await Servico.SalvarMetaAsync(_editando);
+            if (await Servico.SalvarMetaAsync(_editando) is string recusa)
+            {
+                _erros = [recusa];
+                return;
+            }
+
             Fechar();
             await CarregarAsync();
         }
@@ -268,8 +287,22 @@ else
 
     private async Task Arquivar(int id, bool arquivar)
     {
-        await Servico.ArquivarMetaAsync(id, arquivar);
-        Fechar();
-        await CarregarAsync();
+        if (_salvando)
+        {
+            return;
+        }
+
+        _salvando = true;
+
+        try
+        {
+            await Servico.ArquivarMetaAsync(id, arquivar);
+            Fechar();
+            await CarregarAsync();
+        }
+        finally
+        {
+            _salvando = false;
+        }
     }
 }

@@ -162,7 +162,7 @@ public class MotorTests
 
             Assert.Equal(esperado.CaiNaContaEm, efetiva);
 
-            var ultima = Ocorrencias.UltimaVez(efetiva, lancamento.Vezes);
+            var ultima = Ocorrencias.UltimaVezDo(lancamento, cartoes);
             var textoUltima = ultima?.ToString("yyyy-MM-dd") ?? "sem fim";
             Assert.Equal(esperado.UltimaVez, textoUltima);
         }

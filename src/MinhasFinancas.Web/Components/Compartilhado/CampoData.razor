@@ -3,6 +3,8 @@
 <input @key="_chave"
        type="date"
        class="campo"
+       min="@Formato.ParaCampo(Validacao.DataMinima)"
+       max="@Formato.ParaCampo(Validacao.DataMaxima)"
        value="@_texto"
        id="@Id"
        @onchange="Alterou" />

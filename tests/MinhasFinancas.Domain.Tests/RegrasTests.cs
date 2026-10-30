@@ -621,6 +621,39 @@ public class RegrasTests
     }
 
     [Fact]
+    public void R15_juros_do_rotativo_param_em_100_por_cento_da_divida()
+    {
+        // Fatura de 2006 (ano digitado errado) com 15% ao mes: 240 meses de juros compostos
+        // estouravam o long e derrubavam todas as telas. A lei limita juros a 100% da divida.
+        var cartao = CartaoDeTeste(juros: 0.15m);
+        var fatura = new FaturaCartao { Id = 1, CartaoId = 1, Vencimento = D("2006-10-10"), TotalInformadoCentavos = 100_000 };
+
+        var resumo = Faturas.Resumir([fatura], [], [cartao], D("2026-10-23")).Single();
+
+        Assert.Equal(100_000, resumo.JurosCentavos);
+        Assert.Equal(200_000, resumo.ASairCentavos);
+        Assert.Equal(115_000, Faturas.ComJuros(100_000, 0.15m, 1));
+    }
+
+    [Fact]
+    public void Valores_absurdos_sao_recusados_e_nao_derrubam_o_motor()
+    {
+        // Taxa de 9999% ao mes estourava o decimal no cronograma.
+        var parcelas = Simulador.MontarCronograma(100_000, 36, 99.99m, D("2026-11-10"));
+        Assert.NotEmpty(parcelas);
+
+        var simulacao = new Simulacao { ValorTotalCentavos = 100_000, Parcelas = 2, TaxaMensal = 99.99m, PrimeiraParcela = D("2026-11-10") };
+        Assert.Contains(Validacao.Simulacao(simulacao, D("2026-10-23")), e => e.Contains("100%"));
+
+        var lancamento = L("2006-10-10", TipoLancamento.Saida, 10_000);
+        lancamento.Data = new DateOnly(1926, 10, 10);
+        Assert.Contains(Validacao.Lancamento(lancamento, []), e => e.Contains("2000"));
+
+        var cartao = CartaoDeTeste(juros: 1.5m);
+        Assert.NotEmpty(Validacao.Cartao(cartao));
+    }
+
+    [Fact]
     public void R14_pagamento_parcial_deixa_so_o_que_falta()
     {
         var cartao = CartaoDeTeste();
@@ -631,9 +664,7 @@ public class RegrasTests
             CartaoId = 1,
             Fechamento = D("2026-10-03"),
             Vencimento = D("2026-10-10"),
-            TotalInformadoCentavos = 100_000,
-            PagoCentavos = 30_000,
-            PagoEm = D("2026-10-05")
+            TotalInformadoCentavos = 100_000
         };
 
         var resultado = Projetor.Projetar(new EntradaProjecao
@@ -642,13 +673,106 @@ public class RegrasTests
             Hoje = D("2026-10-01"),
             FimHorizonte = D("2026-10-31"),
             Cartoes = [cartao],
-            Faturas = [fatura]
+            Faturas = [fatura],
+            PagamentosFatura = [new PagamentoFatura { Id = 1, FaturaId = 1, Data = D("2026-10-05"), ValorCentavos = 30_000 }]
         });
 
         // O que ja saiu sai no dia em que saiu; o que falta continua marcado no vencimento.
         Assert.Equal(30_000, resultado.Dia(D("2026-10-05"))!.CartaoCentavos);
         Assert.Equal(70_000, resultado.Dia(D("2026-10-10"))!.CartaoCentavos);
         Assert.Equal(400_000, resultado.Dia(D("2026-10-10"))!.SaldoCentavos);
+    }
+
+    [Fact]
+    public void R14_pagamento_feito_antes_da_ancora_nao_sai_de_novo()
+    {
+        var cartao = CartaoDeTeste();
+        var fatura = new FaturaCartao
+        {
+            Id = 1,
+            CartaoId = 1,
+            Fechamento = D("2026-10-03"),
+            Vencimento = D("2026-10-10"),
+            TotalInformadoCentavos = 100_000
+        };
+
+        // 60.000 pagos em 02/10, antes da conferencia com o banco (ancora 04/10): o saldo
+        // conferido ja esta sem eles. Os outros 40.000 saem em 06/10, depois da ancora.
+        var resultado = Projetor.Projetar(new EntradaProjecao
+        {
+            Configuracao = Cfg("2026-10-04", saldo: 500_000),
+            Hoje = D("2026-10-04"),
+            FimHorizonte = D("2026-10-31"),
+            Cartoes = [cartao],
+            Faturas = [fatura],
+            PagamentosFatura =
+            [
+                new PagamentoFatura { Id = 1, FaturaId = 1, Data = D("2026-10-02"), ValorCentavos = 60_000 },
+                new PagamentoFatura { Id = 2, FaturaId = 1, Data = D("2026-10-06"), ValorCentavos = 40_000 }
+            ]
+        });
+
+        // Somados com a data do ultimo, os 100.000 sairiam em 06/10 e os 60.000 contariam duas vezes.
+        Assert.Equal(40_000, resultado.Dias.Sum(d => d.CartaoCentavos));
+        Assert.Equal(460_000, resultado.Dia(D("2026-10-31"))!.SaldoCentavos);
+    }
+
+    [Fact]
+    public void R14_fatura_com_vencimento_empurrado_pelo_banco_continua_no_mesmo_ciclo()
+    {
+        var cartao = CartaoDeTeste();
+        var compra = CompraNoCartao("2026-10-01", 89_000, PapelNaFatura.Detalhamento);
+
+        // O vencimento calculado e 10/10 (sabado); o banco cobra em 12/10 e o dono digita isso.
+        var fatura = new FaturaCartao
+        {
+            Id = 1,
+            CartaoId = 1,
+            Fechamento = D("2026-10-03"),
+            Vencimento = D("2026-10-12"),
+            TotalInformadoCentavos = 89_000
+        };
+
+        var resultado = Projetor.Projetar(new EntradaProjecao
+        {
+            Configuracao = Cfg("2026-10-01", saldo: 500_000),
+            Hoje = D("2026-10-01"),
+            FimHorizonte = D("2026-10-31"),
+            Lancamentos = [compra],
+            Cartoes = [cartao],
+            Faturas = [fatura]
+        });
+
+        // Sai uma vez so, no dia que o banco cobra. Casando pela data exata, a compra sairia
+        // tambem em 10/10 e o gasto contaria duas vezes.
+        Assert.Equal(0, resultado.Dia(D("2026-10-10"))!.CartaoCentavos);
+        Assert.Equal(89_000, resultado.Dia(D("2026-10-12"))!.CartaoCentavos);
+        Assert.Equal(89_000, resultado.Dias.Sum(d => d.CartaoCentavos));
+    }
+
+    [Fact]
+    public void R14_segunda_fatura_do_mesmo_ciclo_e_recusada()
+    {
+        var cartao = CartaoDeTeste();
+        var existente = new FaturaCartao { Id = 1, CartaoId = 1, Fechamento = D("2026-10-03"), Vencimento = D("2026-10-10") };
+        var nova = new FaturaCartao { Id = 0, CartaoId = 1, Fechamento = D("2026-10-03"), Vencimento = D("2026-10-12") };
+
+        Assert.NotEmpty(Validacao.Fatura(nova, [cartao], [existente]));
+        Assert.Empty(Validacao.Fatura(existente, [cartao], [existente]));
+    }
+
+    [Fact]
+    public void R1_cartao_que_vence_dia_30_mantem_o_dia_nas_parcelas()
+    {
+        var cartao = new Cartao { Id = 1, Nome = "C", DiaFechamento = 20, DiaVencimento = 30 };
+        var compra = L("2026-01-25", TipoLancamento.Cartao, 10_000, vezes: 3);
+        compra.CartaoId = 1;
+
+        var datas = Ocorrencias.Do(compra, new Dictionary<int, Cartao> { [1] = cartao }, D("2026-12-31")).ToList();
+
+        // A primeira cai em 28/02 porque fevereiro nao tem dia 30; as outras voltam para o dia 30.
+        Assert.Equal([D("2026-02-28"), D("2026-03-30"), D("2026-04-30")], datas);
+        Assert.Equal(D("2026-04-30"), Ocorrencias.UltimaVezDo(compra, new Dictionary<int, Cartao> { [1] = cartao }));
     }
 
     [Fact]

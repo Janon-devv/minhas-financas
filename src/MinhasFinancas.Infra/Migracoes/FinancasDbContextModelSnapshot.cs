@@ -180,12 +180,6 @@ namespace MinhasFinancas.Infra.Migracoes
                     b.Property<string>("Obs")
                         .HasColumnType("TEXT");
 
-                    b.Property<long>("PagoCentavos")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateOnly?>("PagoEm")
-                        .HasColumnType("TEXT");
-
                     b.Property<long?>("TotalInformadoCentavos")
                         .HasColumnType("INTEGER");
 
@@ -279,6 +273,8 @@ namespace MinhasFinancas.Infra.Migracoes
 
                     b.HasIndex("CartaoId");
 
+                    b.HasIndex("CarteiraId");
+
                     b.HasIndex("Data");
 
                     b.HasIndex("MetaId");
@@ -316,6 +312,28 @@ namespace MinhasFinancas.Infra.Migracoes
                         .IsUnique();
 
                     b.ToTable("Metas");
+                });
+
+            modelBuilder.Entity("MinhasFinancas.Domain.Modelo.PagamentoFatura", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateOnly>("Data")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("FaturaId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("ValorCentavos")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FaturaId");
+
+                    b.ToTable("PagamentosFatura");
                 });
 
             modelBuilder.Entity("MinhasFinancas.Domain.Modelo.SituacaoOcorrencia", b =>
@@ -375,11 +393,33 @@ namespace MinhasFinancas.Infra.Migracoes
                     b.ToTable("Tags");
                 });
 
+            modelBuilder.Entity("MinhasFinancas.Domain.Modelo.DiarioReal", b =>
+                {
+                    b.HasOne("MinhasFinancas.Domain.Modelo.Carteira", null)
+                        .WithMany()
+                        .HasForeignKey("CarteiraId")
+                        .OnDelete(DeleteBehavior.Cascade);
+                });
+
+            modelBuilder.Entity("MinhasFinancas.Domain.Modelo.FaturaCartao", b =>
+                {
+                    b.HasOne("MinhasFinancas.Domain.Modelo.Cartao", null)
+                        .WithMany()
+                        .HasForeignKey("CartaoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("MinhasFinancas.Domain.Modelo.Lancamento", b =>
                 {
                     b.HasOne("MinhasFinancas.Domain.Modelo.Cartao", null)
                         .WithMany()
                         .HasForeignKey("CartaoId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("MinhasFinancas.Domain.Modelo.Carteira", null)
+                        .WithMany()
+                        .HasForeignKey("CarteiraId")
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("MinhasFinancas.Domain.Modelo.Meta", null)
@@ -391,6 +431,24 @@ namespace MinhasFinancas.Infra.Migracoes
                         .WithMany()
                         .HasForeignKey("TagId")
                         .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("MinhasFinancas.Domain.Modelo.PagamentoFatura", b =>
+                {
+                    b.HasOne("MinhasFinancas.Domain.Modelo.FaturaCartao", null)
+                        .WithMany()
+                        .HasForeignKey("FaturaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("MinhasFinancas.Domain.Modelo.SituacaoOcorrencia", b =>
+                {
+                    b.HasOne("MinhasFinancas.Domain.Modelo.Lancamento", null)
+                        .WithMany()
+                        .HasForeignKey("LancamentoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 #pragma warning restore 612, 618
         }

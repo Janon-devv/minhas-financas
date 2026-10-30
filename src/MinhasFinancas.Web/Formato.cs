@@ -21,11 +21,26 @@ public static class Formato
 
     private static readonly string[] DiasSemana = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
 
+    private static readonly string[] DiasSemanaLongos =
+        ["domingo", "segunda", "terça", "quarta", "quinta", "sexta", "sábado"];
+
     // ---------- Dinheiro ----------
 
     public static string Moeda(long centavos) => (centavos / 100m).ToString("C2", Br);
 
-    public static string Moeda(long? centavos) => centavos is null ? "nao informado" : Moeda(centavos.Value);
+    public static string Moeda(long? centavos) => centavos is null ? "sem cálculo" : Moeda(centavos.Value);
+
+    /// <summary>
+    /// As partes de um valor para a tela poder diminuir os centavos no numero grande:
+    /// sinal, parte inteira com milhar e centavos com a virgula. "-R$ 1.234,56" vira
+    /// ("-", "1.234", ",56").
+    /// </summary>
+    public static (string Sinal, string Inteiro, string Centavos) Partes(long centavos)
+    {
+        var texto = Numero(Math.Abs(centavos));
+        var virgula = texto.LastIndexOf(',');
+        return (centavos < 0 ? "-" : "", texto[..virgula], texto[virgula..]);
+    }
 
     /// <summary>Sem o R$, para tabelas onde a coluna ja diz que e dinheiro.</summary>
     public static string Numero(long centavos) => (centavos / 100m).ToString("N2", Br);
@@ -88,7 +103,9 @@ public static class Formato
             inteiros = "0";
         }
 
-        if (inteiros.Length > 15)
+        // Dez digitos de reais: ate R$ 9.999.999.999,99, o teto do dominio (Validacao.ValorMaximoCentavos).
+        // Mais que isso e zero a mais, e o campo recusar e melhor que gravar um valor mil vezes maior.
+        if (inteiros.TrimStart('0').Length > 10)
         {
             return false;
         }
@@ -115,7 +132,12 @@ public static class Formato
 
     public static string Data(DateOnly data) => data.ToString("dd/MM/yyyy", Br);
 
-    public static string Data(DateOnly? data) => data is null ? "nao informada" : Data(data.Value);
+    public static string Data(DateOnly? data) => data is null ? "sem data" : Data(data.Value);
+
+    /// <summary>"15 de outubro", sem o ano: para o dia que esta em tela, onde o ano e obvio.</summary>
+    public static string DataExtensa(DateOnly data) => $"{data.Day} de {Meses[data.Month - 1]}";
+
+    public static string DiaSemanaLongo(DateOnly data) => DiasSemanaLongos[(int)data.DayOfWeek];
 
     public static string DataCurta(DateOnly data) => data.ToString("dd/MM", Br);
 
@@ -172,10 +194,14 @@ public static class Formato
         _ => "negativo"
     };
 
+    /// <summary>
+    /// O farol diz a regra, nao um estado de espirito: "tranquilo" prometia mais do que o
+    /// numero sabe, que e so a comparacao com o saldo de conforto.
+    /// </summary>
     public static string TextoFarol(Farol farol) => farol switch
     {
-        Farol.Ok => "tranquilo",
-        Farol.Atencao => "atenção",
+        Farol.Ok => "acima do conforto",
+        Farol.Atencao => "abaixo do conforto",
         _ => "negativo"
     };
 
@@ -190,6 +216,14 @@ public static class Formato
         _ => "Economia"
     };
 
+    public static string TextoTipoPlural(TipoLancamento tipo) => tipo switch
+    {
+        TipoLancamento.Entrada => "Entradas",
+        TipoLancamento.Saida => "Saídas",
+        TipoLancamento.Cartao => "Cartão",
+        _ => "Economias"
+    };
+
     public static string ClasseTipo(TipoLancamento tipo) => tipo switch
     {
         TipoLancamento.Entrada => "entrada",
@@ -197,6 +231,9 @@ public static class Formato
         TipoLancamento.Cartao => "cartao",
         _ => "economia"
     };
+
+    /// <summary>Nome do icone de cada tipo. Coincide com a classe, mas sao coisas diferentes.</summary>
+    public static string IconeTipo(TipoLancamento tipo) => ClasseTipo(tipo);
 
     /// <summary>
     /// Nomes da paleta de tags, na ordem em que aparecem para escolher.
@@ -225,12 +262,25 @@ public static class Formato
 
     public static string Porcento(decimal fracao) => (fracao * 100).ToString("N0", Br) + "%";
 
-    public static string TextoVezes(int? vezes) => vezes switch
+    /// <summary>
+    /// Como o valor se repete, escrito para ficar ao lado dele: "R$ 89,90 por mês, 4x".
+    /// Deixa claro que o numero e de cada ocorrencia, nao o total.
+    /// </summary>
+    public static string Repeticao(int? vezes, Periodicidade periodicidade)
     {
-        null => "todo mês, sem fim",
-        1 => "uma vez",
-        var n => $"{n} vezes, uma por mês"
-    };
+        var intervalo = periodicidade == Periodicidade.Semanal ? "por semana" : "por mês";
+
+        return vezes switch
+        {
+            null => intervalo,
+            1 => "uma vez",
+            var n => $"{intervalo}, {n}x"
+        };
+    }
+
+    /// <summary>Quantidade com singular e plural: "1 conta", "3 contas".</summary>
+    public static string Quantos(int quantos, string singular, string plural) =>
+        $"{quantos} {(quantos == 1 ? singular : plural)}";
 
     public static string TextoSituacaoMeta(SituacaoMeta situacao) => situacao switch
     {

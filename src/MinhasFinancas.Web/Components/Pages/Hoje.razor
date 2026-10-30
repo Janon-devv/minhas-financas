@@ -7,453 +7,432 @@
 
 @if (_dados is null || _projecao is null)
 {
-    <p class="vazio">Carregando...</p>
+    <Cabecalho Titulo="Hoje" Marca="true" Classe="destaque" />
+    <Carregando />
 }
 else
 {
     var agora = _projecao.Agora;
-    var conforto = _dados.Configuracao.SaldoConfortoCentavos;
+    var cfg = _dados.Configuracao;
+    var conforto = cfg.SaldoConfortoCentavos;
+    var aVencer = ContasAVencer();
+    var conferidoHoje = cfg.DataAncora == Relogio.Hoje.AddDays(1);
+    var semResposta = _pendencias.Count(p => p.ForaDaProjecao && !p.Registrada);
 
-    <h1 class="rotulo">Como está o seu saldo</h1>
-
-    <div class="cartao destaque" style="margin-top:0.5rem">
-        <div class="rotulo">Saldo hoje</div>
-        @if (agora.SaldoHojeCentavos is long saldoHoje)
-        {
-            <div class="numero @Formato.ClasseValor(saldoHoje, conforto)">@Formato.Moeda(saldoHoje)</div>
-            <div class="ajuda">
-                @if (_dados.Configuracao.DataAncora == Relogio.Hoje.AddDays(1))
-                {
-                    @* Conferido hoje: o número veio do banco, não de projeção nenhuma, e já
-                       inclui o que saiu hoje. Dizer "projetado" aqui seria mentira. *@
-                    <text>Conferido com o banco hoje. Já inclui o que saiu hoje.</text>
-                }
-                else
-                {
-                    <text>
-                        Projetado para o fim do dia,
-                        @(_dados.Configuracao.DiarioPrevistoAtivo
-                            ? "já contando o diário."
-                            : "com o que você registrar no diário.")
-                    </text>
-                }
+    <Cabecalho Titulo="@($"Hoje, {Formato.DataExtensa(Relogio.Hoje)}")" Marca="true" Classe="destaque com-acoes">
+        <div class="hero">
+            <div class="rotulo-linha hero-rotulo">
+                <span class="rotulo-texto">@(conferidoHoje ? "Saldo de hoje" : "Saldo previsto hoje")</span>
+                <BotaoAjuda Rotulo="Como ler estes números" Controla="ajuda-hero" Aberta="_ajudaHero"
+                            AoAlternar="@(() => _ajudaHero = !_ajudaHero)" />
             </div>
 
-            var aVencer = ContasAVencer();
+            @if (agora.SaldoHojeCentavos is long saldoHoje)
+            {
+                <Valor Centavos="saldoHoje" Classe="@($"valor-hero {Formato.ClasseValor(saldoHoje, conforto)}")" />
+                @if (conferidoHoje)
+                {
+                    <p class="hero-nota">Conferido com o banco hoje.</p>
+                }
+            }
+            else
+            {
+                <span class="valor-hero">Sem saldo</span>
+                <p class="hero-nota">O saldo começa em @Formato.Data(cfg.DataAncora).</p>
+            }
+        </div>
 
-            @if (aVencer.Count > 0)
+        <dl class="hero-indicadores">
+            <div class="hero-indicador">
+                <dt>Pode gastar hoje</dt>
+                <dd><Valor Centavos="agora.PodeGastarHojeCentavos" /></dd>
+            </div>
+            <div class="hero-indicador">
+                <dt>Menor saldo</dt>
+                <dd>
+                    @if (agora.MenorSaldoAFrenteCentavos is long menor)
+                    {
+                        <Valor Centavos="menor" Classe="@Formato.ClasseValor(menor, conforto)" />
+                        <span class="indicador-sub">em @Formato.DataCurta(agora.DataMenorSaldoAFrente!.Value)</span>
+                    }
+                    else
+                    {
+                        <Valor Centavos="null" />
+                    }
+                </dd>
+            </div>
+            @if (aVencer.Count > 0 && agora.SaldoHojeCentavos is long saldoBase)
             {
                 @* O saldo grande ainda não viu as contas que vencem depois de hoje. Este número
-                   é o que sobra se todas elas saírem: é ele que responde se dá para gastar. *@
+                   é o que sobra se todas elas saírem. *@
                 var comprometido = aVencer.Sum(p => p.ValorCentavos);
 
-                <div style="margin-top:0.6rem; padding-top:0.6rem; border-top:1px solid var(--linha)">
-                    <div class="rotulo">Livre depois das contas do mês</div>
-                    <div class="numero medio @Formato.ClasseValor(saldoHoje - comprometido, conforto)">
-                        @Formato.Moeda(saldoHoje - comprometido)
-                    </div>
-                    <div class="ajuda">
-                        Já tirando @aVencer.Count conta(s) que ainda vencem este mês,
-                        @Formato.Moeda(comprometido) no total.
-                    </div>
+                <div class="hero-indicador">
+                    <dt>Após as contas</dt>
+                    <dd>
+                        <Valor Centavos="saldoBase - comprometido" Classe="@Formato.ClasseValor(saldoBase - comprometido, conforto)" />
+                        <span class="indicador-sub">@Formato.Quantos(aVencer.Count, "conta", "contas")</span>
+                    </dd>
                 </div>
             }
-        }
-        else
+        </dl>
+
+        @if (_ajudaHero)
         {
-            <div class="numero">sem saldo</div>
-            <div class="ajuda">
-                Seu saldo começa em @Formato.Data(_dados.Configuracao.DataAncora), que ainda não chegou.
-            </div>
+            <dl class="texto-ajuda ajuda-indicadores" id="ajuda-hero">
+                @foreach (var (termo, explicacao) in AjudaDosIndicadores(aVencer, conferidoHoje))
+                {
+                    <div>
+                        <dt>@termo</dt>
+                        <dd>@explicacao</dd>
+                    </div>
+                }
+            </dl>
+        }
+    </Cabecalho>
+
+    <nav class="acoes-rapidas" aria-label="Ações rápidas">
+        <a class="acao-rapida" href="ajustes#conferir">
+            <span class="acao-rapida-icone"><Icone Nome="banco" Tamanho="20" /></span>
+            Conferir saldo
+        </a>
+        <a class="acao-rapida" href="simulador">
+            <span class="acao-rapida-icone"><Icone Nome="simulador" Tamanho="20" /></span>
+            Simular compra
+        </a>
+        <a class="acao-rapida" href="metas">
+            <span class="acao-rapida-icone"><Icone Nome="meta" Tamanho="20" /></span>
+            Metas
+        </a>
+    </nav>
+
+    @* ---------- Um aviso por vez, o mais grave ---------- *@
+    <div class="avisos">
+        @if (_dados.Lancamentos.Count == 0)
+        {
+            <Aviso Tipo="info">
+                <strong>Nenhum lançamento cadastrado.</strong>
+                @(cfg.DiarioPrevistoAtivo
+                    ? "Por enquanto, o saldo previsto só desconta o gasto diário."
+                    : "Por enquanto, o saldo previsto não muda.")
+                <div class="acoes inicio">
+                    <a class="btn pequeno" href="lancamentos?novo=1">Adicionar</a>
+                </div>
+            </Aviso>
+        }
+        else if (agora.MenorSaldoAFrenteCentavos is long pior && pior < 0)
+        {
+            <Aviso Tipo="ruim">
+                <strong>Saldo negativo à frente.</strong>
+                Em @Formato.Data(agora.DataMenorSaldoAFrente!.Value) a previsão chega a @Formato.Moeda(pior).
+            </Aviso>
+        }
+        else if (agora.PrimeiroDiaAbaixoConforto is DateOnly aperto)
+        {
+            <Aviso Tipo="atencao">
+                <strong>Abaixo do conforto a partir de @Formato.Data(aperto).</strong>
+                Seu conforto é de @Formato.Moeda(conforto).
+            </Aviso>
+        }
+        else if (conforto > 0 && semResposta == 0 && _projecao.Avisos.Count == 0)
+        {
+            @* Só afirma que está tudo acima do conforto quando nada está fora da conta: conta
+               vencida sem resposta ou cadastro com problema deixam a previsão incompleta. *@
+            <Aviso Tipo="bom">Acima do conforto até @Formato.Data(_projecao.Fim).</Aviso>
+        }
+
+        @foreach (var aviso in _projecao.Avisos)
+        {
+            <Aviso Tipo="atencao">@aviso</Aviso>
         }
     </div>
 
-    <div class="painel-cartoes" style="margin-top:0.75rem">
-        <div class="cartao">
-            <div class="rotulo">Pode gastar hoje</div>
-            <div class="numero medio">@Formato.Moeda(agora.PodeGastarHojeCentavos)</div>
-            <div class="ajuda">O que sobra acima do conforto no pior dia à frente.</div>
-        </div>
-
-        <div class="cartao">
-            <div class="rotulo">Menor saldo à frente</div>
-            @if (agora.MenorSaldoAFrenteCentavos is long menor)
-            {
-                <div class="numero medio @Formato.ClasseValor(menor, conforto)">@Formato.Moeda(menor)</div>
-                <div class="ajuda">
-                    em @Formato.Data(agora.DataMenorSaldoAFrente!.Value)
-                    @if (Formato.QuandoRelativo(agora.DataMenorSaldoAFrente.Value, Relogio.Hoje) is string quando)
+    @* No PC as listas ficam em duas colunas; no celular, uma embaixo da outra. *@
+    <div class="colunas">
+        <div>
+            @* ---------- Gasto de hoje ---------- *@
+            <Grupo Titulo="Gasto de hoje" Id="gasto-hoje">
+                <Marcador>
+                    @if (_diarios.All(d => d.Registrado))
                     {
-                        <text>(@quando)</text>
+                        <span class="pilula diario">registrado</span>
                     }
-                    <br /><FarolTag Farol="agora.Farol" />
-                </div>
-            }
-            else
-            {
-                <div class="numero medio">nao calculado</div>
-            }
-        </div>
+                </Marcador>
+                <ChildContent>
+                    <div class="corpo">
+                        @for (var i = 0; i < _diarios.Count; i++)
+                        {
+                            var linha = _diarios[i];
+                            var id = $"diario-{linha.CarteiraId?.ToString() ?? "conta"}";
 
-        <a class="cartao" href="metas" style="text-decoration:none; color:inherit">
-            <div class="rotulo">Guardado até hoje</div>
-            <div class="numero medio">@Formato.Moeda(agora.GuardadoAteHojeCentavos)</div>
-            <div class="ajuda">Ver metas</div>
-        </a>
-
-        <a class="cartao" href="simulador" style="text-decoration:none; color:inherit">
-            <div class="rotulo">Pensando em comprar?</div>
-            <div class="numero medio">Simular</div>
-            <div class="ajuda">Ver se cabe antes de gastar</div>
-        </a>
-    </div>
-
-    @if (_projecao.Carteiras.Count > 0)
-    {
-        @* Banco grande em cima, benefícios menores embaixo: o aluguel sai da conta corrente,
-           e é o saldo dela que decide se o mês fecha. *@
-        <div class="painel-cartoes" style="margin-top:0.75rem">
-            @foreach (var carteira in _projecao.Carteiras)
-            {
-                <div class="cartao">
-                    <div class="rotulo">@carteira.Carteira.Nome</div>
-                    @if (carteira.Agora.SaldoHojeCentavos is long saldoCarteira)
-                    {
-                        <div class="numero medio @Formato.ClasseValor(saldoCarteira, carteira.Carteira.SaldoConfortoCentavos)">
-                            @Formato.Moeda(saldoCarteira)
-                        </div>
-                        <div class="ajuda">
-                            <FarolTag Farol="carteira.Agora.Farol" />
-                            @if (carteira.Agora.MenorSaldoAFrenteCentavos is long menorCarteira &&
-                                 menorCarteira != saldoCarteira)
-                            {
-                                <text> menor à frente @Formato.Moeda(menorCarteira)</text>
-                            }
-                        </div>
-                    }
-                    else
-                    {
-                        <div class="numero medio">--</div>
-                        <div class="ajuda">Saldo informado a partir de @Formato.Data(carteira.Carteira.DataAncora).</div>
-                    }
-                </div>
-            }
-        </div>
-    }
-
-    @if (_dados.Lancamentos.Count == 0)
-    {
-        @* Sem nada cadastrado a projecao so tem o diario, entao ela sempre cai.
-           Mostrar o numero (ele esta no cartao acima) mas explicar que falta metade da historia. *@
-        <div class="aviso info">
-            <strong>Falta cadastrar o que entra e o que sai.</strong>
-            @if (_dados.Configuracao.DiarioPrevistoAtivo)
-            {
-                <text>
-                    Por enquanto a projeção só tem o seu gasto diário previsto de
-                    @Formato.Moeda(_dados.Configuracao.DiarioPrevistoCentavos), por isso o saldo só desce.
-                </text>
-            }
-            else
-            {
-                <text>
-                    Por enquanto a projeção é uma linha reta: o diário está desligado e não há
-                    lançamento nenhum para mexer no saldo.
-                </text>
-            }
-            Cadastre o salário e as contas fixas para esses números virarem realidade.
-            <div class="acoes">
-                <a class="btn pequeno" href="lancamentos?novo=1">Cadastrar o que entra</a>
-                <a class="btn pequeno secundario" href="ajustes">Ajustar o diário</a>
-            </div>
-        </div>
-    }
-    else if (agora.MenorSaldoAFrenteCentavos is long pior && pior < 0)
-    {
-        <div class="aviso ruim">
-            <strong>Vem saldo negativo.</strong>
-            Em @Formato.Data(agora.DataMenorSaldoAFrente!.Value) a projeção chega a @Formato.Moeda(pior).
-            Dá tempo de mexer em algo até lá.
-        </div>
-    }
-    else if (agora.PrimeiroDiaAbaixoConforto is DateOnly aperto)
-    {
-        <div class="aviso atencao">
-            <strong>Aperto chegando.</strong>
-            Em @Formato.Data(aperto) o saldo fica abaixo do seu conforto de @Formato.Moeda(conforto).
-        </div>
-    }
-    else if (conforto > 0)
-    {
-        <div class="aviso bom">
-            Nenhum dia abaixo do conforto até @Formato.Data(_projecao.Fim). Tranquilo.
-        </div>
-    }
-
-    @foreach (var aviso in _projecao.Avisos)
-    {
-        <div class="aviso atencao">@aviso</div>
-    }
-
-    @* ---------- O que ja venceu (R12) ---------- *@
-    @if (_pendencias.Count > 0)
-    {
-        var semResposta = _pendencias.Count(p => p.ForaDaProjecao && !p.Registrada);
-
-        // Conta so o que ja venceu: o que ainda vai vencer aparece na lista para poder ser
-        // marcado adiantado, mas nao e cobranca.
-        var aConfirmar = _pendencias.Count(p =>
-            p.Estado is EstadoOcorrencia.EmAberto or EstadoOcorrencia.VenceHoje);
-
-        <div class="bloco" style="margin-top:0.75rem">
-            <header>
-                <h2>Contas do mês</h2>
-                @if (aConfirmar > 0)
-                {
-                    <span class="pilula saida">@aConfirmar a confirmar</span>
-                }
-                else
-                {
-                    <span class="pilula entrada">em dia</span>
-                }
-            </header>
-
-            @if (semResposta > 0)
-            {
-                @* Este é o caso que mente no saldo: a conta venceu antes da âncora, o dinheiro
-                   dela ainda está no extrato que virou o saldo de partida, e a projeção não a
-                   mostra saindo. O app parece ter mais dinheiro do que tem. *@
-                <div class="aviso atencao" style="margin:0.75rem 0.9rem 0" role="alert">
-                    <strong>
-                        @(semResposta == 1 ? "Uma conta venceu" : semResposta + " contas venceram")
-                        antes do seu saldo de partida.
-                    </strong>
-                    Enquanto você não disser se saiu ou não, ela fica fora da projeção, e o saldo
-                    lá em cima parece maior do que é.
-                </div>
-            }
-
-            <ul class="lista">
-                @foreach (var pendencia in _pendencias)
-                {
-                    var tag = pendencia.TagId is int idTag
-                        ? _dados.Tags.FirstOrDefault(t => t.Id == idTag)
-                        : null;
-
-                    <li>
-                        <div class="principal">
-                            <div class="titulo">@pendencia.Descricao</div>
-                            <div class="sub">
-                                @Formato.Data(pendencia.DataPrevista)
-                                &middot;
-                                <span class="pilulas">
-                                <Pilula Tipo="pendencia.Tipo" />
-                                @if (tag is not null)
-                                {
-                                    <span class="pilula @Formato.ClasseTag(tag.Cor)">@tag.Nome</span>
-                                }
-                                @if (pendencia.Estado == EstadoOcorrencia.Pulada)
-                                {
-                                    <span class="pilula neutra">não teve</span>
-                                }
-                                else if (pendencia.Estado == EstadoOcorrencia.Paga)
-                                {
-                                    <span class="farol ok">pago em @Formato.DataCurta(pendencia.PagoEm!.Value)</span>
-                                }
-                                else if (pendencia.Registrada)
-                                {
-                                    <span class="farol negativo">não pago</span>
-                                }
-                                else if (pendencia.ForaDaProjecao)
-                                {
-                                    <span class="farol atencao">confirme</span>
-                                }
-                                else if (pendencia.Estado == EstadoOcorrencia.VenceHoje)
-                                {
-                                    <span class="pilula diario">vence hoje</span>
-                                }
-                                else if (pendencia.Estado == EstadoOcorrencia.Prevista)
-                                {
-                                    <span class="pilula neutra">vence em @Formato.DataCurta(pendencia.DataPrevista)</span>
-                                }
-                                else
-                                {
-                                    <span class="pilula neutra">a pagar</span>
-                                }
-                                </span>
-                            </div>
-
-                            @if (EstaInformandoValor(pendencia))
-                            {
-                                @* O valor vem preenchido com o previsto: conta que não varia é só
-                                   confirmar, e a que varia se corrige sem editar o lançamento. *@
-                                <div class="linha-campos" style="margin-top:0.4rem">
-                                    <CampoDinheiro Valor="_valorPago" ValorChanged="v => _valorPago = v"
-                                                   Id="@($"pago-{pendencia.LancamentoId}-{pendencia.DataPrevista:yyyyMMdd}")" />
-                                    <button type="button" class="btn" style="flex:0 0 auto" disabled="@_salvandoPendencia"
-                                            @onclick="() => ConfirmarPagamentoAsync(pendencia)">Confirmar</button>
+                            <div class="campo-grupo">
+                                <Rotulo Texto="@(_diarios.Count > 1 ? linha.Nome : "Total do dia")" Para="@id"
+                                        Ajuda="@(i == 0 ? AjudaGastoDoDia : null)" />
+                                <div class="linha-campo-botao">
+                                    <CampoDinheiro Valor="linha.Valor" ValorChanged="v => linha.Valor = v" Id="@id" />
+                                    <button type="button" class="btn" disabled="@_salvandoDiario"
+                                            @onclick="() => SalvarDiario(linha)">Salvar</button>
                                 </div>
-                                <div class="acoes">
-                                    <button type="button" class="btn pequeno secundario"
-                                            @onclick="() => _informandoValor = null">Cancelar</button>
-                                </div>
-                            }
-                            else
-                            {
-                                <div class="acoes">
-                                    @if (pendencia.Estado is EstadoOcorrencia.Paga or EstadoOcorrencia.Pulada)
+                                <div class="dica" style="display:flex; align-items:center; justify-content:space-between; gap:8px">
+                                    <span>@DicaDoDiario(linha)</span>
+                                    @if (linha.Registrado)
                                     {
-                                        <button type="button" class="btn pequeno secundario" disabled="@_salvandoPendencia"
-                                                @onclick="() => LimparAsync(pendencia)">Desfazer</button>
-                                    }
-                                    else
-                                    {
-                                        <button type="button" class="btn pequeno" disabled="@_salvandoPendencia"
-                                                @onclick="() => AbrirPagamento(pendencia)">
-                                            @RotuloDoPagar(pendencia)
+                                        <button type="button" class="btn texto pequeno" disabled="@_salvandoDiario"
+                                                @onclick="() => VoltarParaPrevisao(linha)">
+                                            Usar previsto
                                         </button>
-                                        @if (!pendencia.Registrada && pendencia.ForaDaProjecao)
-                                        {
-                                            <button type="button" class="btn pequeno secundario" disabled="@_salvandoPendencia"
-                                                    @onclick="() => NaoPagueiAsync(pendencia)">Ainda não</button>
-                                        }
-                                        <button type="button" class="btn pequeno secundario" disabled="@_salvandoPendencia"
-                                                @onclick="() => PularAsync(pendencia)">Não teve</button>
                                     }
                                 </div>
-                            }
-                        </div>
-                        <div class="dinheiro @(pendencia.Tipo == TipoLancamento.Entrada ? "valor-ok" : "")">
-                            @Formato.Moeda(pendencia.ValorCentavos)
-                        </div>
-                    </li>
-                }
-            </ul>
+                            </div>
+                        }
 
-            @if (_mensagemPendencia is not null)
-            {
-                <div class="aviso bom" role="status" aria-live="polite"
-                     style="margin:0 0.9rem 0.9rem">@_mensagemPendencia</div>
-            }
-        </div>
-    }
-
-    @* No PC o check-in e os proximos dias ficam lado a lado; no celular, um embaixo do outro. *@
-    <div class="colunas" style="margin-top:0.75rem">
-
-    @* ---------- Check-in do dia ---------- *@
-    <div class="bloco">
-        <header>
-            <h2>Quanto gastei hoje?</h2>
-            @if (_diarios.All(d => d.Registrado))
-            {
-                <span class="pilula diario">registrado</span>
-            }
-        </header>
-        <div class="corpo">
-            @foreach (var linha in _diarios)
-            {
-                <div style="margin-bottom:0.9rem">
-                    @if (_diarios.Count > 1)
-                    {
-                        <div class="rotulo" style="margin-bottom:0.2rem">
-                            @linha.Nome
-                            @if (linha.Registrado)
-                            {
-                                <span class="pilula diario">registrado</span>
-                            }
-                        </div>
-                    }
-                    <div class="linha-campos">
-                        <CampoDinheiro Valor="linha.Valor" ValorChanged="v => linha.Valor = v"
-                                       Id="@($"diario-{linha.CarteiraId?.ToString() ?? "conta"}")" />
-                        <button type="button" class="btn" style="flex:0 0 auto" disabled="@_salvandoDiario"
-                                @onclick="() => SalvarDiario(linha)">Salvar</button>
+                        @if (_mensagemDiario is not null)
+                        {
+                            <Aviso Tipo="bom" Papel="status">@_mensagemDiario</Aviso>
+                        }
                     </div>
-                    @if (linha.Registrado)
-                    {
-                        <div class="acoes">
-                            <button type="button" class="btn secundario pequeno" disabled="@_salvandoDiario"
-                                    @onclick="() => VoltarParaPrevisao(linha)">
-                                Voltar para a previsão
-                            </button>
-                        </div>
-                    }
-                </div>
-            }
+                </ChildContent>
+            </Grupo>
 
-            <p class="ajuda" style="margin:0">
-                Vale o gasto miúdo do dia: lanche, transporte, mercado de passagem.
-                Zero também conta como resposta.
-                @if (_diarios.Any(d => !d.Registrado && d.CarteiraId is null))
-                {
-                    @if (_dados.Configuracao.DiarioPrevistoAtivo)
-                    {
-                        <text>Sem registro, o dia usa o previsto de @Formato.Moeda(_dados.Configuracao.DiarioPrevistoCentavos).</text>
-                    }
-                    else
-                    {
-                        <text>Sem registro, o dia conta zero: você desligou o diário previsto em Ajustes.</text>
-                    }
-                }
-            </p>
-            @if (_mensagemDiario is not null)
+            @* ---------- Contas do mês (R12) ---------- *@
+            @if (_pendencias.Count > 0)
             {
-                <div class="aviso bom" role="status" aria-live="polite" style="margin-top:0.6rem">@_mensagemDiario</div>
+                // Conta só o que já venceu: o que ainda vai vencer aparece na lista para poder
+                // ser marcado adiantado, mas não é cobrança.
+                var aConfirmar = _pendencias.Count(p =>
+                    p.Estado is EstadoOcorrencia.EmAberto or EstadoOcorrencia.VenceHoje);
+                var abertas = _pendencias.Where(p => p.Estado is not (EstadoOcorrencia.Paga or EstadoOcorrencia.Pulada)).ToList();
+                var resolvidas = _pendencias.Where(p => p.Estado is EstadoOcorrencia.Paga or EstadoOcorrencia.Pulada).ToList();
+
+                <Grupo Titulo="Contas do mês">
+                    <Marcador>
+                        @if (aConfirmar > 0)
+                        {
+                            <span class="contador alerta" aria-label="@aConfirmar a confirmar">@aConfirmar</span>
+                        }
+                        else
+                        {
+                            <span class="pilula entrada">em dia</span>
+                        }
+                    </Marcador>
+                    <ChildContent>
+                        @if (semResposta > 0)
+                        {
+                            @* Este é o caso que mente no saldo: a conta venceu antes do saldo inicial,
+                               o dinheiro dela ainda está no extrato que virou o saldo de partida, e a
+                               previsão não a mostra saindo. *@
+                            <div class="corpo">
+                                <Aviso Tipo="atencao" Papel="alert">
+                                    <strong>
+                                        @(semResposta == 1
+                                            ? "1 conta venceu antes do saldo inicial."
+                                            : $"{semResposta} contas venceram antes do saldo inicial.")
+                                    </strong>
+                                    Até você confirmar, @(semResposta == 1 ? "ela fica" : "elas ficam") fora da previsão.
+                                </Aviso>
+                            </div>
+                        }
+
+                        @if (abertas.Count > 0)
+                        {
+                            <ul class="lista">
+                                @foreach (var pendencia in abertas)
+                                {
+                                    <li>@LinhaPendencia(pendencia)</li>
+                                }
+                            </ul>
+                        }
+
+                        @if (resolvidas.Count > 0)
+                        {
+                            <details class="detalhes">
+                                <summary>
+                                    Resolvidas (@resolvidas.Count)
+                                    <Icone Nome="abrir" Tamanho="18" />
+                                </summary>
+                                <ul class="lista">
+                                    @foreach (var pendencia in resolvidas)
+                                    {
+                                        <li>@LinhaPendencia(pendencia)</li>
+                                    }
+                                </ul>
+                            </details>
+                        }
+
+                        @if (_mensagemPendencia is not null)
+                        {
+                            <div class="corpo">
+                                <Aviso Tipo="bom" Papel="status">@_mensagemPendencia</Aviso>
+                            </div>
+                        }
+                    </ChildContent>
+                </Grupo>
             }
         </div>
-    </div>
 
-    @* ---------- Proximos dias ---------- *@
-    <div class="bloco">
-        <header>
-            <h2>Próximos 7 dias</h2>
-            <a class="btn secundario pequeno" href="calendario">Ver calendário</a>
-        </header>
-
-        @{
-            var limite = Relogio.Hoje.AddDays(6);
-            var proximos = _projecao.Dias
-                .Where(d => d.Data >= Relogio.Hoje && d.Data <= limite && d.TemMovimento)
-                .ToList();
-        }
-
-        @if (proximos.Count == 0)
-        {
-            <p class="vazio">Nenhum movimento programado nos próximos 7 dias, só o diário.</p>
-        }
-        else
-        {
-            <ul class="lista">
-                @foreach (var dia in proximos)
-                {
-                    @foreach (var movimento in dia.Movimentos)
+        <div>
+            @* ---------- Outros saldos ---------- *@
+            @* Benefício não paga aluguel: cada carteira tem saldo e conforto próprios, separados
+               do número grande, que é só da conta corrente. *@
+            <Grupo Titulo="Outros saldos">
+                <ul class="lista">
+                    @foreach (var carteira in _projecao.Carteiras)
                     {
                         <li>
-                            <div class="principal">
-                                <div class="titulo">@movimento.Descricao</div>
-                                <div class="sub">
-                                    @Formato.DataCurta(dia.Data), @Formato.Quando(dia.Data, Relogio.Hoje)
-                                    &middot; <Pilula Tipo="movimento.Tipo" />
-                                </div>
-                            </div>
-                            <div class="dinheiro @(movimento.Tipo == TipoLancamento.Entrada ? "valor-ok" : "")">
-                                @(movimento.Tipo == TipoLancamento.Entrada ? "+" : "-")@Formato.Numero(movimento.ValorCentavos)
+                            <div class="item">
+                                <span class="icone-tipo neutro"><Icone Nome="carteira" Tamanho="20" /></span>
+                                <span class="item-principal">
+                                    <span class="item-titulo">@carteira.Carteira.Nome</span>
+                                    <span class="item-sub">
+                                        @if (carteira.Agora.SaldoHojeCentavos is not null)
+                                        {
+                                            @* O farol é do menor saldo à frente, por isso vem depois dele. *@
+                                            @if (carteira.Agora.MenorSaldoAFrenteCentavos is long menorCarteira &&
+                                                 menorCarteira != carteira.Agora.SaldoHojeCentavos)
+                                            {
+                                                <span>menor @Formato.Moeda(menorCarteira)</span>
+                                            }
+                                            <FarolTag Farol="carteira.Agora.Farol" />
+                                        }
+                                        else
+                                        {
+                                            <span>a partir de @Formato.Data(carteira.Carteira.DataAncora)</span>
+                                        }
+                                    </span>
+                                </span>
+                                <span class="item-valor">
+                                    <Valor Centavos="carteira.Agora.SaldoHojeCentavos" Vazio="sem saldo"
+                                           Classe="@(carteira.Agora.SaldoHojeCentavos is long s ? Formato.ClasseValor(s, carteira.Carteira.SaldoConfortoCentavos) : null)" />
+                                </span>
                             </div>
                         </li>
                     }
+                    <li>
+                        <a class="item" href="metas">
+                            <span class="icone-tipo economia"><Icone Nome="economia" Tamanho="20" /></span>
+                            <span class="item-principal">
+                                <span class="item-titulo">Guardado até hoje</span>
+                                <span class="item-sub">Metas e economias</span>
+                            </span>
+                            <span class="item-valor"><Valor Centavos="agora.GuardadoAteHojeCentavos" /></span>
+                            <span class="item-seta"><Icone Nome="seta" Tamanho="18" /></span>
+                        </a>
+                    </li>
+                </ul>
+            </Grupo>
+
+            @* ---------- Próximos 7 dias ---------- *@
+            @{
+                var limite = Relogio.Hoje.AddDays(6);
+                var proximos = _projecao.Dias
+                    .Where(d => d.Data >= Relogio.Hoje && d.Data <= limite && d.TemMovimento)
+                    .SelectMany(d => d.Movimentos.Select(m => (d.Data, Movimento: m)))
+                    .ToList();
+            }
+
+            <Grupo Titulo="Próximos 7 dias">
+                <Acoes>
+                    <a class="btn texto pequeno" href="calendario">Calendário</a>
+                </Acoes>
+                <ChildContent>
+                    @if (proximos.Count == 0)
+                    {
+                        <Vazio Texto="Nenhum lançamento nos próximos 7 dias." />
+                    }
+                    else
+                    {
+                        <ul class="lista">
+                            @foreach (var (data, movimento) in proximos)
+                            {
+                                var entra = movimento.Tipo == TipoLancamento.Entrada;
+
+                                <li>
+                                    <div class="item">
+                                        <IconeTipo Tipo="movimento.Tipo" />
+                                        <span class="item-principal">
+                                            <span class="item-titulo">@movimento.Descricao</span>
+                                            <span class="item-sub">
+                                                @Formato.Quando(data, Relogio.Hoje)@(Formato.QuandoRelativo(data, Relogio.Hoje) is null ? "" : $", {Formato.DataCurta(data)}")
+                                            </span>
+                                        </span>
+                                        <span class="item-valor">
+                                            <Valor Centavos="@(entra ? movimento.ValorCentavos : -movimento.ValorCentavos)"
+                                                   Mais="entra" Classe="@(entra ? "valor-entrada" : null)" />
+                                        </span>
+                                    </div>
+                                </li>
+                            }
+                        </ul>
+                    }
+                </ChildContent>
+            </Grupo>
+        </div>
+    </div>
+}
+
+@if (_pendenciaAberta is Pendencia aberta && _dados is not null)
+{
+    var entrada = aberta.Tipo == TipoLancamento.Entrada;
+    var pedeValor = PedeValor(aberta);
+    var resolvida = aberta.Estado is EstadoOcorrencia.Paga or EstadoOcorrencia.Pulada;
+
+    <Modal Titulo="@aberta.Descricao" AoFechar="FecharPendencia">
+        <ChildContent>
+            <dl class="linhas">
+                <div class="linha">
+                    <dt>@(entrada ? "Previsto para" : "Vencimento")</dt>
+                    <dd>@Formato.Data(aberta.DataPrevista)</dd>
+                </div>
+                <div class="linha">
+                    <dt>Valor</dt>
+                    <dd><Valor Centavos="aberta.ValorCentavos" /></dd>
+                </div>
+                <div class="linha">
+                    <dt>Situação</dt>
+                    <dd>@{ var (texto, classe) = Estado(aberta); }<span class="@classe">@texto</span></dd>
+                </div>
+            </dl>
+
+            @if (aberta.ForaDaProjecao && !aberta.Registrada)
+            {
+                <p class="dica" style="margin-top:12px">
+                    Venceu antes do saldo inicial (@Formato.Data(_dados.Configuracao.DataAncora)).
+                    Se já @(entrada ? "caiu" : "saiu"), já está nesse saldo. Se não, entra na previsão
+                    como @(entrada ? "valor a receber" : "conta a pagar").
+                </p>
+            }
+
+            @if (!resolvida && pedeValor)
+            {
+                <div class="campo-grupo" style="margin-top:16px">
+                    <Rotulo Texto="@(entrada ? "Valor recebido" : "Valor pago")" Para="valor-pendencia"
+                            Ajuda="Se a conta variou, informe o valor real. Vale só para esta vez; os próximos meses continuam com o valor do lançamento." />
+                    <CampoDinheiro Valor="_valorPago" ValorChanged="v => _valorPago = v" Id="valor-pendencia" />
+                </div>
+            }
+        </ChildContent>
+        <Rodape>
+            @if (resolvida)
+            {
+                <button type="button" class="btn secundario" disabled="@_salvandoPendencia"
+                        @onclick="() => LimparAsync(aberta)">Desfazer</button>
+            }
+            else
+            {
+                <button type="button" class="btn" disabled="@_salvandoPendencia"
+                        @onclick="() => ConfirmarPagamentoAsync(aberta, pedeValor)">
+                    @RotuloDoPagar(aberta)
+                </button>
+                @if (!aberta.Registrada && aberta.ForaDaProjecao)
+                {
+                    <button type="button" class="btn secundario" disabled="@_salvandoPendencia"
+                            @onclick="() => NaoPagueiAsync(aberta)">Ainda não</button>
                 }
-            </ul>
-        }
-    </div>
-
-    </div>
-
-    <div class="acoes">
-        <a class="btn largo" href="lancamentos?novo=1">
-            <Icone Nome="mais" Tamanho="18" /> Novo lançamento
-        </a>
-    </div>
+                <button type="button" class="btn contorno" disabled="@_salvandoPendencia"
+                        @onclick="() => PularAsync(aberta)">Não teve</button>
+            }
+        </Rodape>
+    </Modal>
 }
 
 @code {
@@ -461,6 +440,11 @@ else
     private ResultadoProjecao? _projecao;
     private string? _mensagemDiario;
     private bool _salvandoDiario;
+    private bool _ajudaHero;
+
+    private const string AjudaGastoDoDia =
+        "O total de gastos miúdos do dia: lanche, transporte, mercado de passagem. Salvar troca o " +
+        "valor do dia, não soma. Zero também vale. Conta fixa e compra no cartão vão em Lançar.";
 
     /// <summary>
     /// Uma linha de check-in por carteira que tem diário. Carteira sem diário previsto não
@@ -472,13 +456,14 @@ else
         public string Nome { get; init; } = "";
         public long Valor { get; set; }
         public bool Registrado { get; init; }
+        public long? Previsto { get; init; }
     }
 
     private List<LinhaDiario> _diarios = [];
     private List<Pendencia> _pendencias = [];
     private bool _salvandoPendencia;
     private string? _mensagemPendencia;
-    private (int LancamentoId, DateOnly Data)? _informandoValor;
+    private Pendencia? _pendenciaAberta;
     private long _valorPago;
 
     protected override async Task OnInitializedAsync() => await CarregarAsync();
@@ -499,6 +484,51 @@ else
         _diarios = MontarLinhasDeDiario();
     }
 
+    /// <summary>
+    /// O que cada número do cabeçalho quer dizer, num painel só: um (i) por indicador espalharia
+    /// ícone de ajuda pela tela inteira e quebraria os rótulos das colunas estreitas.
+    /// </summary>
+    private IEnumerable<(string Termo, string Explicacao)> AjudaDosIndicadores(List<Pendencia> aVencer, bool conferidoHoje)
+    {
+        var cfg = _dados!.Configuracao;
+        var agora = _projecao!.Agora;
+
+        yield return conferidoHoje
+            ? ("Saldo de hoje", "O valor que você conferiu com o banco hoje. Já inclui o que saiu hoje.")
+            : agora.SaldoHojeCentavos is null
+                ? ("Saldo previsto hoje", "A previsão começa na data do saldo inicial, que ainda não chegou.")
+                : ("Saldo previsto hoje", cfg.DiarioPrevistoAtivo
+                    ? "Previsão para o fim do dia, já descontando o gasto diário previsto."
+                    : "Previsão para o fim do dia, com o gasto de hoje que você registrar.");
+
+        yield return ("Pode gastar hoje",
+            $"O que sobra acima do seu conforto de {Formato.Moeda(cfg.SaldoConfortoCentavos)} no dia de menor saldo.");
+
+        yield return ("Menor saldo", $"O saldo mais baixo previsto até {Formato.Data(_projecao.Fim)}.");
+
+        if (aVencer.Count > 0)
+        {
+            yield return ("Após as contas",
+                $"Saldo de hoje menos {Formato.Quantos(aVencer.Count, "conta que ainda vence", "contas que ainda vencem")} " +
+                $"neste mês ({Formato.Moeda(aVencer.Sum(p => p.ValorCentavos))}). Contas vencidas em aberto já estão no saldo.");
+        }
+    }
+
+    private string DicaDoDiario(LinhaDiario linha)
+    {
+        if (linha.Registrado)
+        {
+            return "Registrado.";
+        }
+
+        if (linha.CarteiraId is null && !_dados!.Configuracao.DiarioPrevistoAtivo)
+        {
+            return "Sem registro, o dia conta zero.";
+        }
+
+        return $"Sem registro, conta o previsto de {Formato.Moeda(linha.Previsto ?? 0)}.";
+    }
+
     private List<LinhaDiario> MontarLinhasDeDiario()
     {
         var linhas = new List<LinhaDiario>();
@@ -509,6 +539,7 @@ else
             CarteiraId = null,
             Nome = "Conta corrente",
             Registrado = registroConta is not null,
+            Previsto = _dados.Configuracao.DiarioPrevistoCentavos,
 
             // Com a contagem desligada o campo abre em zero, não no previsto: abrir no previsto
             // convidaria a salvar um gasto que o dono acabou de dizer que não tem.
@@ -525,6 +556,7 @@ else
                 CarteiraId = carteira.Id,
                 Nome = carteira.Nome,
                 Registrado = registro is not null,
+                Previsto = carteira.DiarioPrevistoCentavos,
                 Valor = registro?.ValorCentavos ?? carteira.DiarioPrevistoCentavos ?? 0
             });
         }
@@ -544,7 +576,9 @@ else
         try
         {
             await Servico.RegistrarDiarioAsync(Relogio.Hoje, linha.Valor, linha.CarteiraId);
-            _mensagemDiario = $"{linha.Nome}: hoje registrado em {Formato.Moeda(linha.Valor)}.";
+            _mensagemDiario = _diarios.Count > 1
+                ? $"{linha.Nome}: {Formato.Moeda(linha.Valor)} hoje."
+                : $"Salvo: {Formato.Moeda(linha.Valor)} hoje.";
             await CarregarAsync();
         }
         finally
@@ -565,7 +599,9 @@ else
         try
         {
             await Servico.VoltarParaPrevisaoAsync(Relogio.Hoje, linha.CarteiraId);
-            _mensagemDiario = $"{linha.Nome}: hoje voltou a usar o previsto.";
+            _mensagemDiario = _diarios.Count > 1
+                ? $"{linha.Nome}: hoje voltou para o previsto."
+                : "Hoje voltou para o previsto.";
             await CarregarAsync();
         }
         finally
@@ -574,7 +610,57 @@ else
         }
     }
 
-    // ---------- O que ja venceu ----------
+    // ---------- Contas do mês ----------
+
+    private RenderFragment LinhaPendencia(Pendencia pendencia) => __builder =>
+    {
+        var (texto, classe) = Estado(pendencia);
+        var entra = pendencia.Tipo == TipoLancamento.Entrada;
+        var resolvida = pendencia.Estado is EstadoOcorrencia.Paga or EstadoOcorrencia.Pulada;
+
+        <button type="button" class="item @(resolvida ? "apagado" : "")" @onclick="() => AbrirPendencia(pendencia)"
+                aria-label="@pendencia.Descricao, @Formato.Data(pendencia.DataPrevista), @Formato.Moeda(pendencia.ValorCentavos), @texto">
+            <IconeTipo Tipo="pendencia.Tipo" />
+            <span class="item-principal">
+                <span class="item-titulo">@pendencia.Descricao</span>
+                <span class="item-sub">
+                    <span>@Formato.DataCurta(pendencia.DataPrevista)</span>
+                    <span class="@classe">@texto</span>
+                </span>
+            </span>
+            <span class="item-valor">
+                <Valor Centavos="pendencia.ValorCentavos" Classe="@(entra && !resolvida ? "valor-entrada" : null)" />
+            </span>
+            <span class="item-seta"><Icone Nome="seta" Tamanho="18" /></span>
+        </button>
+    };
+
+    /// <summary>O que se sabe da ocorrência, em texto curto, com a classe da pílula.</summary>
+    private (string Texto, string Classe) Estado(Pendencia p)
+    {
+        var entra = p.Tipo == TipoLancamento.Entrada;
+
+        return p switch
+        {
+            { Estado: EstadoOcorrencia.Pulada } => ("não teve", "pilula neutra"),
+            { Estado: EstadoOcorrencia.Paga } =>
+                ($"{(entra ? "recebida" : "paga")} em {Formato.DataCurta(p.PagoEm!.Value)}", "farol ok"),
+            { Registrada: true } => (entra ? "não recebida" : "não paga", "farol negativo"),
+            { ForaDaProjecao: true } => ("confirme", "farol atencao"),
+            { Estado: EstadoOcorrencia.VenceHoje } => (entra ? "cai hoje" : "vence hoje", "pilula diario"),
+            { Estado: EstadoOcorrencia.Prevista } => (entra ? "a receber" : "a vencer", "pilula neutra"),
+            _ => ("a confirmar", "pilula neutra")
+        };
+    }
+
+    private void AbrirPendencia(Pendencia pendencia)
+    {
+        _pendenciaAberta = pendencia;
+        _valorPago = pendencia.ValorCentavos;
+        _mensagemPendencia = null;
+    }
+
+    private void FecharPendencia() => _pendenciaAberta = null;
 
     /// <summary>
     /// Quando o dinheiro saiu, que decide se a saída entra ou não na projeção.
@@ -593,51 +679,37 @@ else
             ? pendencia.DataPrevista
             : Relogio.Hoje;
 
-    private string RotuloDoPagar(Pendencia pendencia)
-    {
-        var entrada = pendencia.Tipo == TipoLancamento.Entrada;
-
-        return QuandoSaiu(pendencia) == pendencia.DataPrevista && pendencia.DataPrevista != Relogio.Hoje
-            ? (entrada ? "Já caiu" : "Já saiu")
-            : (entrada ? "Caiu" : "Paguei");
-    }
-
-    private bool EstaInformandoValor(Pendencia pendencia) =>
-        _informandoValor == (pendencia.LancamentoId, pendencia.DataPrevista);
-
     /// <summary>
     /// Conta que já saiu antes da âncora não precisa de valor: ela fica fora da projeção de
     /// qualquer jeito, e pedir um número que não muda nada só atrasa a confirmação.
     /// </summary>
-    private async Task AbrirPagamento(Pendencia pendencia)
-    {
-        if (QuandoSaiu(pendencia) == pendencia.DataPrevista && pendencia.DataPrevista != Relogio.Hoje)
-        {
-            await ConfirmarPagamentoAsync(pendencia, pedirValor: false);
-            return;
-        }
+    private bool PedeValor(Pendencia pendencia) =>
+        !(QuandoSaiu(pendencia) == pendencia.DataPrevista && pendencia.DataPrevista != Relogio.Hoje);
 
-        _valorPago = pendencia.ValorCentavos;
-        _informandoValor = (pendencia.LancamentoId, pendencia.DataPrevista);
+    private string RotuloDoPagar(Pendencia pendencia)
+    {
+        var entrada = pendencia.Tipo == TipoLancamento.Entrada;
+
+        return PedeValor(pendencia)
+            ? (entrada ? "Recebi" : "Paguei")
+            : (entrada ? "Já caiu" : "Já saiu");
     }
 
-    private async Task ConfirmarPagamentoAsync(Pendencia pendencia, bool pedirValor = true)
+    private async Task ConfirmarPagamentoAsync(Pendencia pendencia, bool pedirValor)
     {
         var valor = pedirValor ? _valorPago : (long?)null;
 
         await ComTravaAsync(
             () => Servico.MarcarPagoAsync(pendencia.LancamentoId, pendencia.DataPrevista, QuandoSaiu(pendencia), valor),
             valor is long v && v != pendencia.ValorCentavos
-                ? $"{pendencia.Descricao} confirmado em {Formato.Moeda(v)}."
-                : pendencia.Descricao + " confirmado.");
-
-        _informandoValor = null;
+                ? $"{pendencia.Descricao}: confirmado em {Formato.Moeda(v)}."
+                : $"{pendencia.Descricao}: confirmado.");
     }
 
     private async Task PularAsync(Pendencia pendencia) =>
         await ComTravaAsync(
             () => Servico.MarcarPuladaAsync(pendencia.LancamentoId, pendencia.DataPrevista),
-            pendencia.Descricao + " não teve neste período.");
+            $"{pendencia.Descricao}: não teve desta vez.");
 
     /// <summary>
     /// As contas que ainda vão sair da conta depois de hoje. Vencidas em aberto ficam de fora
@@ -653,12 +725,12 @@ else
     private async Task NaoPagueiAsync(Pendencia pendencia) =>
         await ComTravaAsync(
             () => Servico.MarcarEmAbertoAsync(pendencia.LancamentoId, pendencia.DataPrevista),
-            pendencia.Descricao + " entrou na projeção como conta a pagar.");
+            $"{pendencia.Descricao}: entrou na previsão como conta a pagar.");
 
     private async Task LimparAsync(Pendencia pendencia) =>
         await ComTravaAsync(
             () => Servico.LimparSituacaoAsync(pendencia.LancamentoId, pendencia.DataPrevista),
-            pendencia.Descricao + " voltou a ficar sem resposta.");
+            $"{pendencia.Descricao}: voltou a ficar sem resposta.");
 
     /// <summary>Trava os botões enquanto grava: dois toques seguidos gravariam duas vezes.</summary>
     private async Task ComTravaAsync(Func<Task> gravar, string mensagem)
@@ -674,6 +746,7 @@ else
         {
             await gravar();
             _mensagemPendencia = mensagem;
+            _pendenciaAberta = null;
             await CarregarAsync();
         }
         finally
@@ -681,6 +754,4 @@ else
             _salvandoPendencia = false;
         }
     }
-
-
 }

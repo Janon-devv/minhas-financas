@@ -1,0 +1,12 @@
+@* Quadrado com o icone do tipo de lancamento. Forma e cor mudam juntas, e o nome do tipo
+   vai escrito para o leitor de tela: a cor nunca e a unica pista. *@
+
+<span class="icone-tipo @Formato.ClasseTipo(Tipo)" title="@Formato.TextoTipo(Tipo)">
+    <Icone Nome="@Formato.IconeTipo(Tipo)" Tamanho="20" />
+    <span class="so-leitor">@Formato.TextoTipo(Tipo)</span>
+</span>
+
+@code {
+    [Parameter]
+    public TipoLancamento Tipo { get; set; }
+}

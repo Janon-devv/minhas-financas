@@ -1,0 +1,47 @@
+@*
+    Rotulo de campo ou de indicador, com ajuda opcional. A explicacao longa fica atras do (i),
+    que abre e fecha por toque, clique ou teclado, e aparece logo abaixo do rotulo: o campo
+    continua com nome visivel e a tela so mostra a explicacao para quem pediu.
+*@
+
+<div class="rotulo-linha @Classe">
+    @if (Para is not null)
+    {
+        <label class="rotulo-texto" for="@Para">@Texto</label>
+    }
+    else
+    {
+        <span class="rotulo-texto">@Texto</span>
+    }
+
+    @if (Ajuda is not null)
+    {
+        <button type="button" class="botao-ajuda" aria-expanded="@(_aberta ? "true" : "false")"
+                aria-controls="@_id" aria-label="Sobre: @Texto" @onclick="() => _aberta = !_aberta">
+            <Icone Nome="info" Tamanho="18" />
+        </button>
+    }
+</div>
+
+@if (Ajuda is not null && _aberta)
+{
+    <p class="texto-ajuda" id="@_id">@Ajuda</p>
+}
+
+@code {
+    private readonly string _id = $"ajuda-{Guid.NewGuid():N}";
+    private bool _aberta;
+
+    [Parameter, EditorRequired]
+    public string Texto { get; set; } = "";
+
+    /// <summary>Id do campo. Sem ele o rotulo e texto, para indicadores que nao sao campo.</summary>
+    [Parameter]
+    public string? Para { get; set; }
+
+    [Parameter]
+    public string? Ajuda { get; set; }
+
+    [Parameter]
+    public string? Classe { get; set; }
+}

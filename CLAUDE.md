@@ -16,11 +16,19 @@ O documento de especificação chama o projeto de Radar do Saldo, que era o nome
 - Datas são `DateOnly` locais, fuso America/Sao_Paulo. Nada de UTC que mude o dia.
 - Interface em pt-BR, informal e direta, minimalista, com a paleta da seção 8 do CONTEXTO.
   **Não usar travessão (—) em nenhum texto de interface.**
-- **Uma interface só, para celular e PC.** O celular define a estrutura; a partir de 900px o CSS
-  transforma a barra de baixo em coluna lateral e abre os blocos em duas colunas. Para esconder algo
-  no celular use `so-desktop`, que só existe como regra abaixo de 900px (assim no PC o elemento
-  mantém o display natural dele); para esconder no PC use `so-celular`. Blocos que viram duas colunas
-  usam `colunas`; grupos de quatro indicadores usam `painel-cartoes`.
+- **Uma interface só, para celular e PC.** O celular define a estrutura (desenhada em 390px); a
+  partir de 900px o CSS transforma a barra de baixo em coluna lateral e abre os blocos em duas
+  colunas. Para esconder algo no celular use `so-desktop`, que só existe como regra abaixo de 900px
+  (assim no PC o elemento mantém o display natural dele); para esconder no PC use `so-celular`.
+  Blocos que viram duas colunas usam `colunas`.
+- **Toda página começa por `<Cabecalho>`**, em petróleo. A barra de status do iPhone é
+  `black-translucent` e fica sobre ele; a `.faixa-status` cobre essa área quando o conteúdo rola.
+  Página sem cabeçalho deixaria o relógio branco sobre fundo claro. Destaque grande (`destaque`)
+  só em Hoje e Calendário; o resto usa o cabeçalho compacto.
+- **Texto curto na tela, explicação no (i).** Regra que muda dinheiro (valor por ocorrência, item já
+  no saldo inicial, renda variável que não mexe no saldo, conta vencida fora da previsão) continua
+  visível em uma linha; o porquê vai em `Rotulo Ajuda=` ou `BotaoAjuda`. Um (i) por bloco, não um
+  por número.
 - Sem nome, marca, imagem ou texto de produto de terceiros (seção 3 do CONTEXTO).
 
 ## Regras de interface que não podem regredir
@@ -31,24 +39,57 @@ Verificadas com medição, não no olho. Mudanças de UI precisam continuar resp
   `--linha` (#E5E7EB) é divisória decorativa; `--borda-campo` (#868E9B, 3,30:1) é contorno de
   campo de formulário, que a WCAG trata como componente de interface. Não unificar os dois.
   `--pilula-neutra-texto` existe porque #6B7280 sobre #E5E7EB dá 3,90:1 e reprova.
-- **Alvo de toque 44px.** `--alvo-toque` em `.btn`, `.btn.pequeno`, `.campo` e `.toque-diario`.
-  Um valor numérico pequeno dentro de tabela precisa virar `.toque-diario`, não um span clicável.
-- **Nada clicável só com mouse.** Linha de tabela ou item de lista que responde a clique leva
-  `clicavel` + `tabindex="0"` + `role="button"` + tratamento de Enter. Sem isso a função some
-  para quem usa teclado.
-- **Um `h1` por página.** A marca no topo é `span.marca-nome`, não `h1`. Páginas sem título
-  visível usam `<h1 class="so-leitor">`, que `FocusOnNavigate` foca ao navegar.
+- **Alvo de toque 44px.** `--alvo-toque` em `.btn`, `.btn.pequeno`, `.btn-icone`, `.filtro`,
+  `.botao-ajuda` e nas abas; `.campo` tem 48px. O (i) usa margem negativa para ter 44px de toque
+  sem esticar a linha do rótulo.
+- **Nada clicável só com mouse.** Linha de lista que responde a toque é um `<button class="item">`
+  ou `<a class="item">` de verdade (no calendário, `button.dia`), nunca `li` com `@onclick`. Assim
+  teclado e leitor de tela funcionam sem `tabindex` nem tratamento de Enter.
+- **Um `h1` por página.** É o `Titulo` do `<Cabecalho>`, que `FocusOnNavigate` foca ao navegar.
+  A marca "Minhas Finanças" é `span.marca`, não `h1`.
+- **Modal é `<Modal>`.** Fecha por X, Esc e toque fora, prende o foco, devolve o foco ao fechar e
+  põe as ações no `Rodape`, que fica fixo acima do teclado (`app.js` mede a área visível).
+- **Excluir pede um segundo toque** ("Excluir" vira "Excluir de vez").
 - **Erro com `role="alert"`, confirmação com `aria-live="polite"`.** Borda vermelha sozinha não
   chega ao leitor de tela.
 - **`prefers-reduced-motion`** está tratado globalmente no fim do `app.css`. Transições novas
   devem usar `--transicao` (180ms) para entrarem nessa regra.
-- **Botão que grava desabilita enquanto grava.** No Plano, dois toques criariam dois lançamentos.
+- **Botão que grava desabilita enquanto grava, e o handler confere a trava na primeira linha**
+  (`if (... || _salvando) return;`). Só o `disabled` não basta: ele chega ao iPhone depois de uma
+  ida e volta pela rede, e um toque duplo passa. Vale para salvar, excluir, pagar e restaurar.
+- **Modal fecha por Esc com o foco onde estiver.** O `Modal.razor.js` ouve o documento, porque o
+  elemento focado pode sumir (excluir uma linha da lista dentro do modal) e o foco cair no body.
+- **Erro inesperado fica na tela.** O `MainLayout` tem um `ErrorBoundary` com "Tentar de novo";
+  ele não substitui tratar o erro esperado (nome repetido, validação) com mensagem.
+
+## Regras de dados e segurança
+
+- **Validação no domínio, com faixa.** `Validacao` recusa data fora de 2000 a 2100, valor acima de
+  R$ 9.999.999.999,99, juros acima de 100% ao mês e mais de 360 repetições. Data ou valor absurdo
+  não é só número errado: já travou o app inteiro (juros de uma fatura de 2006 estourando o long).
+- **Nome único volta como mensagem.** `Salvar{Cartao,Tag,Meta,Carteira}Async` devolve `string?`
+  com o motivo; a tela mostra no `Aviso`. Comparação sem diferenciar maiúsculas.
+- **Ocorrências de um lançamento saem de `Ocorrencias.Do`.** Ele aplica a data efetiva e o dia de
+  referência (vencimento do cartão). Chamar `Ocorrencias.Ate` direto com a data efetiva de uma
+  compra no cartão erra o dia quando o vencimento é 29 a 31.
+- **Fatura e compra se casam por `Faturas.Chave(fatura, cartoes)`**, o ciclo calculado, nunca pela
+  data digitada na fatura. Cada pagamento de fatura é um `PagamentoFatura` com a própria data.
+- **Migração gerada pelo EF precisa ser lida antes de rodar.** Na de pagamentos ele apagava as
+  colunas antes de copiar os dados. Confira com `dotnet dotnet-ef migrations script <anterior> <nova>`
+  e teste numa cópia de um banco no formato antigo. O app copia o banco antes de migrar.
+- **Backup automático** (`CopiaDeSeguranca`, `CopiaDiaria`): cópia diária com `VACUUM INTO`, 30
+  dias, na pasta de backups do banco em uso. Campo novo de backup sobe `BackupService.VersaoSchema`
+  e arquivo antigo tem que continuar abrindo.
+- **Rede.** `Seguranca/ProtecaoDeRede` roda antes de tudo: cabeçalhos, filtro de Host (só
+  localhost, IP e nome do PC; extras em `MinhasFinancas:HostsPermitidos`) e PIN para quem não é
+  este computador. Endpoint ou arquivo novo fica atrás do PIN automaticamente; só entra em
+  `LiberadosSemPin` o que a tela de entrada precisa e não tem dado. O perfil `rede` roda em
+  Production.
 
 ### Lacunas conhecidas
 
-- Modais fecham por botão, por Cancelar e por toque fora, mas não pela tecla Esc, e não prendem
-  o foco dentro deles.
-- O gráfico não tem tooltip por ponto; os valores exatos ficam na tabela ao lado.
+- O gráfico mostra o valor do ponto só ao passar o mouse (`<title>` do SVG); no toque não há
+  tooltip, e os valores que importam estão escritos ao lado.
 - Só tema claro. O `app.css` já é todo baseado em tokens, então um tema escuro seria um bloco
   `prefers-color-scheme` redefinindo as variáveis.
 
@@ -75,9 +116,13 @@ Conflitos já decididos, não reabrir sem o dono pedir:
   abre direto no dado.
 - **Animação.** Só com `--transicao`, senão escapa da regra de `prefers-reduced-motion`.
 
-Antes de aceitar sugestão de componente, procure o que já existe: `Pilula`, `FarolTag`, `Icone`,
-`CampoDinheiro`, `GraficoSaldo`, e as classes `bloco`, `cartao`, `painel-cartoes`, `colunas`,
-`tabela`, `lista`. Reusar vence criar.
+Antes de aceitar sugestão de componente, procure o que já existe em `Components/Compartilhado`:
+`Cabecalho`, `Grupo`, `Valor` (dinheiro com centavos menores no destaque), `Rotulo` e `BotaoAjuda`
+(ajuda contextual), `Aviso`, `Vazio`, `Carregando`, `IconeTipo`, `SeletorMes`, `Modal`, `FarolTag`,
+`Pilula`, `Icone` (uma família só: traço 1,8, grade 24), `CampoDinheiro`, `CampoData`,
+`GraficoSaldo`. Classes: `lista`/`item`, `linhas`/`linha` (conta aberta), `indicadores`,
+`hero-indicadores`, `segmentado` (radios), `interruptor`, `detalhes` (mais opções), `filtros`,
+`abas`, `dias`, `proporcao`, `colunas`. Reusar vence criar.
 
 ### Como verificar antes de dar por pronto
 
@@ -108,9 +153,9 @@ No código, `DiaProjetado.SaidaTotalCentavos` corresponde à primeira e
 ## Comandos
 
 ```bash
-dotnet test                                              # 73 testes
+dotnet test                                              # 81 testes
 dotnet run --project src/MinhasFinancas.Web --launch-profile local # http://localhost:5080
-dotnet run --project src/MinhasFinancas.Web --launch-profile rede  # 0.0.0.0:5080, para o iPhone
+dotnet run --project src/MinhasFinancas.Web --launch-profile rede  # 0.0.0.0:5080, para o iPhone (pede PIN)
 dotnet dotnet-ef migrations add <Nome> --project src/MinhasFinancas.Infra --startup-project src/MinhasFinancas.Infra --output-dir Migracoes
 ```
 

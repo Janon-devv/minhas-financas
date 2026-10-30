@@ -1,0 +1,22 @@
+@* Estado vazio: uma frase objetiva e, quando faz sentido, a acao que resolve. *@
+
+<div class="vazio">
+    @if (NomeIcone is not null)
+    {
+        <Icone Nome="@NomeIcone" Tamanho="28" />
+    }
+    <p>@Texto</p>
+    @ChildContent
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public string Texto { get; set; } = "";
+
+    [Parameter]
+    public string? NomeIcone { get; set; }
+
+    /// <summary>A acao pertinente, quando ha uma.</summary>
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+}

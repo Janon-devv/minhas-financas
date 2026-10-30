@@ -2,251 +2,229 @@
 @inject PlanejamentoService Servico
 @inject IRelogio Relogio
 
-<PageTitle>Simulador | Minhas Finanças</PageTitle>
+<PageTitle>Simular compra | Minhas Finanças</PageTitle>
 
-<h1>Cabe uma compra?</h1>
-<p class="ajuda" style="margin-top:0.3rem">
-    Nada aqui mexe no seu planejamento. É só uma conta de e se.
-</p>
+<Cabecalho Titulo="Simular compra" Voltar="" />
 
 @if (_dados is null)
 {
-    <p class="vazio">Carregando...</p>
+    <Carregando />
 }
 else
 {
-    @* No PC o formulario fica a esquerda e o resultado a direita. *@
-    <div class="colunas" style="margin-top:0.75rem">
+    @* No PC o formulário fica à esquerda e o resultado à direita. *@
+    <div class="colunas">
+        <div>
+            <Grupo Classe="sem-titulo">
+                <div class="corpo">
+                    <p class="dica" style="margin:0 0 16px">Só uma conta. Não muda seus lançamentos.</p>
 
-    <div>
-    <div class="cartao">
-        <div class="campo-grupo">
-            <label for="descricao">O que é</label>
-            <input id="descricao" class="campo" @bind="_descricao" placeholder="Notebook, geladeira, viagem" />
-        </div>
-
-        <div class="linha-campos">
-            <div class="campo-grupo">
-                <label for="preco">Preço à vista</label>
-                <CampoDinheiro Valor="_preco" ValorChanged="v => _preco = v" Id="preco" />
-            </div>
-            <div class="campo-grupo">
-                <label for="entrada">Entrada</label>
-                <CampoDinheiro Valor="_entrada" ValorChanged="v => _entrada = v" Id="entrada" />
-            </div>
-        </div>
-
-        @if (_entrada > 0)
-        {
-            <div class="campo-grupo">
-                <label for="data-entrada">Quando paga a entrada</label>
-                <CampoData Valor="_dataEntrada" ValorChanged="v => _dataEntrada = v" Id="data-entrada" />
-            </div>
-        }
-
-        <div class="linha-campos">
-            <div class="campo-grupo">
-                <label for="parcelas">Parcelas</label>
-                <input id="parcelas" type="number" inputmode="numeric" min="1" max="@MinhasFinancas.Domain.Simulador.MaximoParcelas"
-                       class="campo" @bind="_parcelas" />
-            </div>
-            <div class="campo-grupo">
-                <label for="taxa">Juros ao mês (%)</label>
-                <CampoDinheiro Valor="_taxaCentesimos" ValorChanged="v => _taxaCentesimos = v" Id="taxa" />
-                <div class="dica">Zero se for sem juros.</div>
-            </div>
-        </div>
-
-        @if (_preco - _entrada > 0)
-        {
-            <div class="campo-grupo">
-                <label for="primeira">Primeira parcela</label>
-                <CampoData Valor="_primeiraParcela" ValorChanged="v => _primeiraParcela = v" Id="primeira" />
-                <div class="dica">
-                    Se for no cartão, use o dia em que a fatura vence, não o da compra.
-                </div>
-            </div>
-        }
-
-        <div class="acoes">
-            <button type="button" class="btn largo" @onclick="Simular">Ver se cabe</button>
-        </div>
-    </div>
-
-    @if (_erros.Count > 0)
-    {
-        <div class="aviso ruim" role="alert">
-            @foreach (var erro in _erros)
-            {
-                <div>@erro</div>
-            }
-        </div>
-    }
-    </div>
-
-    <div>
-    @if (_resultado is null)
-    {
-        <div class="cartao">
-            <div class="rotulo">Resultado</div>
-            <p class="ajuda" style="margin:0.3rem 0 0">
-                Preencha os campos e toque em ver se cabe. O app compara o seu saldo projetado
-                com e sem a compra, dia a dia, e diz onde fica o pior dia.
-            </p>
-        </div>
-    }
-    else if (_projecao is not null)
-    {
-        var conforto = _dados.Configuracao.SaldoConfortoCentavos;
-
-        <div class="aviso @Formato.ClasseVeredito(_resultado.Veredito)">
-            <strong>@Formato.TextoVeredito(_resultado.Veredito)</strong>
-            @if (_resultado.MenorComCentavos is long menorCom)
-            {
-                <text>
-                    O pior dia passa a ser @Formato.Data(_resultado.DataMenorCom!.Value),
-                    com @Formato.Moeda(menorCom).
-                </text>
-            }
-        </div>
-
-        @if (_resultado.JaEstavaNegativoSemCompra)
-        {
-            <div class="aviso atencao">
-                O cenário já apresentava saldo negativo antes da compra.
-                A compra piora o pior dia em @Formato.Moeda(_resultado.PioraCentavos),
-                mas o problema não começa nela.
-            </div>
-        }
-
-        @if (_resultado.ImpactoParcial)
-        {
-            <div class="aviso atencao">
-                <strong>Impacto parcial.</strong>
-                Há pagamentos depois do fim da projeção, somando
-                @Formato.Moeda(_resultado.PagamentosForaDoHorizonteCentavos).
-                O que você vê aqui é só o pedaço que cabe no horizonte.
-            </div>
-        }
-
-        <div class="grade2" style="margin-top:0.75rem">
-            <div class="cartao">
-                <div class="rotulo">Total pago</div>
-                <div class="numero medio">@Formato.Moeda(_resultado.TotalPagoCentavos)</div>
-                @if (_resultado.JurosTotaisCentavos > 0)
-                {
-                    <div class="ajuda valor-negativo">
-                        @Formato.Moeda(_resultado.JurosTotaisCentavos) só de juros
+                    <div class="campo-grupo">
+                        <Rotulo Texto="O que é (opcional)" Para="descricao" />
+                        <input id="descricao" class="campo" @bind="_descricao" autocomplete="off" placeholder="Notebook" />
                     </div>
-                }
-                else
-                {
-                    <div class="ajuda">Sem juros</div>
-                }
-            </div>
-            <div class="cartao">
-                <div class="rotulo">Folga no conforto</div>
-                <div class="numero medio @((_resultado.FolgaCentavos ?? 0) < 0 ? "valor-negativo" : "valor-ok")">
-                    @Formato.Moeda(_resultado.FolgaCentavos)
-                </div>
-                <div class="ajuda">
-                    @if (_resultado.PrimeiroDiaAbaixoConfortoCom is DateOnly abaixo)
-                    {
-                        <text>Abaixo do conforto a partir de @Formato.Data(abaixo)</text>
-                    }
-                    else
-                    {
-                        <text>Nunca fica abaixo do conforto</text>
-                    }
-                </div>
-            </div>
-        </div>
 
-        <div class="bloco" style="margin-top:0.75rem">
-            <header><h2>Antes e depois</h2></header>
-            <table class="tabela">
-                <tbody>
-                    <tr>
-                        <td>Pior dia sem a compra</td>
-                        <td class="num @Formato.ClasseValor(_resultado.MenorSemCentavos ?? 0, conforto)">
-                            @Formato.Moeda(_resultado.MenorSemCentavos)
-                            <div class="ajuda">@Formato.Data(_resultado.DataMenorSem)</div>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>Pior dia com a compra</td>
-                        <td class="num @Formato.ClasseValor(_resultado.MenorComCentavos ?? 0, conforto)">
-                            @Formato.Moeda(_resultado.MenorComCentavos)
-                            <div class="ajuda">@Formato.Data(_resultado.DataMenorCom)</div>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>Quanto piora</td>
-                        <td class="num">@Formato.Moeda(_resultado.PioraCentavos)</td>
-                    </tr>
-                </tbody>
-            </table>
-            <div class="corpo">
-                <GraficoSaldo Serie="_serieSem" SerieComparacao="_serieCom" Conforto="conforto" />
-            </div>
-        </div>
+                    <div class="linha-campos">
+                        <div class="campo-grupo">
+                            <Rotulo Texto="Preço à vista" Para="preco" />
+                            <CampoDinheiro Valor="_preco" ValorChanged="v => _preco = v" Id="preco" />
+                        </div>
+                        <div class="campo-grupo">
+                            <Rotulo Texto="Entrada" Para="entrada" />
+                            <CampoDinheiro Valor="_entrada" ValorChanged="v => _entrada = v" Id="entrada" />
+                        </div>
+                    </div>
 
-        @if (_resultado.Parcelas.Count > 0)
-        {
-            <div class="bloco rolagem" style="margin-top:0.75rem">
-                <header><h2>Cronograma</h2></header>
-                <table class="tabela">
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>Vence</th>
-                            <th class="num">Parcela</th>
-                            @if (_resultado.JurosTotaisCentavos > 0)
+                    @if (_entrada > 0)
+                    {
+                        <div class="campo-grupo">
+                            <Rotulo Texto="Data da entrada" Para="data-entrada" />
+                            <CampoData Valor="_dataEntrada" ValorChanged="v => _dataEntrada = v" Id="data-entrada" />
+                        </div>
+                    }
+
+                    <div class="linha-campos">
+                        <div class="campo-grupo">
+                            <Rotulo Texto="Parcelas" Para="parcelas" />
+                            <input id="parcelas" type="number" inputmode="numeric" min="1" max="@MinhasFinancas.Domain.Simulador.MaximoParcelas"
+                                   class="campo" @bind="_parcelas" />
+                        </div>
+                        <div class="campo-grupo">
+                            <Rotulo Texto="Juros ao mês" Para="taxa" Ajuda="Deixe zero se for sem juros." />
+                            <CampoDinheiro Valor="_taxaCentesimos" ValorChanged="v => _taxaCentesimos = v" Id="taxa"
+                                           Prefixo="@null" Sufixo="%" />
+                        </div>
+                    </div>
+
+                    @if (_preco - _entrada > 0)
+                    {
+                        <div class="campo-grupo">
+                            <Rotulo Texto="Primeira parcela" Para="primeira"
+                                    Ajuda="No cartão, use o dia em que a fatura vence, não o da compra." />
+                            <CampoData Valor="_primeiraParcela" ValorChanged="v => _primeiraParcela = v" Id="primeira" />
+                        </div>
+                    }
+
+                    @if (_erros.Count > 0)
+                    {
+                        <Aviso Tipo="ruim" Papel="alert">
+                            @foreach (var erro in _erros)
                             {
-                                <th class="num">Juros</th>
-                                <th class="num">Resta</th>
+                                <div>@erro</div>
                             }
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @if (_resultado.EntradaCentavos > 0)
-                        {
-                            <tr>
-                                <td>entrada</td>
-                                <td>@Formato.Data(_resultado.DataEntrada)</td>
-                                <td class="num">@Formato.Numero(_resultado.EntradaCentavos)</td>
-                                @if (_resultado.JurosTotaisCentavos > 0)
-                                {
-                                    <td class="num">0,00</td>
-                                    <td class="num"></td>
-                                }
-                            </tr>
-                        }
-                        @foreach (var parcela in _resultado.Parcelas)
-                        {
-                            <tr>
-                                <td>@parcela.Numero</td>
-                                <td>@Formato.Data(parcela.Data)</td>
-                                <td class="num">@Formato.Numero(parcela.PagamentoCentavos)</td>
-                                @if (_resultado.JurosTotaisCentavos > 0)
-                                {
-                                    <td class="num">@Formato.Numero(parcela.JurosCentavos)</td>
-                                    <td class="num">@Formato.Numero(parcela.SaldoDevedorCentavos)</td>
-                                }
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-        }
+                        </Aviso>
+                    }
 
-        <p class="ajuda" style="margin-top:0.5rem">
-            A conta não inclui seguro, tarifas, IOF nem juros por dia corrido, então não é o custo
-            efetivo total que o banco informa.
-        </p>
-    }
-    </div>
+                    <div class="acoes">
+                        <button type="button" class="btn largo" @onclick="Simular">Simular</button>
+                    </div>
+                </div>
+            </Grupo>
+        </div>
 
+        <div>
+            @if (_resultado is null)
+            {
+                <Grupo Classe="sem-titulo">
+                    <Vazio Texto="O resultado compara seu saldo previsto com e sem a compra." NomeIcone="simulador" />
+                </Grupo>
+            }
+            else if (_projecao is not null)
+            {
+                var conforto = _dados.Configuracao.SaldoConfortoCentavos;
+
+                <div class="grupo sem-titulo" id="resultado">
+                    <Aviso Tipo="@Formato.ClasseVeredito(_resultado.Veredito)" Papel="status">
+                        <strong>@Formato.TextoVeredito(_resultado.Veredito).</strong>
+                        @if (_resultado.MenorComCentavos is long menorCom)
+                        {
+                            <text>
+                                Com a compra, o menor saldo vai a @Formato.Moeda(menorCom)
+                                em @Formato.Data(_resultado.DataMenorCom!.Value).
+                            </text>
+                        }
+                    </Aviso>
+
+                    @if (_resultado.JaEstavaNegativoSemCompra)
+                    {
+                        <Aviso Tipo="atencao">
+                            O saldo já ficava negativo sem a compra. Ela piora o menor saldo em
+                            @Formato.Moeda(_resultado.PioraCentavos), mas o aperto não começa nela.
+                        </Aviso>
+                    }
+
+                    @if (_resultado.ImpactoParcial)
+                    {
+                        <Aviso Tipo="atencao">
+                            <strong>Impacto parcial.</strong>
+                            @Formato.Moeda(_resultado.PagamentosForaDoHorizonteCentavos) em pagamentos ficam depois do
+                            fim da previsão e não aparecem aqui.
+                        </Aviso>
+                    }
+                </div>
+
+                <Grupo Titulo="Antes e depois">
+                    <div class="corpo">
+                        <dl class="indicadores" style="grid-template-columns:1fr 1fr">
+                            <div>
+                                <dt>Menor saldo sem</dt>
+                                <dd>
+                                    <Valor Centavos="_resultado.MenorSemCentavos" Classe="@Formato.ClasseValor(_resultado.MenorSemCentavos ?? 0, conforto)" />
+                                    <span class="indicador-sub">@Formato.Data(_resultado.DataMenorSem)</span>
+                                </dd>
+                            </div>
+                            <div>
+                                <dt>Menor saldo com</dt>
+                                <dd>
+                                    <Valor Centavos="_resultado.MenorComCentavos" Classe="@Formato.ClasseValor(_resultado.MenorComCentavos ?? 0, conforto)" />
+                                    <span class="indicador-sub">@Formato.Data(_resultado.DataMenorCom)</span>
+                                    @if (_resultado.PioraCentavos > 0)
+                                    {
+                                        <span class="indicador-sub">piora @Formato.Moeda(_resultado.PioraCentavos)</span>
+                                    }
+                                </dd>
+                            </div>
+                            <div>
+                                <dt>Folga no conforto</dt>
+                                <dd>
+                                    <Valor Centavos="_resultado.FolgaCentavos" Classe="@((_resultado.FolgaCentavos ?? 0) < 0 ? "valor-negativo" : null)" />
+                                    <span class="indicador-sub">
+                                        @(_resultado.PrimeiroDiaAbaixoConfortoCom is DateOnly abaixo
+                                            ? $"abaixo a partir de {Formato.Data(abaixo)}"
+                                            : "nunca abaixo do conforto")
+                                    </span>
+                                </dd>
+                            </div>
+                            <div>
+                                <dt>Total pago</dt>
+                                <dd>
+                                    <Valor Centavos="_resultado.TotalPagoCentavos" />
+                                    <span class="indicador-sub">
+                                        @(_resultado.JurosTotaisCentavos > 0
+                                            ? $"{Formato.Moeda(_resultado.JurosTotaisCentavos)} de juros"
+                                            : "sem juros")
+                                    </span>
+                                </dd>
+                            </div>
+                        </dl>
+
+                        <div style="margin-top:20px">
+                            <GraficoSaldo Serie="_serieSem" SerieComparacao="_serieCom" Conforto="conforto" />
+                        </div>
+                    </div>
+                </Grupo>
+
+                @if (_resultado.Parcelas.Count > 0)
+                {
+                    <Grupo>
+                        <details class="detalhes">
+                            <summary>
+                                Parcelas (@(_resultado.Parcelas.Count + (_resultado.EntradaCentavos > 0 ? 1 : 0)))
+                                <Icone Nome="abrir" Tamanho="18" />
+                            </summary>
+                            <ul class="lista">
+                                @if (_resultado.EntradaCentavos > 0)
+                                {
+                                    <li>
+                                        <div class="item" style="min-height:52px">
+                                            <span class="item-principal">
+                                                <span class="item-titulo">Entrada</span>
+                                                <span class="item-sub">@Formato.Data(_resultado.DataEntrada)</span>
+                                            </span>
+                                            <span class="item-valor"><Valor Centavos="_resultado.EntradaCentavos" /></span>
+                                        </div>
+                                    </li>
+                                }
+                                @foreach (var parcela in _resultado.Parcelas)
+                                {
+                                    <li>
+                                        <div class="item" style="min-height:52px">
+                                            <span class="item-principal">
+                                                <span class="item-titulo">Parcela @parcela.Numero</span>
+                                                <span class="item-sub">@Formato.Data(parcela.Data)</span>
+                                            </span>
+                                            <span class="item-valor">
+                                                <Valor Centavos="parcela.PagamentoCentavos" />
+                                                @if (_resultado.JurosTotaisCentavos > 0)
+                                                {
+                                                    <span class="item-valor-sub">
+                                                        juros @Formato.Moeda(parcela.JurosCentavos), resta @Formato.Moeda(parcela.SaldoDevedorCentavos)
+                                                    </span>
+                                                }
+                                            </span>
+                                        </div>
+                                    </li>
+                                }
+                            </ul>
+                        </details>
+                    </Grupo>
+                }
+
+                <p class="dica" style="margin-top:12px">
+                    Não inclui seguro, tarifas, IOF nem juros por dia corrido: não é o custo efetivo total do banco.
+                </p>
+            }
+        </div>
     </div>
 }
 

@@ -1,0 +1,34 @@
+@*
+    Dinheiro na tela. As partes vem separadas para o numero grande poder diminuir o R$ e os
+    centavos pelo CSS, sem mudar o texto: o leitor de tela continua lendo "R$ 1.234,56".
+    O espaco depois do R$ e comum de proposito: numa coluna estreita o numero desce inteiro
+    para a linha de baixo em vez de ser cortado.
+*@
+
+@if (Centavos is long centavos)
+{
+    var (sinal, inteiro, decimais) = Formato.Partes(centavos);
+    var mais = Mais && centavos > 0 ? "+" : "";
+
+    <span class="valor @Classe">@sinal@mais<span class="valor-moeda">R$</span> <span class="valor-numero">@inteiro<span class="valor-centavos">@decimais</span></span></span>
+}
+else
+{
+    <span class="valor valor-zero @Classe">@Vazio</span>
+}
+
+@code {
+    [Parameter]
+    public long? Centavos { get; set; }
+
+    [Parameter]
+    public string? Classe { get; set; }
+
+    /// <summary>Escreve o + na frente de valor positivo, para dinheiro que entra.</summary>
+    [Parameter]
+    public bool Mais { get; set; }
+
+    /// <summary>Texto quando nao ha valor. Nao e zero: zero e um valor, isto e ausencia dele.</summary>
+    [Parameter]
+    public string Vazio { get; set; } = "sem cálculo";
+}

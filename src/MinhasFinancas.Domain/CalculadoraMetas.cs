@@ -75,9 +75,7 @@ public static class CalculadoraMetas
 
             foreach (var aporte in aportes.Where(a => a.MetaId == meta.Id))
             {
-                var dataEfetiva = Ocorrencias.DataEfetiva(aporte, indiceCartoes);
-
-                foreach (var data in Ocorrencias.Ate(dataEfetiva, aporte.Vezes, limite, aporte.Periodicidade))
+                foreach (var data in Ocorrencias.Do(aporte, indiceCartoes, limite))
                 {
                     if (data < ancora)
                     {

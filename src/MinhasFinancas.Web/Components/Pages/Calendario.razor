@@ -1,230 +1,241 @@
 @page "/calendario"
 @inject PlanejamentoService Servico
 @inject IRelogio Relogio
+@inject IJSRuntime JS
 
 <PageTitle>Calendário | Minhas Finanças</PageTitle>
 
-<h1 class="so-leitor">Calendário</h1>
-
 @if (_dados is null || _projecao is null)
 {
-    <p class="vazio">Carregando...</p>
+    <Cabecalho Titulo="Calendário" Marca="true" Classe="destaque" />
+    <Carregando />
 }
 else
 {
     var conforto = _dados.Configuracao.SaldoConfortoCentavos;
     var doMes = _projecao.Dias.Where(d => d.Data.Year == _mes.Year && d.Data.Month == _mes.Month).ToList();
     var resumo = _projecao.Mes(_mes.Year, _mes.Month);
+    var mesAtual = MinhasFinancas.Domain.Calendario.MesmoMes(_mes, Relogio.Hoje);
 
-    <div class="bloco">
-        <header>
-            <button type="button" class="btn secundario pequeno" @onclick="() => Mover(-1)" disabled="@(!PodeVoltar)"
-                    aria-label="Mês anterior">
-                <Icone Nome="voltar" Tamanho="16" />
-            </button>
-            <h2 style="flex:1; text-align:center">@Formato.MesAno(_mes.Year, _mes.Month)</h2>
-            <button type="button" class="btn secundario pequeno" @onclick="() => Mover(1)" disabled="@(!PodeAvancar)"
-                    aria-label="Mês seguinte">
-                <span style="transform:rotate(180deg); display:inline-flex"><Icone Nome="voltar" Tamanho="16" /></span>
-            </button>
-        </header>
+    // No mês corrente a lista começa em hoje, como na referência: os dias que já passaram
+    // ficam a um toque, para quem quiser registrar o gasto de ontem.
+    var anteriores = mesAtual && !_mostrarAnteriores ? doMes.Count(d => d.Data < Relogio.Hoje) : 0;
+    var visiveis = doMes.Skip(anteriores).ToList();
+
+    <Cabecalho Titulo="Calendário" Marca="true" Classe="destaque">
+        <SeletorMes Mes="_mes" PodeVoltar="PodeVoltar" PodeAvancar="PodeAvancar" AoMover="Mover">
+            <button type="button" class="btn sobre-escuro" style="min-height:52px" @onclick="IrParaHoje">Hoje</button>
+        </SeletorMes>
 
         @if (resumo is not null)
         {
-            <div class="corpo grade-indicadores">
-                <div>
-                    <div class="rotulo">Entrou</div>
-                    <div class="dinheiro valor-ok">@Formato.Moeda(resumo.EntradasCentavos)</div>
+            <div class="hero">
+                <div class="rotulo-linha hero-rotulo">
+                    <span class="rotulo-texto">Saldo no fim do mês</span>
                 </div>
-                <div>
-                    <div class="rotulo">Saiu</div>
-                    <div class="dinheiro">@Formato.Moeda(resumo.CustoDeVidaCentavos + resumo.EconomiasCentavos)</div>
-                </div>
-                <div>
-                    <div class="rotulo">Saldo no fim</div>
-                    <div class="dinheiro @Formato.ClasseValor(resumo.SaldoFimCentavos ?? 0, conforto)">
-                        @Formato.Moeda(resumo.SaldoFimCentavos)
-                    </div>
-                </div>
-                <div>
-                    <div class="rotulo">Menor do mês</div>
-                    <div class="dinheiro @Formato.ClasseValor(resumo.MenorSaldoCentavos ?? 0, conforto)">
-                        @Formato.Moeda(resumo.MenorSaldoCentavos)
-                    </div>
-                    @if (resumo.DataMenorSaldo is DateOnly dataMenor)
-                    {
-                        <div class="ajuda">Em @Formato.Data(dataMenor)</div>
-                    }
-                </div>
+                <Valor Centavos="resumo.SaldoFimCentavos"
+                       Classe="@($"valor-hero {Formato.ClasseValor(resumo.SaldoFimCentavos ?? 0, conforto)}")" />
             </div>
+
+            <dl class="hero-indicadores">
+                <div class="hero-indicador">
+                    <dt>Entradas</dt>
+                    <dd>
+                        <Valor Centavos="resumo.EntradasCentavos" />
+                        @if (resumo.GanhoVariavelCentavos > 0)
+                        {
+                            @* A renda variável conta nas entradas do mês, mas não nos dias: ela já
+                               estava no saldo do banco. Sem dizer, a soma dos dias não fecha. *@
+                            <span class="indicador-sub">@Formato.Moeda(resumo.GanhoVariavelCentavos) de renda variável</span>
+                        }
+                    </dd>
+                </div>
+                <div class="hero-indicador">
+                    <dt>Saídas</dt>
+                    <dd><Valor Centavos="resumo.CustoDeVidaCentavos + resumo.EconomiasCentavos" /></dd>
+                </div>
+                <div class="hero-indicador">
+                    <dt>Menor saldo</dt>
+                    <dd>
+                        <Valor Centavos="resumo.MenorSaldoCentavos" Classe="@Formato.ClasseValor(resumo.MenorSaldoCentavos ?? 0, conforto)" />
+                        @if (resumo.DataMenorSaldo is DateOnly dataMenor)
+                        {
+                            <span class="indicador-sub">em @Formato.DataCurta(dataMenor)</span>
+                        }
+                    </dd>
+                </div>
+            </dl>
         }
-    </div>
+    </Cabecalho>
 
     @if (doMes.Count == 0)
     {
-        <p class="vazio">
-            Este mês está fora da projeção.
-            Ela vai de @Formato.Data(_projecao.Inicio) a @Formato.Data(_projecao.Fim).
-        </p>
+        <Vazio Texto="@($"Este mês está fora da previsão, que vai de {Formato.Data(_projecao.Inicio)} a {Formato.Data(_projecao.Fim)}.")" />
     }
     else
     {
-        <div class="acoes">
-            <button type="button" class="btn secundario pequeno" @onclick="IrParaHoje">Ir para hoje</button>
-            @if (_diaExpandido is not null)
-            {
-                <button type="button" class="btn secundario pequeno" @onclick="() => _diaExpandido = null">
-                    Fechar detalhe
+        @if (anteriores > 0)
+        {
+            <div class="mostrar-anteriores">
+                <button type="button" class="btn texto" @onclick="() => _mostrarAnteriores = true">
+                    <Icone Nome="abrir" Tamanho="18" />
+                    @(anteriores == 1 ? "Mostrar o dia anterior" : $"Mostrar os {anteriores} dias anteriores")
                 </button>
+            </div>
+        }
+
+        <ul class="dias" id="lista-dias" aria-label="Dias de @Formato.MesAno(_mes.Year, _mes.Month)">
+            @foreach (var dia in visiveis)
+            {
+                var ehHoje = dia.Data == Relogio.Hoje;
+                var classe = ehHoje ? "hoje"
+                    : dia.Data.DayOfWeek == DayOfWeek.Saturday ? "sabado"
+                    : dia.Data.DayOfWeek == DayOfWeek.Sunday ? "domingo" : "";
+
+                <li id="dia-@dia.Data.ToString("yyyy-MM-dd")">
+                    <button type="button" class="dia @classe" @onclick="() => Abrir(dia.Data)"
+                            aria-haspopup="dialog"
+                            aria-label="@AriaDoDia(dia, ehHoje)">
+                        <span class="dia-data" aria-hidden="true">
+                            <span class="dia-numero">@dia.Data.Day</span>
+                            <span class="dia-semana">@Formato.DiaSemana(dia.Data)</span>
+                            @if (ehHoje)
+                            {
+                                <span class="selo-hoje">Hoje</span>
+                            }
+                        </span>
+                        <span class="dia-valores" aria-hidden="true">
+                            <span class="rot">Entrada</span>
+                            <span class="val @(dia.EntradasCentavos > 0 ? "entra" : "zero")"><Valor Centavos="dia.EntradasCentavos" /></span>
+                            <span class="rot">Saída</span>
+                            <span class="val @(dia.SaidaTotalCentavos > 0 ? "sai" : "zero")"><Valor Centavos="dia.SaidaTotalCentavos" /></span>
+                            <span class="rot">Diário</span>
+                            <span class="val @(dia.DiarioEReal ? "registrado" : "previsto")"><Valor Centavos="dia.DiarioCentavos" /></span>
+                        </span>
+                        <span class="dia-saldo" aria-hidden="true">
+                            <span class="rot">Saldo</span>
+                            <span class="val @Formato.ClasseValor(dia.SaldoCentavos, conforto)">
+                                @if (dia.Farol != Farol.Ok)
+                                {
+                                    <Icone Nome="alerta" Tamanho="14" />
+                                }
+                                <Valor Centavos="dia.SaldoCentavos" />
+                            </span>
+                        </span>
+                        <span class="dia-seta" aria-hidden="true"><Icone Nome="seta" Tamanho="18" /></span>
+                    </button>
+                </li>
             }
-        </div>
+        </ul>
 
-        <div class="bloco rolagem" style="margin-top:0.75rem">
-            <table class="tabela">
-                <thead>
-                    <tr>
-                        <th>Dia</th>
-                        <th class="num">Entra</th>
-                        <th class="num">Sai</th>
-                        <th class="num">Diário</th>
-                        <th class="num">Saldo</th>
-                        <th class="so-desktop">Situação</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var dia in doMes)
-                    {
-                        var ehHoje = dia.Data == Relogio.Hoje;
-                        var classe = ehHoje ? "hoje" : Formato.FimDeSemana(dia.Data) ? "fim-de-semana" : "";
-
-                        <tr class="@classe clicavel" @onclick="() => Expandir(dia.Data)"
-                            @onkeydown="evento => TeclaNaLinha(evento, dia.Data)"
-                            tabindex="0" role="button"
-                            aria-expanded="@(_diaExpandido == dia.Data ? "true" : "false")"
-                            aria-label="@Formato.Data(dia.Data), saldo @Formato.Moeda(dia.SaldoCentavos), @Formato.TextoFarol(dia.Farol)">
-                            <td>
-                                <strong>@dia.Data.Day</strong>
-                                <span class="ajuda">@Formato.DiaSemana(dia.Data)</span>
-                                @if (ehHoje)
-                                {
-                                    <span class="pilula economia">hoje</span>
-                                }
-                            </td>
-                            <td class="num">
-                                @(dia.EntradasCentavos == 0 ? "" : Formato.Numero(dia.EntradasCentavos))
-                            </td>
-                            <td class="num">
-                                @(dia.SaidaTotalCentavos == 0 ? "" : Formato.Numero(dia.SaidaTotalCentavos))
-                            </td>
-                            <td class="num">
-                                @if (_editandoDiario == dia.Data)
-                                {
-                                    <span @onclick:stopPropagation="true" style="display:inline-block; width:6.5rem">
-                                        <CampoDinheiro Valor="_valorDiario" ValorChanged="v => _valorDiario = v" />
-                                    </span>
-                                }
-                                else
-                                {
-                                    <button type="button"
-                                            class="toque-diario @(dia.DiarioEReal ? "registrado" : "previsto")"
-                                            @onclick:stopPropagation="true"
-                                            @onclick="() => EditarDiario(dia)"
-                                            aria-label="Diário de @Formato.DataCurta(dia.Data): @Formato.Moeda(dia.DiarioCentavos), @(dia.DiarioEReal ? "registrado" : "previsto"). Tocar para mudar">
-                                        @Formato.Numero(dia.DiarioCentavos)
-                                    </button>
-                                }
-                            </td>
-                            <td class="num @Formato.ClasseValor(dia.SaldoCentavos, conforto)">
-                                @Formato.Numero(dia.SaldoCentavos)
-                            </td>
-                            <td class="so-desktop"><FarolTag Farol="dia.Farol" /></td>
-                        </tr>
-
-                        @if (_editandoDiario == dia.Data)
-                        {
-                            <tr class="@classe">
-                                <td colspan="6">
-                                    <div class="acoes" style="margin:0">
-                                        <button type="button" class="btn pequeno" @onclick="SalvarDiario">Salvar</button>
-                                        @if (dia.DiarioEReal)
-                                        {
-                                            <button type="button" class="btn secundario pequeno" @onclick="VoltarParaPrevisao">
-                                                Voltar para previsão
-                                            </button>
-                                        }
-                                        <button type="button" class="btn secundario pequeno" @onclick="() => _editandoDiario = null">
-                                            Cancelar
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        }
-
-                        @if (_diaExpandido == dia.Data)
-                        {
-                            <tr class="@classe">
-                                <td colspan="6">
-                                    <div class="rotulo">@Formato.Data(dia.Data)</div>
-                                    @if (dia.Movimentos.Count == 0)
-                                    {
-                                        <p class="ajuda" style="margin:0.3rem 0 0">
-                                            Nenhum lançamento neste dia, só o diário de @Formato.Moeda(dia.DiarioCentavos)
-                                            (@(dia.DiarioEReal ? "registrado" : "previsto")).
-                                        </p>
-                                    }
-                                    else
-                                    {
-                                        <ul class="lista">
-                                            @foreach (var movimento in dia.Movimentos)
-                                            {
-                                                <li style="padding-left:0; padding-right:0">
-                                                    <div class="principal">
-                                                        <div class="titulo">@movimento.Descricao</div>
-                                                        <div class="sub">
-                                                            <span class="pilulas">
-                                                            <Pilula Tipo="movimento.Tipo" />
-                                                            @if (movimento.Pago)
-                                                            {
-                                                                <span class="farol ok">pago</span>
-                                                            }
-                                                            @if (movimento.Atrasada)
-                                                            {
-                                                                <span class="farol negativo">atrasada</span>
-                                                            }
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                    <div class="dinheiro">@Formato.Moeda(movimento.ValorCentavos)</div>
-                                                </li>
-                                            }
-                                        </ul>
-                                        <p class="ajuda" style="margin:0.3rem 0 0">
-                                            Diário do dia: @Formato.Moeda(dia.DiarioCentavos)
-                                            (@(dia.DiarioEReal ? "registrado" : "previsto")).
-                                        </p>
-                                    }
-                                </td>
-                            </tr>
-                        }
-                    }
-                </tbody>
-            </table>
-        </div>
-
-        <p class="ajuda" style="margin-top:0.5rem">
-            Diário em cinza itálico é o previsto; em azul é o que você registrou.
-            Toque no valor para mudar, ou na linha para ver os lançamentos do dia.
+        <p class="dica" style="margin-top:12px">
+            Diário em itálico é o previsto; em azul, o que você registrou.
         </p>
     }
+}
+
+@if (_diaAberto is DateOnly data && _projecao?.Dia(data) is DiaProjetado aberto && _dados is not null)
+{
+    var conforto = _dados.Configuracao.SaldoConfortoCentavos;
+
+    <Modal Titulo="@($"{Formato.DiaSemanaLongo(data)}, {Formato.DataExtensa(data)}")" AoFechar="Fechar">
+        <ChildContent>
+            <div class="destaque-claro">
+                <div class="rotulo-linha"><span class="rotulo-texto">Saldo no fim do dia</span></div>
+                <Valor Centavos="aberto.SaldoCentavos" Classe="@($"valor-grande {Formato.ClasseValor(aberto.SaldoCentavos, conforto)}")" />
+                <div style="margin-top:6px"><FarolTag Farol="aberto.Farol" /></div>
+            </div>
+
+            <dl class="linhas" style="margin-top:12px">
+                <div class="linha">
+                    <dt>Entradas</dt>
+                    <dd><Valor Centavos="aberto.EntradasCentavos" Mais="true" Classe="@(aberto.EntradasCentavos > 0 ? "valor-entrada" : null)" /></dd>
+                </div>
+                <div class="linha">
+                    <dt>Saídas</dt>
+                    <dd><Valor Centavos="-aberto.SaidaTotalCentavos" /></dd>
+                </div>
+                <div class="linha">
+                    <dt>
+                        Diário
+                        <span class="linha-sub">@(aberto.DiarioEReal ? "registrado" : "previsto")</span>
+                    </dt>
+                    <dd><Valor Centavos="-aberto.DiarioCentavos" /></dd>
+                </div>
+                <div class="linha total">
+                    <dt>Resultado do dia</dt>
+                    <dd><Valor Centavos="aberto.ResultadoCentavos" Mais="true" /></dd>
+                </div>
+            </dl>
+
+            <h3 style="margin-top:20px">Lançamentos</h3>
+            @if (aberto.Movimentos.Count == 0)
+            {
+                <p class="dica">Nenhum lançamento neste dia.</p>
+            }
+            else
+            {
+                <ul class="lista" style="margin-top:4px">
+                    @foreach (var movimento in aberto.Movimentos)
+                    {
+                        var entra = movimento.Tipo == TipoLancamento.Entrada;
+
+                        <li>
+                            <div class="item" style="padding-left:0; padding-right:0">
+                                <IconeTipo Tipo="movimento.Tipo" />
+                                <span class="item-principal">
+                                    <span class="item-titulo">@movimento.Descricao</span>
+                                    @if (movimento.Pago || movimento.Atrasada)
+                                    {
+                                        <span class="item-sub">
+                                            @if (movimento.Pago)
+                                            {
+                                                <span class="farol ok">pago</span>
+                                            }
+                                            @if (movimento.Atrasada)
+                                            {
+                                                <span class="farol negativo">atrasada</span>
+                                            }
+                                        </span>
+                                    }
+                                </span>
+                                <span class="item-valor">
+                                    <Valor Centavos="@(entra ? movimento.ValorCentavos : -movimento.ValorCentavos)"
+                                           Mais="entra" Classe="@(entra ? "valor-entrada" : null)" />
+                                </span>
+                            </div>
+                        </li>
+                    }
+                </ul>
+            }
+
+            <div class="campo-grupo" style="margin-top:20px">
+                <Rotulo Texto="Gasto do dia (total)" Para="diario-dia"
+                        Ajuda="O total de gastos miúdos deste dia. Salvar troca o valor do dia, não soma. Zero também vale. Usar previsto apaga o registro e o dia volta a contar o diário previsto." />
+                <CampoDinheiro Valor="_valorDiario" ValorChanged="v => _valorDiario = v" Id="diario-dia" />
+            </div>
+        </ChildContent>
+        <Rodape>
+            <button type="button" class="btn" disabled="@_salvando" @onclick="SalvarDiario">Salvar gasto</button>
+            @if (aberto.DiarioEReal)
+            {
+                <button type="button" class="btn secundario" disabled="@_salvando" @onclick="VoltarParaPrevisao">
+                    Usar previsto
+                </button>
+            }
+        </Rodape>
+    </Modal>
 }
 
 @code {
     private DadosPlanejamento? _dados;
     private ResultadoProjecao? _projecao;
     private DateOnly _mes;
-    private DateOnly? _diaExpandido;
-    private DateOnly? _editandoDiario;
+    private DateOnly? _diaAberto;
     private long _valorDiario;
+    private bool _mostrarAnteriores;
+    private bool _salvando;
+    private bool _rolarParaLista;
 
     private bool PodeVoltar => _projecao is not null && _mes > MinhasFinancas.Domain.Calendario.PrimeiroDiaDoMes(_projecao.Inicio);
 
@@ -233,8 +244,21 @@ else
     protected override async Task OnInitializedAsync()
     {
         await CarregarAsync();
-        _mes = MinhasFinancas.Domain.Calendario.PrimeiroDiaDoMes(MinhasFinancas.Domain.Calendario.Maior(Relogio.Hoje, _projecao!.Inicio));
+        _mes = MesInicial();
     }
+
+    protected override async Task OnAfterRenderAsync(bool primeiraRenderizacao)
+    {
+        if (_rolarParaLista)
+        {
+            _rolarParaLista = false;
+            await JS.InvokeVoidAsync("minhasFinancas.rolarAte", "lista-dias");
+        }
+    }
+
+    private DateOnly MesInicial() =>
+        MinhasFinancas.Domain.Calendario.PrimeiroDiaDoMes(
+            MinhasFinancas.Domain.Calendario.Maior(Relogio.Hoje, _projecao!.Inicio));
 
     private async Task CarregarAsync()
     {
@@ -242,48 +266,75 @@ else
         _projecao = Servico.Projetar(_dados, null, Relogio.Hoje);
     }
 
-    private void Mover(int meses) => _mes = _mes.AddMonths(meses);
+    private void Mover(int meses)
+    {
+        _mes = _mes.AddMonths(meses);
+        _mostrarAnteriores = false;
+    }
 
     private void IrParaHoje()
     {
-        _mes = MinhasFinancas.Domain.Calendario.PrimeiroDiaDoMes(MinhasFinancas.Domain.Calendario.Maior(Relogio.Hoje, _projecao!.Inicio));
-        _diaExpandido = Relogio.Hoje;
+        var jaNoMes = _mes == MesInicial();
+        _mes = MesInicial();
+        _mostrarAnteriores = false;
+
+        // Ja no mes, o botao serve para voltar a lista ao comeco depois de abrir os dias anteriores.
+        _rolarParaLista = jaNoMes;
     }
 
-    private void Expandir(DateOnly data) => _diaExpandido = _diaExpandido == data ? null : data;
+    private string AriaDoDia(DiaProjetado dia, bool ehHoje) =>
+        $"{(ehHoje ? "Hoje, " : "")}{Formato.DiaSemanaLongo(dia.Data)}, {Formato.DataExtensa(dia.Data)}. " +
+        $"Entrada {Formato.Moeda(dia.EntradasCentavos)}, saída {Formato.Moeda(dia.SaidaTotalCentavos)}, " +
+        $"diário {Formato.Moeda(dia.DiarioCentavos)} {(dia.DiarioEReal ? "registrado" : "previsto")}. " +
+        $"Saldo {Formato.Moeda(dia.SaldoCentavos)}, {Formato.TextoFarol(dia.Farol)}.";
 
-    /// <summary>Enter abre e fecha o detalhe do dia, para quem navega pelo teclado.</summary>
-    private void TeclaNaLinha(KeyboardEventArgs evento, DateOnly data)
+    private void Abrir(DateOnly data)
     {
-        if (evento.Key == "Enter")
-        {
-            Expandir(data);
-        }
+        _diaAberto = data;
+        _valorDiario = _projecao?.Dia(data)?.DiarioCentavos ?? 0;
     }
 
-    private void EditarDiario(DiaProjetado dia)
-    {
-        _editandoDiario = dia.Data;
-        _valorDiario = dia.DiarioCentavos;
-    }
+    private void Fechar() => _diaAberto = null;
 
     private async Task SalvarDiario()
     {
-        if (_editandoDiario is DateOnly data)
+        if (_diaAberto is not DateOnly data || _salvando)
+        {
+            return;
+        }
+
+        _salvando = true;
+
+        try
         {
             await Servico.RegistrarDiarioAsync(data, _valorDiario);
-            _editandoDiario = null;
+            _diaAberto = null;
             await CarregarAsync();
+        }
+        finally
+        {
+            _salvando = false;
         }
     }
 
     private async Task VoltarParaPrevisao()
     {
-        if (_editandoDiario is DateOnly data)
+        if (_diaAberto is not DateOnly data || _salvando)
+        {
+            return;
+        }
+
+        _salvando = true;
+
+        try
         {
             await Servico.VoltarParaPrevisaoAsync(data);
-            _editandoDiario = null;
+            _diaAberto = null;
             await CarregarAsync();
+        }
+        finally
+        {
+            _salvando = false;
         }
     }
 }

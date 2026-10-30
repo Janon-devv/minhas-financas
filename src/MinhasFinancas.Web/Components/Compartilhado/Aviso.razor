@@ -1,0 +1,28 @@
+@* Aviso curto com icone. Erro usa role=alert e confirmacao usa status, porque borda ou cor
+   sozinhas nao chegam ao leitor de tela. *@
+
+<div class="aviso @Tipo" role="@Papel" aria-live="@(Papel == "status" ? "polite" : null)">
+    <Icone Nome="@NomeIcone" Tamanho="18" />
+    <div class="aviso-texto">@ChildContent</div>
+</div>
+
+@code {
+    /// <summary>info, atencao, ruim ou bom.</summary>
+    [Parameter]
+    public string Tipo { get; set; } = "info";
+
+    /// <summary>alert para erro, status para confirmacao, nada para o que ja estava na tela.</summary>
+    [Parameter]
+    public string? Papel { get; set; }
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    private string NomeIcone => Tipo switch
+    {
+        "bom" => "check",
+        "ruim" => "erro",
+        "atencao" => "alerta",
+        _ => "info"
+    };
+}

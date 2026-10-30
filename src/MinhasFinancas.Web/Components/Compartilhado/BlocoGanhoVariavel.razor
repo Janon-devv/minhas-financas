@@ -1,107 +1,97 @@
 @inject PlanejamentoService Servico
 @inject IRelogio Relogio
 
-@* Ganho variavel (R17). Um campo por mes, no lugar de um lancamento novo a cada mes.
-   E registro do que JA CAIU: conta nos ganhos do mes, mas nao mexe no saldo projetado,
+@* Renda variavel (R17). Um campo por mes, no lugar de um lancamento novo a cada mes.
+   E registro do que JA CAIU: conta nas entradas do mes, mas nao mexe no saldo previsto,
    porque o saldo conferido com o banco ja contem esse dinheiro. *@
 
-<div class="bloco" style="margin-top:0.75rem">
-    <header>
-        <h2>Ganho variável</h2>
-        <span class="pilulas">
-            <button type="button" class="btn pequeno secundario" @onclick="() => Mover(-1)"
-                    aria-label="Mês anterior">
-                <Icone Nome="voltar" Tamanho="16" />
-            </button>
-            <button type="button" class="btn pequeno secundario" @onclick="() => Mover(1)"
-                    disabled="@(!PodeAvancar)" aria-label="Mês seguinte">
-                <span style="transform:rotate(180deg); display:inline-flex"><Icone Nome="voltar" Tamanho="16" /></span>
-            </button>
-        </span>
-    </header>
-
+<Grupo>
     <div class="corpo">
-        <p class="ajuda" style="margin:0 0 0.75rem">
-            Renda que muda todo mês, tipo aplicativo de corrida ou freela. Preencha quanto
-            <strong>já entrou</strong> e ele conta nos ganhos do mês. Não mexe no saldo: esse
-            dinheiro já está na conta, e somar de novo mostraria dinheiro que não existe.
-        </p>
+        <SeletorMes Mes="_mes" PodeAvancar="PodeAvancar" AoMover="Mover" Claro="true" />
 
-        <div class="linha-campos">
-            <div class="campo-grupo">
-                <label for="ganho-variavel">@Formato.MesAno(_mes.Year, _mes.Month)</label>
-                <CampoDinheiro Id="ganho-variavel" @bind-Valor="_valor" />
-            </div>
-            <div class="campo-grupo">
-                <label for="ganho-obs">De onde veio (opcional)</label>
-                <input id="ganho-obs" class="campo" maxlength="60" @bind="_obs"
-                       placeholder="Uber, freela" />
+        <div class="campo-grupo" style="margin-top:16px">
+            <Rotulo Texto="@($"Recebido em {Formato.Mes(_mes.Month)}")" Para="ganho-variavel"
+                    Ajuda="Renda que muda todo mês, como corrida por aplicativo ou freela. Informe o que já caiu na conta. O valor já está no saldo conferido com o banco, por isso não muda o saldo previsto: conta só nas entradas do mês, no Resumo. Mês sem registro conta zero; o app não estima média." />
+            <CampoDinheiro Id="ganho-variavel" @bind-Valor="_valor" />
+            <div class="dica">
+                @(_registrado is null
+                    ? "Sem registro, o mês conta zero. Não muda o saldo previsto."
+                    : "Não muda o saldo previsto: o valor já está no saldo do banco.")
             </div>
         </div>
 
-        <div class="pilulas" style="margin-top:0.75rem">
-            <button type="button" class="btn pequeno" @onclick="Salvar" disabled="@_salvando">
-                Salvar o mês
+        <div class="campo-grupo">
+            <Rotulo Texto="Origem (opcional)" Para="ganho-obs" />
+            <input id="ganho-obs" class="campo" maxlength="60" autocomplete="off" @bind="_obs" placeholder="Uber, freela" />
+        </div>
+
+        <div class="acoes">
+            <button type="button" class="btn" @onclick="Salvar" disabled="@_salvando">
+                @(_salvando ? "Salvando..." : "Salvar")
             </button>
             @if (_registrado is not null)
             {
-                <button type="button" class="btn pequeno secundario" @onclick="Limpar"
-                        disabled="@_salvando">
-                    Apagar
+                <button type="button" class="btn contorno" @onclick="Limpar" disabled="@_salvando">
+                    Apagar registro
                 </button>
             }
         </div>
 
-        @if (_confirmacao is not null)
+        @if (_erros.Count > 0)
         {
-            <p class="ajuda" aria-live="polite" style="margin:0.6rem 0 0">@_confirmacao</p>
+            <div style="margin-top:12px">
+                <Aviso Tipo="ruim" Papel="alert">
+                    @foreach (var erro in _erros)
+                    {
+                        <div>@erro</div>
+                    }
+                </Aviso>
+            </div>
         }
 
-        @if (_registrado is null)
+        @if (_confirmacao is not null)
         {
-            <p class="ajuda" style="margin:0.6rem 0 0">
-                Este mês ainda está em branco, e mês em branco rende zero na conta. O app não
-                chuta média nenhuma.
-            </p>
+            <div style="margin-top:12px">
+                <Aviso Tipo="bom" Papel="status">@_confirmacao</Aviso>
+            </div>
         }
     </div>
-</div>
+</Grupo>
 
 @if (_historico.Count > 0)
 {
-    <div class="bloco" style="margin-top:0.75rem">
-        <header>
-            <h2>Meses preenchidos</h2>
+    <Grupo Titulo="Meses registrados">
+        <Marcador>
             @if (GanhosVariaveis.Media(_historico) is long media)
             {
                 <span class="pilula neutra">média @Formato.Moeda(media)</span>
             }
-        </header>
-        <div class="corpo" style="padding:0">
-            <table class="tabela">
-                <thead>
-                    <tr>
-                        <th scope="col">Mês</th>
-                        <th scope="col">De onde veio</th>
-                        <th scope="col" style="text-align:right">Ganho</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var registro in _historico)
-                    {
-                        <tr class="clicavel @(registro.Ano == _mes.Year && registro.Mes == _mes.Month ? "hoje" : "")"
-                            tabindex="0" role="button"
-                            @onclick="() => Ir(registro)"
-                            @onkeydown="@(e => { if (e.Key is "Enter" or " ") { Ir(registro); } })">
-                            <td>@Formato.MesAnoCurto(registro.Ano, registro.Mes)</td>
-                            <td class="secundario">@(registro.Obs ?? "-")</td>
-                            <td style="text-align:right">@Formato.Moeda(registro.ValorCentavos)</td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
-    </div>
+        </Marcador>
+        <ChildContent>
+            <ul class="lista">
+                @foreach (var registro in _historico)
+                {
+                    var atual = registro.Ano == _mes.Year && registro.Mes == _mes.Month;
+
+                    <li>
+                        <button type="button" class="item" @onclick="() => Ir(registro)"
+                                aria-current="@(atual ? "true" : null)"
+                                style="@(atual ? "background:var(--acento-suave)" : null)">
+                            <span class="icone-tipo entrada"><Icone Nome="renda" Tamanho="20" /></span>
+                            <span class="item-principal">
+                                <span class="item-titulo">@Formato.MesAno(registro.Ano, registro.Mes)</span>
+                                @if (!string.IsNullOrWhiteSpace(registro.Obs))
+                                {
+                                    <span class="item-sub">@registro.Obs</span>
+                                }
+                            </span>
+                            <span class="item-valor"><Valor Centavos="registro.ValorCentavos" /></span>
+                        </button>
+                    </li>
+                }
+            </ul>
+        </ChildContent>
+    </Grupo>
 }
 
 @code {
@@ -115,6 +105,7 @@
     private long _valor;
     private string _obs = "";
     private bool _salvando;
+    private List<string> _erros = [];
     private string? _confirmacao;
     private GanhoVariavel? _registrado;
     private List<GanhoVariavel> _historico = [];
@@ -152,14 +143,29 @@
         Ler();
     }
 
+    // Sem a trava antes de tudo, dois toques rapidos gravavam o mes duas vezes ao mesmo tempo, e o
+    // segundo batia no indice unico do mes e derrubava a tela.
     private async Task Salvar()
     {
+        if (_salvando)
+        {
+            return;
+        }
+
+        _erros = Validacao.GanhoVariavel(_valor);
+
+        if (_erros.Count > 0)
+        {
+            _confirmacao = null;
+            return;
+        }
+
         _salvando = true;
 
         try
         {
             await Servico.SalvarGanhoVariavelAsync(_mes.Year, _mes.Month, _valor, _obs);
-            _confirmacao = $"Guardado: {Formato.Moeda(_valor)} em {Formato.MesAno(_mes.Year, _mes.Month)}.";
+            _confirmacao = $"Salvo: {Formato.Moeda(_valor)} em {Formato.MesAno(_mes.Year, _mes.Month)}.";
             await Mudou.InvokeAsync();
         }
         finally
@@ -170,12 +176,18 @@
 
     private async Task Limpar()
     {
+        if (_salvando)
+        {
+            return;
+        }
+
+        _erros = [];
         _salvando = true;
 
         try
         {
             await Servico.LimparGanhoVariavelAsync(_mes.Year, _mes.Month);
-            _confirmacao = $"{Formato.MesAno(_mes.Year, _mes.Month)} voltou para em branco.";
+            _confirmacao = $"{char.ToUpper(Formato.MesAno(_mes.Year, _mes.Month)[0])}{Formato.MesAno(_mes.Year, _mes.Month)[1..]} ficou sem registro.";
             await Mudou.InvokeAsync();
         }
         finally

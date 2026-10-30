@@ -73,9 +73,7 @@ public static class Pendencias
                 continue;
             }
 
-            var dataEfetiva = Ocorrencias.DataEfetiva(lancamento, cartoes);
-
-            foreach (var data in Ocorrencias.Ate(dataEfetiva, lancamento.Vezes, ate, lancamento.Periodicidade))
+            foreach (var data in Ocorrencias.Do(lancamento, cartoes, ate))
             {
                 if (data < desde)
                 {
