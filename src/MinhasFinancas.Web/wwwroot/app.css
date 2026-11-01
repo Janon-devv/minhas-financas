@@ -133,7 +133,12 @@ html {
     background: var(--fundo);
 }
 
-html.modal-aberto {
+/*
+    Fundo parado enquanto houver modal na tela, e so enquanto houver. Era uma classe posta e
+    tirada pelo Modal.razor.js, mas o servidor manda o encerrar do modal antes de tirar a folha
+    da tela: o script ainda a encontrava, mantinha a classe e a rolagem ficava travada.
+*/
+html:has(.fundo-modal) {
     overflow: hidden;
 }
 
@@ -278,6 +283,11 @@ html.teclado-aberto .nav {
 
 .nav-marca {
     display: none;
+}
+
+/* As secoes da coluna do PC. No celular elas somem e os links ficam lado a lado na barra. */
+.nav-secao {
+    display: contents;
 }
 
 .nav a {
@@ -1609,6 +1619,10 @@ select.filtro-select {
     color: var(--secundario);
 }
 
+.resultado-mes-barras {
+    margin-top: var(--esp-5);
+}
+
 /* ---------- Indicadores soltos numa superficie clara ---------- */
 
 .destaque-claro .rotulo-texto {
@@ -1971,8 +1985,9 @@ html.teclado-aberto .modal-rodape {
     border-bottom: 1px solid var(--linha);
 }
 
+/* O botao do mes ja tem os 44px de alvo; com mais respiro em volta a linha passava de 64px. */
 .tabela td {
-    padding: 10px var(--esp-3);
+    padding: var(--esp-1) var(--esp-3);
     border-bottom: 1px solid var(--linha);
     vertical-align: middle;
 }
@@ -1998,13 +2013,15 @@ html.teclado-aberto .modal-rodape {
 
 /* ---------- Metas ---------- */
 
-.cartao {
+/* Nao e ".cartao": esse nome ja e a classe do tipo Cartao em .icone-tipo e .pilula, que
+   herdavam este respiro e saiam deslocadas e cortadas. */
+.cartao-meta {
     background: var(--superficie);
     border-radius: var(--raio-g);
     padding: var(--esp-4);
 }
 
-.cartao + .cartao {
+.cartao-meta + .cartao-meta {
     margin-top: var(--esp-3);
 }
 
@@ -2091,24 +2108,52 @@ html.teclado-aberto .modal-rodape {
     :root {
         --margem: 32px;
         --largura-lateral: 248px;
+        /* Petroleo mais fundo que o do cabecalho, para o cartao do numero principal nao se
+           perder ao lado da coluna. O verde-agua e o do anel do icone do app. */
+        --lateral-fundo: #0F3E3B;
+        --radar: #5EEAD4;
+    }
+
+    html.lateral-recolhida {
+        --largura-lateral: 80px;
     }
 
     .faixa-status {
         display: none;
     }
 
+    /*
+        Coluna em petroleo fundo, com os aneis do radar do icone ao fundo. No PC ela faz o papel
+        que o cabecalho petroleo faz no celular, e a pagina aberta e o ponto no radar.
+    */
     .nav {
         top: 0;
         bottom: 0;
         right: auto;
         width: var(--largura-lateral);
         flex-direction: column;
-        gap: 2px;
-        padding: var(--esp-6) var(--esp-3);
+        gap: var(--esp-6);
+        padding: var(--esp-5) var(--esp-3) var(--esp-4);
         border-top: 0;
-        border-right: 1px solid var(--linha);
-        background: var(--superficie);
+        background: var(--lateral-fundo);
         backdrop-filter: none;
+        color: var(--sobre-escuro);
+        transition: width var(--transicao);
+    }
+
+    /* Aneis saindo do canto de baixo, como no icone. So enfeite, atras dos links. */
+    .nav::before {
+        content: "";
+        position: absolute;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        z-index: -1;
+        height: 420px;
+        background: repeating-radial-gradient(circle at 0 100%, transparent 0 47px, rgba(255, 255, 255, 0.07) 47px 48px);
+        -webkit-mask-image: linear-gradient(to top, #000 15%, transparent);
+        mask-image: linear-gradient(to top, #000 15%, transparent);
+        pointer-events: none;
     }
 
     html.teclado-aberto .nav {
@@ -2116,58 +2161,215 @@ html.teclado-aberto .modal-rodape {
     }
 
     .nav-marca {
-        display: block;
-        padding: 0 var(--esp-3) var(--esp-6);
+        display: flex;
+        align-items: center;
+        gap: var(--esp-3);
+        min-height: 48px;
+        padding: 0 var(--esp-2);
+    }
+
+    .nav-marca img {
+        flex-shrink: 0;
+        border-radius: var(--raio);
+        box-shadow: 0 0 0 1px var(--linha-escuro);
     }
 
     .nav-marca strong {
         display: block;
         font-size: var(--t-md);
-        color: var(--petroleo);
+        line-height: 1.2;
     }
 
     .nav-marca span {
-        font-size: var(--t-sm);
-        color: var(--secundario);
+        display: block;
+        font-size: var(--t-xs);
+        color: var(--sobre-escuro-2);
     }
 
-    .nav a {
+    .nav-secao {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    .nav-secao-titulo {
+        padding: 0 var(--esp-3) var(--esp-2);
+        font-size: 0.6875rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        white-space: nowrap;
+        /* 60% de branco sobre o petroleo fundo da 5,3:1. */
+        color: rgba(255, 255, 255, 0.6);
+    }
+
+    .nav-rodape {
+        margin-top: auto;
+        padding-top: var(--esp-3);
+        border-top: 1px solid var(--linha-escuro);
+    }
+
+    .nav a,
+    .nav-recolher {
+        position: relative;
         flex: 0 0 auto;
         flex-direction: row;
         justify-content: flex-start;
         gap: var(--esp-3);
         min-height: var(--alvo-toque);
         padding: 0 var(--esp-3);
+        color: var(--sobre-escuro-2);
         font-size: var(--t-base);
+        transition: background-color var(--transicao), color var(--transicao);
+    }
+
+    /* Recolher e o ultimo item do rodape, com o mesmo desenho dos links. */
+    .nav-recolher {
+        display: flex;
+        align-items: center;
+        width: 100%;
+        border: 0;
+        border-radius: var(--raio);
+        background: none;
+        font-family: inherit;
+        font-weight: 550;
+        cursor: pointer;
+    }
+
+    .nav-recolher .icone-svg {
+        transition: transform var(--transicao);
     }
 
     .nav-icone {
+        flex-shrink: 0;
         width: auto;
         height: auto;
     }
 
-    .nav a.active .nav-icone {
-        background: none;
+    .nav-texto {
+        min-width: 0;
+        white-space: nowrap;
     }
 
-    .nav a:hover {
-        background: var(--superficie-suave);
-        color: var(--texto);
+    .nav a:hover,
+    .nav-recolher:hover {
+        background: var(--superficie-escuro);
+        color: var(--sobre-escuro);
     }
 
     .nav a.active {
-        background: var(--acento-suave);
-        color: var(--acento-forte);
+        background: rgba(255, 255, 255, 0.12);
+        color: var(--sobre-escuro);
+        font-weight: 650;
+    }
+
+    .nav a.active .nav-icone {
+        background: none;
+        color: var(--radar);
+    }
+
+    /* A pagina aberta e o ponto no radar. */
+    .nav a.active::after {
+        content: "";
+        width: 6px;
+        height: 6px;
+        margin-left: auto;
+        border-radius: 50%;
+        background: var(--radar);
+        box-shadow: 0 0 0 4px rgba(94, 234, 212, 0.18);
+    }
+
+    .nav a:focus-visible,
+    .nav-recolher:focus-visible {
+        outline-color: var(--radar);
+    }
+
+    .quando-recolhida {
+        display: none;
+    }
+
+    /* ---------- Coluna recolhida: so os icones; o nome aparece ao lado no mouse ou no foco ---------- */
+
+    html.lateral-recolhida .quando-aberta {
+        display: none;
+    }
+
+    html.lateral-recolhida .quando-recolhida {
+        display: inline;
+    }
+
+    html.lateral-recolhida .nav-recolher .icone-svg {
+        transform: rotate(180deg);
+    }
+
+    html.lateral-recolhida .nav-marca {
+        justify-content: center;
+        padding: 0;
+    }
+
+    html.lateral-recolhida .nav a,
+    html.lateral-recolhida .nav-recolher {
+        justify-content: center;
+        padding: 0;
+    }
+
+    /* O ponto vai para o canto do icone. */
+    html.lateral-recolhida .nav a.active::after {
+        position: absolute;
+        top: 8px;
+        right: 9px;
+    }
+
+    /* O nome da secao vira um fio. */
+    html.lateral-recolhida .nav-secao-titulo {
+        height: 1px;
+        margin: 0 var(--esp-3) var(--esp-2);
+        padding: 0;
+        overflow: hidden;
+        background: var(--linha-escuro);
+        color: transparent;
+    }
+
+    /* Fora da vista, mas o leitor de tela continua lendo o nome do link. */
+    html.lateral-recolhida .nav .nav-texto {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+    }
+
+    html.lateral-recolhida .nav a:hover .nav-texto,
+    html.lateral-recolhida .nav a:focus-visible .nav-texto,
+    html.lateral-recolhida .nav-recolher:hover .nav-texto,
+    html.lateral-recolhida .nav-recolher:focus-visible .nav-texto {
+        top: 50%;
+        left: calc(100% + var(--esp-3));
+        z-index: 40;
+        width: auto;
+        height: auto;
+        overflow: visible;
+        clip-path: none;
+        padding: 6px 10px;
+        border-radius: var(--raio-p);
+        background: var(--texto);
+        color: var(--sobre-escuro);
+        font-size: var(--t-sm);
+        font-weight: 600;
+        transform: translateY(-50%);
+        pointer-events: none;
     }
 
     .conteudo {
         margin-left: var(--largura-lateral);
         padding-top: var(--esp-6);
         padding-bottom: var(--esp-8);
+        transition: margin-left var(--transicao);
     }
 
+    /* Larga como a tela; so num monitor muito largo ela para de crescer, centrada. */
     .pagina {
-        max-width: 1120px;
+        max-width: 1720px;
         margin: 0 auto;
     }
 
@@ -2181,22 +2383,152 @@ html.teclado-aberto .modal-rodape {
         border-radius: 24px;
     }
 
-    .cabecalho.com-acoes {
-        padding-bottom: calc(var(--esp-8) + var(--esp-8));
+    /*
+        Com a coluna lateral o cabecalho deixa de ser o bloco petroleo: titulo grande sobre o
+        fundo, como no painel da pousada, e o petroleo fica no cartao do numero principal. O que
+        pedia o fundo escuro era a barra de status do iPhone, que no PC nao existe. Sem a coluna
+        (primeiro acesso) o cabecalho continua o do celular.
+    */
+    .com-lateral .cabecalho {
+        padding: 0;
+        border-radius: 0;
+        background: none;
+        color: var(--texto);
     }
 
-    /* Esticadas na largura toda, tres acoes e um seletor de mes ficam perdidos no PC. */
-    .acoes-rapidas {
+    .com-lateral .cabecalho-topo {
+        min-height: 48px;
+    }
+
+    /* A marca ja esta no topo da coluna lateral. */
+    .com-lateral .cabecalho .marca {
+        display: none;
+    }
+
+    .com-lateral .cabecalho h1,
+    .com-lateral .cabecalho .marca + h1 {
+        margin: 0;
+        font-size: 1.75rem;
+        font-weight: 700;
+        letter-spacing: -0.025em;
+        line-height: 1.2;
+        color: var(--texto);
+    }
+
+    /* O anel de foco branco era para o petroleo; no fundo claro ele sumia. */
+    .com-lateral .cabecalho a:focus-visible,
+    .com-lateral .cabecalho button:focus-visible {
+        outline-color: var(--acento);
+    }
+
+    .com-lateral .cabecalho .hero button:focus-visible {
+        outline-color: var(--sobre-escuro);
+    }
+
+    /* Botao sobre escuro vira contorno claro; o principal continua cheio. */
+    .com-lateral .cabecalho .btn.sobre-escuro {
+        border-color: var(--linha);
+        background: var(--superficie);
+        color: var(--texto);
+    }
+
+    .com-lateral .cabecalho .seletor-mes-controle {
+        border-color: var(--linha);
+        background: var(--superficie);
+    }
+
+    /* Abas como controle segmentado claro. O secundario sobre este cinza da 5,1:1. */
+    .com-lateral .cabecalho .abas {
+        background: var(--pilula-neutra-fundo);
+    }
+
+    .com-lateral .cabecalho .abas a {
+        color: var(--secundario);
+    }
+
+    .com-lateral .cabecalho .abas a[aria-current="page"] {
+        color: var(--petroleo);
+    }
+
+    .com-lateral .cabecalho .texto-ajuda {
+        border: 1px solid var(--linha);
+        background: var(--superficie);
+    }
+
+    /* O numero principal num cartao petroleo; os indicadores num cartao branco. */
+    .com-lateral .cabecalho > .hero {
+        margin-top: var(--esp-4);
+        padding: var(--esp-5) var(--esp-6) var(--esp-6);
+        border-radius: var(--raio-g);
+        background: var(--petroleo);
+        color: var(--sobre-escuro);
+    }
+
+    .valor-hero {
+        font-size: 3rem;
+    }
+
+    .com-lateral .cabecalho > .hero-indicadores {
+        align-content: center;
+        margin-top: var(--esp-3);
+        padding: var(--esp-5) 0;
+        border: 1px solid var(--linha);
+        border-radius: var(--raio-g);
+        background: var(--superficie);
+    }
+
+    .com-lateral .hero-indicador {
+        padding: 0 var(--esp-5);
+    }
+
+    .com-lateral .hero-indicador + .hero-indicador {
+        border-left-color: var(--linha);
+    }
+
+    .com-lateral .hero-indicador dt,
+    .com-lateral .hero-indicador .indicador-sub {
+        color: var(--secundario);
+    }
+
+    .com-lateral .hero-indicador dd {
+        font-size: var(--t-lg);
+        font-weight: 700;
+        letter-spacing: -0.01em;
+    }
+
+    /* Fora do petroleo, as cores de alerta voltam as da superficie clara. */
+    .com-lateral .cabecalho .hero-indicadores .valor-negativo {
+        color: var(--negativo-texto);
+    }
+
+    .com-lateral .cabecalho .hero-indicadores .valor-atencao {
+        color: var(--atencao-texto);
+    }
+
+    /* Esticados na largura toda, seletor de mes e abas ficam perdidos. */
+    .seletor-mes,
+    .cabecalho > .abas {
         max-width: 560px;
-        margin-left: var(--esp-8);
     }
 
-    .seletor-mes {
-        max-width: 560px;
+    /* Fio fino em volta dos blocos brancos, como nos cartoes do painel da pousada. */
+    .com-lateral .grupo-corpo,
+    .com-lateral .cartao-meta,
+    .com-lateral .aviso.info {
+        border: 1px solid var(--linha);
     }
 
-    .hero-indicadores {
-        max-width: 720px;
+    .resultado-mes {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        align-items: center;
+        /* Vao entre colunas mais o respiro dos dois blocos: as barras comecam onde comeca o
+           conteudo da coluna da direita, logo abaixo. */
+        column-gap: calc(var(--esp-6) + 2 * var(--esp-4));
+    }
+
+    .resultado-mes-barras {
+        margin-top: 0;
     }
 
     .colunas {
@@ -2213,7 +2545,7 @@ html.teclado-aberto .modal-rodape {
     .dias {
         margin-left: 0;
         margin-right: 0;
-        border: 0;
+        border: 1px solid var(--linha);
         border-radius: var(--raio-g);
         overflow: hidden;
     }
@@ -2259,10 +2591,6 @@ html.teclado-aberto .modal-rodape {
         background: var(--hoje-fundo);
     }
 
-    .acao-rapida:hover {
-        background: var(--superficie-suave);
-    }
-
     .btn:hover:not(:disabled) {
         filter: brightness(1.06);
     }
@@ -2275,6 +2603,47 @@ html.teclado-aberto .modal-rodape {
     .btn.largo {
         width: auto;
         min-width: 240px;
+    }
+}
+
+/* ---------- PC largo: cabecalho em duas colunas ---------- */
+
+/*
+    Abaixo disto a coluna dos indicadores nao comporta tres valores nem o seletor com o botao
+    Hoje, e eles continuam empilhados. Acima, o cartao do numero e o dos indicadores ficam lado a
+    lado, da mesma altura, e o seletor de mes sobe para a linha do titulo.
+*/
+@media (min-width: 1200px) {
+    .com-lateral .cabecalho {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr);
+        column-gap: var(--esp-4);
+    }
+
+    .com-lateral .cabecalho > * {
+        grid-column: 1 / -1;
+    }
+
+    .com-lateral .cabecalho:has(> .seletor-mes) > .cabecalho-topo {
+        grid-column: 1;
+    }
+
+    .com-lateral .cabecalho > .seletor-mes {
+        grid-column: 2;
+        grid-row: 1;
+        justify-self: end;
+        width: 100%;
+        max-width: 520px;
+        margin-top: 0;
+    }
+
+    .com-lateral .cabecalho > .hero {
+        grid-column: 1;
+    }
+
+    .com-lateral .cabecalho > .hero-indicadores {
+        grid-column: 2;
+        margin-top: var(--esp-4);
     }
 }
 

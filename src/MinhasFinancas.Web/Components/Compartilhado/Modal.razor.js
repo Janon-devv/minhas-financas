@@ -1,9 +1,9 @@
 // Prende o foco de teclado dentro do modal enquanto ele estiver aberto, para quem navega
 // sem mouse nunca cair sem querer no conteudo por tras. Ao fechar, devolve o foco para o
 // elemento que abriu o modal. Sem biblioteca: so Tab, Shift+Tab e Esc.
+// O fundo parado enquanto o modal esta aberto e do CSS (html:has(.fundo-modal)), nao daqui.
 export function prenderFoco(elementoModal, dotnet) {
     const anterior = document.activeElement;
-    const raiz = document.documentElement;
 
     function focaveis() {
         return Array.from(elementoModal.querySelectorAll(
@@ -59,7 +59,6 @@ export function prenderFoco(elementoModal, dotnet) {
 
     elementoModal.addEventListener('keydown', aoTeclar);
     document.addEventListener('keydown', aoTeclarNoDocumento);
-    raiz.classList.add('modal-aberto');
 
     // Foca a propria folha, nao o primeiro campo: no Android o foco num campo abre o teclado
     // sem ninguem pedir. O leitor de tela anuncia o titulo, e o Tab segue para o primeiro campo.
@@ -69,10 +68,6 @@ export function prenderFoco(elementoModal, dotnet) {
         encerrar() {
             elementoModal.removeEventListener('keydown', aoTeclar);
             document.removeEventListener('keydown', aoTeclarNoDocumento);
-
-            if (!document.querySelector('.fundo-modal .modal')) {
-                raiz.classList.remove('modal-aberto');
-            }
 
             if (anterior instanceof HTMLElement && document.contains(anterior)) {
                 anterior.focus({ preventScroll: true });

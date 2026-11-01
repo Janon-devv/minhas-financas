@@ -20,78 +20,89 @@ else
     var semResposta = _pendencias.Count(p => p.ForaDaProjecao && !p.Registrada);
 
     <Cabecalho Titulo="@($"Hoje, {Formato.DataExtensa(Relogio.Hoje)}")" Marca="true" Classe="destaque com-acoes">
-        <div class="hero">
-            <div class="rotulo-linha hero-rotulo">
-                <span class="rotulo-texto">@(conferidoHoje ? "Saldo de hoje" : "Saldo previsto hoje")</span>
-                <BotaoAjuda Rotulo="Como ler estes números" Controla="ajuda-hero" Aberta="_ajudaHero"
-                            AoAlternar="@(() => _ajudaHero = !_ajudaHero)" />
-            </div>
+        <Acoes>
+            @* No celular estas ações ficam na barra que sobe sobre o cabeçalho e no botão Lançar. *@
+            <a class="btn sobre-escuro pequeno so-desktop" href="ajustes#conferir">
+                <Icone Nome="banco" Tamanho="18" /> Conferir saldo
+            </a>
+            <a class="btn pequeno so-desktop" href="lancamentos?novo=1">
+                <Icone Nome="mais" Tamanho="18" /> Novo lançamento
+            </a>
+        </Acoes>
+        <ChildContent>
+            <div class="hero">
+                <div class="rotulo-linha hero-rotulo">
+                    <span class="rotulo-texto">@(conferidoHoje ? "Saldo de hoje" : "Saldo previsto hoje")</span>
+                    <BotaoAjuda Rotulo="Como ler estes números" Controla="ajuda-hero" Aberta="_ajudaHero"
+                                AoAlternar="@(() => _ajudaHero = !_ajudaHero)" />
+                </div>
 
-            @if (agora.SaldoHojeCentavos is long saldoHoje)
-            {
-                <Valor Centavos="saldoHoje" Classe="@($"valor-hero {Formato.ClasseValor(saldoHoje, conforto)}")" />
-                @if (conferidoHoje)
+                @if (agora.SaldoHojeCentavos is long saldoHoje)
                 {
-                    <p class="hero-nota">Conferido com o banco hoje.</p>
+                    <Valor Centavos="saldoHoje" Classe="@($"valor-hero {Formato.ClasseValor(saldoHoje, conforto)}")" />
+                    @if (conferidoHoje)
+                    {
+                        <p class="hero-nota">Conferido com o banco hoje.</p>
+                    }
                 }
-            }
-            else
-            {
-                <span class="valor-hero">Sem saldo</span>
-                <p class="hero-nota">O saldo começa em @Formato.Data(cfg.DataAncora).</p>
-            }
-        </div>
-
-        <dl class="hero-indicadores">
-            <div class="hero-indicador">
-                <dt>Pode gastar hoje</dt>
-                <dd><Valor Centavos="agora.PodeGastarHojeCentavos" /></dd>
+                else
+                {
+                    <span class="valor-hero">Sem saldo</span>
+                    <p class="hero-nota">O saldo começa em @Formato.Data(cfg.DataAncora).</p>
+                }
             </div>
-            <div class="hero-indicador">
-                <dt>Menor saldo</dt>
-                <dd>
-                    @if (agora.MenorSaldoAFrenteCentavos is long menor)
-                    {
-                        <Valor Centavos="menor" Classe="@Formato.ClasseValor(menor, conforto)" />
-                        <span class="indicador-sub">em @Formato.DataCurta(agora.DataMenorSaldoAFrente!.Value)</span>
-                    }
-                    else
-                    {
-                        <Valor Centavos="null" />
-                    }
-                </dd>
-            </div>
-            @if (aVencer.Count > 0 && agora.SaldoHojeCentavos is long saldoBase)
-            {
-                @* O saldo grande ainda não viu as contas que vencem depois de hoje. Este número
-                   é o que sobra se todas elas saírem. *@
-                var comprometido = aVencer.Sum(p => p.ValorCentavos);
 
+            <dl class="hero-indicadores">
                 <div class="hero-indicador">
-                    <dt>Após as contas</dt>
+                    <dt>Pode gastar hoje</dt>
+                    <dd><Valor Centavos="agora.PodeGastarHojeCentavos" /></dd>
+                </div>
+                <div class="hero-indicador">
+                    <dt>Menor saldo</dt>
                     <dd>
-                        <Valor Centavos="saldoBase - comprometido" Classe="@Formato.ClasseValor(saldoBase - comprometido, conforto)" />
-                        <span class="indicador-sub">@Formato.Quantos(aVencer.Count, "conta", "contas")</span>
+                        @if (agora.MenorSaldoAFrenteCentavos is long menor)
+                        {
+                            <Valor Centavos="menor" Classe="@Formato.ClasseValor(menor, conforto)" />
+                            <span class="indicador-sub">em @Formato.DataCurta(agora.DataMenorSaldoAFrente!.Value, Relogio.Hoje)</span>
+                        }
+                        else
+                        {
+                            <Valor Centavos="null" />
+                        }
                     </dd>
                 </div>
-            }
-        </dl>
-
-        @if (_ajudaHero)
-        {
-            <dl class="texto-ajuda ajuda-indicadores" id="ajuda-hero">
-                @foreach (var (termo, explicacao) in AjudaDosIndicadores(aVencer, conferidoHoje))
+                @if (aVencer.Count > 0 && agora.SaldoHojeCentavos is long saldoBase)
                 {
-                    <div>
-                        <dt>@termo</dt>
-                        <dd>@explicacao</dd>
+                    @* O saldo grande ainda não viu as contas que vencem depois de hoje. Este número
+                       é o que sobra se todas elas saírem. *@
+                    var comprometido = aVencer.Sum(p => p.ValorCentavos);
+
+                    <div class="hero-indicador">
+                        <dt>Após as contas</dt>
+                        <dd>
+                            <Valor Centavos="saldoBase - comprometido" Classe="@Formato.ClasseValor(saldoBase - comprometido, conforto)" />
+                            <span class="indicador-sub">@Formato.Quantos(aVencer.Count, "conta", "contas")</span>
+                        </dd>
                     </div>
                 }
             </dl>
-        }
+
+            @if (_ajudaHero)
+            {
+                <dl class="texto-ajuda ajuda-indicadores" id="ajuda-hero">
+                    @foreach (var (termo, explicacao) in AjudaDosIndicadores(aVencer, conferidoHoje))
+                    {
+                        <div>
+                            <dt>@termo</dt>
+                            <dd>@explicacao</dd>
+                        </div>
+                    }
+                </dl>
+            }
+        </ChildContent>
     </Cabecalho>
 
-    <nav class="acoes-rapidas" aria-label="Ações rápidas">
+    <nav class="acoes-rapidas so-celular" aria-label="Ações rápidas">
         <a class="acao-rapida" href="ajustes#conferir">
             <span class="acao-rapida-icone"><Icone Nome="banco" Tamanho="20" /></span>
             Conferir saldo

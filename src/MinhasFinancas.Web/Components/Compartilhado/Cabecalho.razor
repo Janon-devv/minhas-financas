@@ -8,7 +8,8 @@
     <div class="cabecalho-topo">
         @if (Voltar is not null)
         {
-            <a class="btn-icone" href="@Voltar" aria-label="Voltar">
+            @* No PC as telas com voltar (Metas, Simular) ja estao na coluna lateral. *@
+            <a class="btn-icone so-celular" href="@Voltar" aria-label="Voltar">
                 <Icone Nome="voltar" Tamanho="22" />
             </a>
         }

@@ -2,7 +2,7 @@
 
 <div class="faixa-status" aria-hidden="true"></div>
 
-<main class="conteudo">
+<main class="conteudo com-lateral">
     <div class="pagina">
         @* Erro inesperado numa tela fica nela: sem isto, qualquer excecao derrubava a conexao
            inteira e sobrava só a faixa "Algo deu errado" com recarregar. *@
@@ -18,41 +18,67 @@
     </div>
 </main>
 
-@* No celular esta barra fica embaixo; no PC vira a coluna lateral, pelo CSS. *@
+@*
+    No celular esta barra fica embaixo; no PC vira a coluna lateral, pelo CSS. Secoes e o botao
+    de recolher so existem no PC: no celular as secoes sao display: contents e os links ficam
+    lado a lado na barra, na mesma ordem.
+*@
 <nav class="nav" aria-label="Principal">
     <div class="nav-marca">
-        <strong>Minhas Finanças</strong>
-        <span>Raul Janon</span>
+        <img src="icone-180.png" alt="" width="40" height="40" />
+        <div class="nav-texto">
+            <strong>Minhas Finanças</strong>
+            <span>Raul Janon</span>
+        </div>
     </div>
-    <NavLink href="" Match="NavLinkMatch.All">
-        <span class="nav-icone"><Icone Nome="hoje" Tamanho="22" /></span>
-        Hoje
-    </NavLink>
-    <NavLink href="calendario">
-        <span class="nav-icone"><Icone Nome="calendario" Tamanho="22" /></span>
-        Calendário
-    </NavLink>
-    <NavLink href="lancamentos">
-        <span class="nav-icone"><Icone Nome="lancar" Tamanho="22" /></span>
-        Lançar
-    </NavLink>
-    <NavLink href="resumo">
-        <span class="nav-icone"><Icone Nome="resumo" Tamanho="22" /></span>
-        Resumo
-    </NavLink>
+
+    <div class="nav-secao">
+        <span class="nav-secao-titulo so-desktop">Dia a dia</span>
+        <NavLink href="" Match="NavLinkMatch.All">
+            <span class="nav-icone"><Icone Nome="hoje" Tamanho="22" /></span>
+            <span class="nav-texto">Hoje</span>
+        </NavLink>
+        <NavLink href="calendario">
+            <span class="nav-icone"><Icone Nome="calendario" Tamanho="22" /></span>
+            <span class="nav-texto">Calendário</span>
+        </NavLink>
+        <NavLink href="lancamentos">
+            <span class="nav-icone"><Icone Nome="lancar" Tamanho="22" /></span>
+            <span class="nav-texto">Lançar</span>
+        </NavLink>
+        <NavLink href="resumo">
+            <span class="nav-icone"><Icone Nome="resumo" Tamanho="22" /></span>
+            <span class="nav-texto">Resumo</span>
+        </NavLink>
+    </div>
+
     @* No celular, metas e simulação ficam nas ações rápidas da tela Hoje. *@
-    <NavLink href="metas" class="so-desktop">
-        <span class="nav-icone"><Icone Nome="meta" Tamanho="22" /></span>
-        Metas
-    </NavLink>
-    <NavLink href="simulador" class="so-desktop">
-        <span class="nav-icone"><Icone Nome="simulador" Tamanho="22" /></span>
-        Simular compra
-    </NavLink>
-    <NavLink href="ajustes">
-        <span class="nav-icone"><Icone Nome="ajustes" Tamanho="22" /></span>
-        Ajustes
-    </NavLink>
+    <div class="nav-secao">
+        <span class="nav-secao-titulo so-desktop">Planejar</span>
+        <NavLink href="metas" class="so-desktop">
+            <span class="nav-icone"><Icone Nome="meta" Tamanho="22" /></span>
+            <span class="nav-texto">Metas</span>
+        </NavLink>
+        <NavLink href="simulador" class="so-desktop">
+            <span class="nav-icone"><Icone Nome="simulador" Tamanho="22" /></span>
+            <span class="nav-texto">Simular compra</span>
+        </NavLink>
+    </div>
+
+    <div class="nav-secao nav-rodape">
+        <NavLink href="ajustes">
+            <span class="nav-icone"><Icone Nome="ajustes" Tamanho="22" /></span>
+            <span class="nav-texto">Ajustes</span>
+        </NavLink>
+        @* Quem recolhe e o app.js, direto no navegador: sem ida e volta ao servidor. *@
+        <button type="button" class="nav-recolher so-desktop" data-recolher>
+            <span class="nav-icone"><Icone Nome="voltar" Tamanho="22" /></span>
+            <span class="nav-texto">
+                <span class="quando-aberta">Recolher menu</span>
+                <span class="quando-recolhida">Expandir menu</span>
+            </span>
+        </button>
+    </div>
 </nav>
 
 <div id="blazor-error-ui" data-nosnippet>

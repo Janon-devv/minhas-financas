@@ -20,6 +20,8 @@
     <link rel="manifest" href="manifest.json" />
 
     <base href="/" />
+    <!-- Antes da primeira pintura: a coluna lateral do PC volta recolhida se foi deixada assim (app.js). -->
+    <script>try { if (localStorage.getItem('lateral-recolhida') === '1') document.documentElement.classList.add('lateral-recolhida'); } catch (e) { }</script>
     <ResourcePreloader />
     <link rel="stylesheet" href="@Assets["app.css"]" />
     <link rel="stylesheet" href="@Assets["MinhasFinancas.Web.styles.css"]" />

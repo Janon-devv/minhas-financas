@@ -30,13 +30,16 @@ else
 
         @* ---------- Entrou contra saiu ---------- *@
         <Grupo Id="resumo-mes" Classe="sem-titulo">
-            <div class="corpo">
-                <Rotulo Texto="Resultado do mês"
-                        Ajuda="Entradas menos tudo que saiu no mês: contas, cartão, diário e o que foi guardado." />
-                <Valor Centavos="mes.PerformanceCentavos" Mais="true"
-                       Classe="@($"valor-grande {(mes.PerformanceCentavos < 0 ? "valor-negativo" : "valor-entrada")}")" />
+            @* No PC o resultado fica à esquerda e as barras à direita, alinhados com as colunas de baixo. *@
+            <div class="corpo resultado-mes">
+                <div>
+                    <Rotulo Texto="Resultado do mês"
+                            Ajuda="Entradas menos tudo que saiu no mês: contas, cartão, diário e o que foi guardado." />
+                    <Valor Centavos="mes.PerformanceCentavos" Mais="true"
+                           Classe="@($"valor-grande {(mes.PerformanceCentavos < 0 ? "valor-negativo" : "valor-entrada")}")" />
+                </div>
 
-                <div style="margin-top:20px">
+                <div class="resultado-mes-barras">
                     <div class="proporcao">
                         <div class="proporcao-topo">
                             <span class="proporcao-nome">Entradas</span>

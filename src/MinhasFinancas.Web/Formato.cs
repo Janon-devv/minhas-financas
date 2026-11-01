@@ -141,6 +141,13 @@ public static class Formato
 
     public static string DataCurta(DateOnly data) => data.ToString("dd/MM", Br);
 
+    /// <summary>
+    /// Curta no ano de hoje, com o ano fora dele. Para data que pode cair anos a frente, como o
+    /// menor saldo da previsao: "10/10" sozinho parecia este mes, que ja tinha passado.
+    /// </summary>
+    public static string DataCurta(DateOnly data, DateOnly hoje) =>
+        data.Year == hoje.Year ? DataCurta(data) : Data(data);
+
     public static string ParaCampo(DateOnly data) => data.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
 
     public static string ParaCampo(DateOnly? data) => data is null ? "" : ParaCampo(data.Value);

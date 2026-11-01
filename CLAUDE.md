@@ -18,13 +18,21 @@ O documento de especificação chama o projeto de Radar do Saldo, que era o nome
   **Não usar travessão (—) em nenhum texto de interface.**
 - **Uma interface só, para celular e PC.** O celular define a estrutura (desenhada em 390px); a
   partir de 900px o CSS transforma a barra de baixo em coluna lateral e abre os blocos em duas
-  colunas. Para esconder algo no celular use `so-desktop`, que só existe como regra abaixo de 900px
+  colunas. No PC a coluna é a identidade do app: petróleo fundo (`--lateral-fundo`), anéis do
+  radar do ícone ao fundo, seções "Dia a dia" e "Planejar", Ajustes embaixo, e a página aberta
+  marcada como o ponto no radar (ícone e ponto em `--radar`). O último item do rodapé recolhe a
+  coluna a só ícones; a escolha fica no navegador (`lateral-recolhida`, em `app.js` e no script
+  do `<head>` do `App.razor`). O conteúdo ocupa a largura toda.
+  Para esconder algo no celular use `so-desktop`, que só existe como regra abaixo de 900px
   (assim no PC o elemento mantém o display natural dele); para esconder no PC use `so-celular`.
   Blocos que viram duas colunas usam `colunas`.
 - **Toda página começa por `<Cabecalho>`**, em petróleo. A barra de status do iPhone é
   `black-translucent` e fica sobre ele; a `.faixa-status` cobre essa área quando o conteúdo rola.
   Página sem cabeçalho deixaria o relógio branco sobre fundo claro. Destaque grande (`destaque`)
-  só em Hoje e Calendário; o resto usa o cabeçalho compacto.
+  só em Hoje e Calendário; o resto usa o cabeçalho compacto. No PC, dentro do layout com coluna
+  (`.com-lateral`), o mesmo `<Cabecalho>` fica claro: título grande sobre o fundo e ações à
+  direita; o petróleo vai só para o cartão do número principal (`.hero`), com os indicadores num
+  cartão branco ao lado. Botão `sobre-escuro`, seletor de mês e abas ganham versão clara ali.
 - **Texto curto na tela, explicação no (i).** Regra que muda dinheiro (valor por ocorrência, item já
   no saldo inicial, renda variável que não mexe no saldo, conta vencida fora da previsão) continua
   visível em uma linha; o porquê vai em `Rotulo Ajuda=` ou `BotaoAjuda`. Um (i) por bloco, não um
