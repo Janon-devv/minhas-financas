@@ -123,7 +123,11 @@ else
                         Fecha em @Formato.DataCurta(resumo.Fatura.Fechamento), vence em @Formato.Data(resumo.Fatura.Vencimento).
                         @if (resumo.ASairCentavos > 0)
                         {
-                            <text>Sai da conta em @Formato.Data(MinhasFinancas.Domain.Calendario.Maior(resumo.Fatura.Vencimento, Relogio.Hoje)).</text>
+                            @* A mesma data em que o motor desconta (R15): o vencimento, ou o saldo
+                               inicial quando ela venceu antes dele. Em atraso depois do saldo inicial,
+                               a previsão já a tirou no vencimento. *@
+                            var quando = MinhasFinancas.Domain.Calendario.Maior(resumo.Fatura.Vencimento, _dados.Configuracao.DataAncora);
+                            <text>@(quando <= Relogio.Hoje ? "A previsão já desconta desde" : "Sai da conta em") @Formato.Data(quando).</text>
                         }
                     </p>
 
@@ -235,7 +239,7 @@ else
             </button>
             @if (_editando.Id != 0)
             {
-                <button type="button" class="btn @(_confirmandoExclusao ? "perigo-cheio" : "perigo")" @onclick="ExcluirFatura">
+                <button type="button" class="btn @(_confirmandoExclusao ? "perigo-cheio" : "perigo")" disabled="@_salvando" @onclick="ExcluirFatura">
                     @(_confirmandoExclusao ? "Excluir de vez" : "Excluir")
                 </button>
             }
@@ -462,9 +466,18 @@ else
             return;
         }
 
-        await Servico.ExcluirFaturaAsync(fatura.Id);
-        FecharFatura();
-        await CarregarAsync();
+        _salvando = true;
+
+        try
+        {
+            await Servico.ExcluirFaturaAsync(fatura.Id);
+            FecharFatura();
+            await CarregarAsync();
+        }
+        finally
+        {
+            _salvando = false;
+        }
     }
 
     private void AbrirPagamento(ResumoFatura resumo)

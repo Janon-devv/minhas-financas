@@ -71,17 +71,17 @@ else
                         }
                     </dd>
                 </div>
-                @if (aVencer.Count > 0 && agora.SaldoHojeCentavos is long saldoBase)
+                @if (aVencer.Quantas > 0 && agora.SaldoHojeCentavos is long saldoBase)
                 {
                     @* O saldo grande ainda não viu as contas que vencem depois de hoje. Este número
                        é o que sobra se todas elas saírem. *@
-                    var comprometido = aVencer.Sum(p => p.ValorCentavos);
+                    var comprometido = aVencer.Centavos;
 
                     <div class="hero-indicador">
                         <dt>Após as contas</dt>
                         <dd>
                             <Valor Centavos="saldoBase - comprometido" Classe="@Formato.ClasseValor(saldoBase - comprometido, conforto)" />
-                            <span class="indicador-sub">@Formato.Quantos(aVencer.Count, "conta", "contas")</span>
+                            <span class="indicador-sub">@Formato.Quantos(aVencer.Quantas, "conta", "contas")</span>
                         </dd>
                     </div>
                 }
@@ -103,15 +103,15 @@ else
     </Cabecalho>
 
     <nav class="acoes-rapidas so-celular" aria-label="Ações rápidas">
-        <a class="acao-rapida" href="ajustes#conferir">
+        <a class="acao-rapida cor-ajustes" href="ajustes#conferir">
             <span class="acao-rapida-icone"><Icone Nome="banco" Tamanho="20" /></span>
             Conferir saldo
         </a>
-        <a class="acao-rapida" href="simulador">
+        <a class="acao-rapida cor-simulador" href="simulador">
             <span class="acao-rapida-icone"><Icone Nome="simulador" Tamanho="20" /></span>
             Simular compra
         </a>
-        <a class="acao-rapida" href="metas">
+        <a class="acao-rapida cor-metas" href="metas">
             <span class="acao-rapida-icone"><Icone Nome="meta" Tamanho="20" /></span>
             Metas
         </a>
@@ -206,12 +206,13 @@ else
             </Grupo>
 
             @* ---------- Contas do mês (R12) ---------- *@
-            @if (_pendencias.Count > 0)
+            @if (_pendencias.Count > 0 || _faturas.Count > 0)
             {
                 // Conta só o que já venceu: o que ainda vai vencer aparece na lista para poder
                 // ser marcado adiantado, mas não é cobrança.
                 var aConfirmar = _pendencias.Count(p =>
-                    p.Estado is EstadoOcorrencia.EmAberto or EstadoOcorrencia.VenceHoje);
+                    p.Estado is EstadoOcorrencia.EmAberto or EstadoOcorrencia.VenceHoje) +
+                    _faturas.Count(f => f.EmAtraso || f.Fatura.Vencimento == Relogio.Hoje);
                 var abertas = _pendencias.Where(p => p.Estado is not (EstadoOcorrencia.Paga or EstadoOcorrencia.Pulada)).ToList();
                 var resolvidas = _pendencias.Where(p => p.Estado is EstadoOcorrencia.Paga or EstadoOcorrencia.Pulada).ToList();
 
@@ -244,9 +245,15 @@ else
                             </div>
                         }
 
-                        @if (abertas.Count > 0)
+                        @if (abertas.Count > 0 || _faturas.Count > 0)
                         {
                             <ul class="lista">
+                                @* Fatura não se marca paga aqui: o pagamento tem valor e data próprios
+                                   e mora na aba Faturas. A linha leva até lá. *@
+                                @foreach (var fatura in _faturas)
+                                {
+                                    <li>@LinhaFatura(fatura)</li>
+                                }
                                 @foreach (var pendencia in abertas)
                                 {
                                     <li>@LinhaPendencia(pendencia)</li>
@@ -407,7 +414,7 @@ else
             @if (aberta.ForaDaProjecao && !aberta.Registrada)
             {
                 <p class="dica" style="margin-top:12px">
-                    Venceu antes do saldo inicial (@Formato.Data(_dados.Configuracao.DataAncora)).
+                    Venceu antes do saldo inicial (@Formato.Data(AncoraDa(aberta))).
                     Se já @(entrada ? "caiu" : "saiu"), já está nesse saldo. Se não, entra na previsão
                     como @(entrada ? "valor a receber" : "conta a pagar").
                 </p>
@@ -472,6 +479,7 @@ else
 
     private List<LinhaDiario> _diarios = [];
     private List<Pendencia> _pendencias = [];
+    private List<ResumoFatura> _faturas = [];
     private bool _salvandoPendencia;
     private string? _mensagemPendencia;
     private Pendencia? _pendenciaAberta;
@@ -492,6 +500,13 @@ else
         _projecao = Servico.Projetar(_dados, null, Relogio.Hoje);
         _pendencias = Servico.ListarPendencias(_dados, Relogio.Hoje);
 
+        // Faturas com saldo a pagar que vencem até o fim do mês, e as que já venceram sem
+        // pagamento: estas a previsão já desconta no vencimento, então precisam aparecer aqui
+        // para o dono registrar o pagamento ou perceber que esqueceu.
+        var fimDoMes = MinhasFinancas.Domain.Calendario.UltimoDiaDoMes(Relogio.Hoje);
+        _faturas = [.. Servico.ResumirFaturas(_dados, Relogio.Hoje)
+            .Where(f => f.ASairCentavos > 0 && (f.EmAtraso || f.Fatura.Vencimento <= fimDoMes))];
+
         _diarios = MontarLinhasDeDiario();
     }
 
@@ -499,7 +514,7 @@ else
     /// O que cada número do cabeçalho quer dizer, num painel só: um (i) por indicador espalharia
     /// ícone de ajuda pela tela inteira e quebraria os rótulos das colunas estreitas.
     /// </summary>
-    private IEnumerable<(string Termo, string Explicacao)> AjudaDosIndicadores(List<Pendencia> aVencer, bool conferidoHoje)
+    private IEnumerable<(string Termo, string Explicacao)> AjudaDosIndicadores((int Quantas, long Centavos) aVencer, bool conferidoHoje)
     {
         var cfg = _dados!.Configuracao;
         var agora = _projecao!.Agora;
@@ -517,11 +532,11 @@ else
 
         yield return ("Menor saldo", $"O saldo mais baixo previsto até {Formato.Data(_projecao.Fim)}.");
 
-        if (aVencer.Count > 0)
+        if (aVencer.Quantas > 0)
         {
             yield return ("Após as contas",
-                $"Saldo de hoje menos {Formato.Quantos(aVencer.Count, "conta que ainda vence", "contas que ainda vencem")} " +
-                $"neste mês ({Formato.Moeda(aVencer.Sum(p => p.ValorCentavos))}). Contas vencidas em aberto já estão no saldo.");
+                $"Saldo de hoje menos {Formato.Quantos(aVencer.Quantas, "conta que ainda vence", "contas que ainda vencem")} " +
+                $"neste mês na conta corrente, faturas incluídas ({Formato.Moeda(aVencer.Centavos)}). Contas vencidas em aberto já estão no saldo.");
         }
     }
 
@@ -686,9 +701,16 @@ else
     /// entre as duas datas.
     /// </summary>
     private DateOnly QuandoSaiu(Pendencia pendencia) =>
-        !pendencia.Registrada && pendencia.DataPrevista < _dados!.Configuracao.DataAncora
+        !pendencia.Registrada && pendencia.DataPrevista < AncoraDa(pendencia)
             ? pendencia.DataPrevista
             : Relogio.Hoje;
+
+    /// <summary>O saldo inicial da carteira do lançamento: cada carteira tem o seu (R13).</summary>
+    private DateOnly AncoraDa(Pendencia pendencia) =>
+        _dados!.Lancamentos.FirstOrDefault(l => l.Id == pendencia.LancamentoId)?.CarteiraId is int id &&
+        _dados.Carteiras.FirstOrDefault(c => c.Id == id) is Carteira carteira
+            ? carteira.DataAncora
+            : _dados.Configuracao.DataAncora;
 
     /// <summary>
     /// Conta que já saiu antes da âncora não precisa de valor: ela fica fora da projeção de
@@ -723,15 +745,51 @@ else
             $"{pendencia.Descricao}: não teve desta vez.");
 
     /// <summary>
-    /// As contas que ainda vão sair da conta depois de hoje. Vencidas em aberto ficam de fora
-    /// porque já foram trazidas para dentro do saldo projetado, e contá-las aqui seria descontar
-    /// duas vezes.
+    /// As contas que ainda vão sair da conta corrente depois de hoje, faturas incluídas. Vencidas
+    /// em aberto ficam de fora porque já foram trazidas para dentro do saldo projetado, e
+    /// contá-las aqui seria descontar duas vezes. Conta de outra carteira (VA, benefício) não sai
+    /// do número grande, então também não entra.
     /// </summary>
-    private List<Pendencia> ContasAVencer() =>
-        [.. _pendencias.Where(p =>
+    private (int Quantas, long Centavos) ContasAVencer()
+    {
+        var contas = _pendencias.Where(p =>
             p.Tipo != TipoLancamento.Entrada &&
             p.Estado is not (EstadoOcorrencia.Paga or EstadoOcorrencia.Pulada) &&
-            p.DataPrevista > Relogio.Hoje)];
+            p.DataPrevista > Relogio.Hoje &&
+            PlanejamentoService.DaContaCorrente(_dados!, p.LancamentoId)).ToList();
+
+        var faturas = _faturas.Where(f => QuandoSaiFatura(f) > Relogio.Hoje).ToList();
+
+        return (contas.Count + faturas.Count,
+                contas.Sum(p => p.ValorCentavos) + faturas.Sum(f => f.ASairCentavos));
+    }
+
+    /// <summary>O dia em que a previsão desconta a fatura: o vencimento, ou o saldo inicial se ela venceu antes (R15).</summary>
+    private DateOnly QuandoSaiFatura(ResumoFatura fatura) =>
+        MinhasFinancas.Domain.Calendario.Maior(fatura.Fatura.Vencimento, _dados!.Configuracao.DataAncora);
+
+    private RenderFragment LinhaFatura(ResumoFatura fatura) => __builder =>
+    {
+        var (texto, classe) = fatura.EmAtraso
+            ? ("em atraso", "farol negativo")
+            : fatura.Fatura.Vencimento == Relogio.Hoje
+                ? ("vence hoje", "pilula diario")
+                : ("a vencer", "pilula neutra");
+
+        <a class="item" href="faturas"
+           aria-label="Fatura @fatura.NomeCartao, @Formato.Data(fatura.Fatura.Vencimento), falta pagar @Formato.Moeda(fatura.ASairCentavos), @texto">
+            <IconeTipo Tipo="TipoLancamento.Cartao" />
+            <span class="item-principal">
+                <span class="item-titulo">Fatura @fatura.NomeCartao</span>
+                <span class="item-sub">
+                    <span>@Formato.DataCurta(fatura.Fatura.Vencimento)</span>
+                    <span class="@classe">@texto</span>
+                </span>
+            </span>
+            <span class="item-valor"><Valor Centavos="fatura.ASairCentavos" /></span>
+            <span class="item-seta"><Icone Nome="seta" Tamanho="18" /></span>
+        </a>
+    };
 
     private async Task NaoPagueiAsync(Pendencia pendencia) =>
         await ComTravaAsync(

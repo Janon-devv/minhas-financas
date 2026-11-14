@@ -2,7 +2,7 @@
 
 <div class="faixa-status" aria-hidden="true"></div>
 
-<main class="conteudo com-lateral">
+<main class="conteudo com-lateral secao-@Secao">
     <div class="pagina">
         @* Erro inesperado numa tela fica nela: sem isto, qualquer excecao derrubava a conexao
            inteira e sobrava só a faixa "Algo deu errado" com recarregar. *@
@@ -34,19 +34,19 @@
 
     <div class="nav-secao">
         <span class="nav-secao-titulo so-desktop">Dia a dia</span>
-        <NavLink href="" Match="NavLinkMatch.All">
+        <NavLink href="" Match="NavLinkMatch.All" class="nav-hoje">
             <span class="nav-icone"><Icone Nome="hoje" Tamanho="22" /></span>
             <span class="nav-texto">Hoje</span>
         </NavLink>
-        <NavLink href="calendario">
+        <NavLink href="calendario" class="nav-calendario">
             <span class="nav-icone"><Icone Nome="calendario" Tamanho="22" /></span>
             <span class="nav-texto">Calendário</span>
         </NavLink>
-        <NavLink href="lancamentos">
+        <NavLink href="lancamentos" class="nav-lancar">
             <span class="nav-icone"><Icone Nome="lancar" Tamanho="22" /></span>
             <span class="nav-texto">Lançar</span>
         </NavLink>
-        <NavLink href="resumo">
+        <NavLink href="resumo" class="nav-resumo">
             <span class="nav-icone"><Icone Nome="resumo" Tamanho="22" /></span>
             <span class="nav-texto">Resumo</span>
         </NavLink>
@@ -55,18 +55,18 @@
     @* No celular, metas e simulação ficam nas ações rápidas da tela Hoje. *@
     <div class="nav-secao">
         <span class="nav-secao-titulo so-desktop">Planejar</span>
-        <NavLink href="metas" class="so-desktop">
+        <NavLink href="metas" class="so-desktop nav-metas">
             <span class="nav-icone"><Icone Nome="meta" Tamanho="22" /></span>
             <span class="nav-texto">Metas</span>
         </NavLink>
-        <NavLink href="simulador" class="so-desktop">
+        <NavLink href="simulador" class="so-desktop nav-simulador">
             <span class="nav-icone"><Icone Nome="simulador" Tamanho="22" /></span>
             <span class="nav-texto">Simular compra</span>
         </NavLink>
     </div>
 
     <div class="nav-secao nav-rodape">
-        <NavLink href="ajustes">
+        <NavLink href="ajustes" class="nav-ajustes">
             <span class="nav-icone"><Icone Nome="ajustes" Tamanho="22" /></span>
             <span class="nav-texto">Ajustes</span>
         </NavLink>
@@ -88,7 +88,25 @@
 </div>
 
 @code {
+    [Inject]
+    private NavigationManager Navegacao { get; set; } = default!;
+
     private ErrorBoundary? _falha;
+
+    /// <summary>
+    /// Secao da pagina aberta. Da a cor de destaque dela (--secao no app.css), a mesma do item
+    /// no menu. Rotas antigas caem na secao da tela que as atende.
+    /// </summary>
+    private string Secao => Navegacao.ToBaseRelativePath(Navegacao.Uri).Split('/', '?', '#')[0].ToLowerInvariant() switch
+    {
+        "calendario" => "calendario",
+        "lancamentos" or "plano" or "faturas" => "lancar",
+        "resumo" => "resumo",
+        "metas" => "metas",
+        "simulador" => "simulador",
+        "ajustes" => "ajustes",
+        _ => "hoje"
+    };
 
     // Trocar de tela limpa o erro da anterior: a falha de uma tela nao pode travar as outras.
     protected override void OnParametersSet() => _falha?.Recover();

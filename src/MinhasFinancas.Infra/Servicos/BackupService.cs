@@ -127,7 +127,13 @@ public sealed class BackupService(
         }
         catch (JsonException erro)
         {
-            return new ResultadoRestauracao { Erros = ["O arquivo não é um JSON válido: " + erro.Message] };
+            // A mensagem do leitor de JSON vem em ingles e fala de "depth" e "tokens"; para o dono
+            // basta saber que o arquivo esta cortado ou nao e um backup, e onde o problema comeca.
+            var onde = erro.LineNumber is long linha ? $" O problema começa na linha {linha + 1}." : "";
+            return new ResultadoRestauracao
+            {
+                Erros = ["O arquivo está incompleto ou não é um backup deste app." + onde]
+            };
         }
 
         if (arquivo is null)

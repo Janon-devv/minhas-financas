@@ -103,7 +103,7 @@ else
                     @foreach (var linha in linhas)
                     {
                         var l = linha.Lancamento;
-                        var passou = linha.UltimaVez is DateOnly ultima && ultima < ancora;
+                        var passou = linha.UltimaVez is DateOnly ultima && ultima < AncoraDe(l);
                         var cartaoInvalido = l.Tipo == TipoLancamento.Cartao &&
                                              (l.CartaoId is null || !cartoes.ContainsKey(l.CartaoId.Value));
                         var entra = l.Tipo == TipoLancamento.Entrada;
@@ -149,10 +149,19 @@ else
                 </ul>
             </div>
 
-            @if (linhas.Any(linha => linha.UltimaVez is DateOnly u && u < ancora))
+            var ancorasPassadas = linhas
+                .Where(linha => linha.UltimaVez is DateOnly u && u < AncoraDe(linha.Lancamento))
+                .Select(linha => AncoraDe(linha.Lancamento))
+                .Distinct()
+                .ToList();
+
+            @if (ancorasPassadas.Count > 0)
             {
                 <p class="dica" style="margin-top:12px">
-                    "No saldo inicial": todas as vezes ficaram antes de @Formato.Data(ancora), então já estão dentro do saldo.
+                    "No saldo inicial": todas as vezes ficaram antes
+                    @(ancorasPassadas.Count == 1 && ancorasPassadas[0] == ancora
+                        ? $"de {Formato.Data(ancora)}"
+                        : "do saldo inicial da conta ou carteira delas"), então já estão dentro do saldo.
                 </p>
             }
         }
@@ -436,6 +445,15 @@ else
     private void NovaFatura() => _blocoFaturas?.AbrirFatura(null);
 
     private sealed record LinhaPlano(Lancamento Lancamento, DateOnly CaiEm, DateOnly? UltimaVez);
+
+    /// <summary>
+    /// O saldo inicial que vale para o lançamento: o da carteira dele, ou o da conta corrente.
+    /// Cada carteira tem a própria data, e o motor projeta cada uma a partir dela (R13).
+    /// </summary>
+    private DateOnly AncoraDe(Lancamento lancamento) =>
+        lancamento.CarteiraId is int id && _dados!.Carteiras.FirstOrDefault(c => c.Id == id) is Carteira carteira
+            ? carteira.DataAncora
+            : _dados!.Configuracao.DataAncora;
 
     private List<LinhaPlano> MontarLinhas(Dictionary<int, Cartao> cartoes) =>
         (_dados?.Lancamentos ?? [])

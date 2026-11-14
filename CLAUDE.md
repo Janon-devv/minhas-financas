@@ -18,20 +18,27 @@ O documento de especificação chama o projeto de Radar do Saldo, que era o nome
   **Não usar travessão (—) em nenhum texto de interface.**
 - **Uma interface só, para celular e PC.** O celular define a estrutura (desenhada em 390px); a
   partir de 900px o CSS transforma a barra de baixo em coluna lateral e abre os blocos em duas
-  colunas. No PC a coluna é a identidade do app: petróleo fundo (`--lateral-fundo`), anéis do
+  colunas. No PC a coluna é a identidade do app: tinta funda (`--lateral-fundo`), anéis do
   radar do ícone ao fundo, seções "Dia a dia" e "Planejar", Ajustes embaixo, e a página aberta
-  marcada como o ponto no radar (ícone e ponto em `--radar`). O último item do rodapé recolhe a
+  marcada como o ponto no radar, na cor da seção dela (`--secao-clara`). O último item do rodapé recolhe a
   coluna a só ícones; a escolha fica no navegador (`lateral-recolhida`, em `app.js` e no script
   do `<head>` do `App.razor`). O conteúdo ocupa a largura toda.
   Para esconder algo no celular use `so-desktop`, que só existe como regra abaixo de 900px
   (assim no PC o elemento mantém o display natural dele); para esconder no PC use `so-celular`.
   Blocos que viram duas colunas usam `colunas`.
-- **Toda página começa por `<Cabecalho>`**, em petróleo. A barra de status do iPhone é
+- **Cor é detalhe, não fundo.** Grafite e papel (seção 8 do CONTEXTO): tinta, fio e branco.
+  Cada página tem uma cor de seção (`--secao`), posta pelo `MainLayout` como classe
+  `secao-<nome>` no `<main>`; o item do menu usa `nav-<nome>` e o atalho da Hoje `cor-<nome>`.
+  Ela aparece pequena: ponto do número principal, quadrado e fio do título do bloco, linha do
+  gráfico, barra de proporção, sublinhado de link, fio da aba aberta. Página nova entra no
+  `switch` do `MainLayout` e ganha um `--cor-<nome>`. Não pintar cartão nem botão com ela:
+  o botão principal é tinta. Verde e vermelho ficam para dinheiro que entra e sai.
+- **Toda página começa por `<Cabecalho>`**, em tinta. A barra de status do iPhone é
   `black-translucent` e fica sobre ele; a `.faixa-status` cobre essa área quando o conteúdo rola.
   Página sem cabeçalho deixaria o relógio branco sobre fundo claro. Destaque grande (`destaque`)
   só em Hoje e Calendário; o resto usa o cabeçalho compacto. No PC, dentro do layout com coluna
   (`.com-lateral`), o mesmo `<Cabecalho>` fica claro: título grande sobre o fundo e ações à
-  direita; o petróleo vai só para o cartão do número principal (`.hero`), com os indicadores num
+  direita; a tinta vai só para o cartão do número principal (`.hero`), com os indicadores num
   cartão branco ao lado. Botão `sobre-escuro`, seletor de mês e abas ganham versão clara ali.
 - **Texto curto na tela, explicação no (i).** Regra que muda dinheiro (valor por ocorrência, item já
   no saldo inicial, renda variável que não mexe no saldo, conta vencida fora da previsão) continua
@@ -44,9 +51,10 @@ O documento de especificação chama o projeto de Radar do Saldo, que era o nome
 Verificadas com medição, não no olho. Mudanças de UI precisam continuar respeitando:
 
 - **Contraste.** Texto 4,5:1, contorno de campo 3:1. Por isso existem dois tokens de borda:
-  `--linha` (#E5E7EB) é divisória decorativa; `--borda-campo` (#868E9B, 3,30:1) é contorno de
+  `--linha` (#E6E5E0) é divisória decorativa; `--borda-campo` (#878A91, 3,46:1) é contorno de
   campo de formulário, que a WCAG trata como componente de interface. Não unificar os dois.
-  `--pilula-neutra-texto` existe porque #6B7280 sobre #E5E7EB dá 3,90:1 e reprova.
+  `--pilula-neutra-texto` (#45474D, 8,0:1 sobre o cinza da pílula) existe porque cinza médio
+  sobre cinza claro reprova. Cor de seção é gráfico, não texto: o âmbar dá só 3,65:1 no branco.
 - **Alvo de toque 44px.** `--alvo-toque` em `.btn`, `.btn.pequeno`, `.btn-icone`, `.filtro`,
   `.botao-ajuda` e nas abas; `.campo` tem 48px. O (i) usa margem negativa para ter 44px de toque
   sem esticar a linha do rótulo.
@@ -161,7 +169,7 @@ No código, `DiaProjetado.SaidaTotalCentavos` corresponde à primeira e
 ## Comandos
 
 ```bash
-dotnet test                                              # 81 testes
+dotnet test                                              # 85 testes
 dotnet run --project src/MinhasFinancas.Web --launch-profile local # http://localhost:5080
 dotnet run --project src/MinhasFinancas.Web --launch-profile rede  # 0.0.0.0:5080, para o iPhone (pede PIN)
 dotnet dotnet-ef migrations add <Nome> --project src/MinhasFinancas.Infra --startup-project src/MinhasFinancas.Infra --output-dir Migracoes

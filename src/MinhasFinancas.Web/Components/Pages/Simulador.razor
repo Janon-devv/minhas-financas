@@ -108,8 +108,10 @@ else
                     @if (_resultado.JaEstavaNegativoSemCompra)
                     {
                         <Aviso Tipo="atencao">
-                            O saldo já ficava negativo sem a compra. Ela piora o menor saldo em
-                            @Formato.Moeda(_resultado.PioraCentavos), mas o aperto não começa nela.
+                            O saldo já ficava negativo sem a compra.
+                            @(_resultado.PioraCentavos > 0
+                                ? $"Ela piora o menor saldo em {Formato.Moeda(_resultado.PioraCentavos)}, mas o aperto não começa nela."
+                                : "Ela não mexe no menor saldo: o aperto vem de antes.")
                         </Aviso>
                     }
 

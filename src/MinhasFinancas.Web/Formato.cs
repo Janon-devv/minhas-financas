@@ -84,6 +84,7 @@ public static class Formato
         var posDecimal = Math.Max(limpo.LastIndexOf(','), limpo.LastIndexOf('.'));
         var inteiros = limpo;
         var decimais = "";
+        char? separadorDecimal = null;
 
         if (posDecimal >= 0)
         {
@@ -93,7 +94,16 @@ public static class Formato
             {
                 inteiros = limpo[..posDecimal];
                 decimais = limpo[(posDecimal + 1)..];
+                separadorDecimal = limpo[posDecimal];
             }
+        }
+
+        // O que sobra antes dos centavos e so digitos ou milhar de verdade (1.234.567). Sem esta
+        // conferencia, "0,005" virava R$ 5,00 e "1,2,3" virava R$ 12,30: o separador era tomado
+        // por milhar e jogado fora, e o valor saia mil vezes maior sem ninguem perceber.
+        if (!inteiros.All(char.IsDigit) && !MilharValido(inteiros, separadorDecimal))
+        {
+            return false;
         }
 
         inteiros = new string(inteiros.Where(char.IsDigit).ToArray());
@@ -126,6 +136,27 @@ public static class Formato
         }
 
         return true;
+    }
+
+    /// <summary>
+    /// Grupos de milhar: o primeiro com 1 a 3 digitos sem zero na frente, os outros com 3, todos
+    /// com o mesmo separador, e ele diferente do separador dos centavos.
+    /// </summary>
+    private static bool MilharValido(string texto, char? separadorDecimal)
+    {
+        var separador = texto.FirstOrDefault(c => c is ',' or '.');
+
+        if (separador == separadorDecimal)
+        {
+            return false;
+        }
+
+        var grupos = texto.Split(separador);
+
+        return grupos[0].Length is >= 1 and <= 3 &&
+               grupos[0][0] != '0' &&
+               grupos.All(g => g.All(char.IsDigit)) &&
+               grupos.Skip(1).All(g => g.Length == 3);
     }
 
     // ---------- Datas ----------

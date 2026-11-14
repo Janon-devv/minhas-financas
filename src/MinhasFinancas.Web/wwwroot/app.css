@@ -6,35 +6,54 @@
 
 :root {
     /* ---------- Cor ---------- */
-    --petroleo: #134E4A;
-    --acento: #0F766E;
-    --acento-forte: #115E59;
-    --acento-suave: #E2F0EE;
+    /*
+        Grafite e papel. Quase tudo e tinta, fio e branco; a cor fica para o que significa algo
+        (entrou, saiu, farol) e para a marca de cada secao, sempre pequena: um ponto, um fio,
+        a linha do grafico. Cada secao tem a sua, a mesma no menu e na pagina (--secao).
+    */
+    --tinta: #16181D;
+    --acento: #16181D;
+    --acento-forte: #16181D;
+    --acento-suave: #EFEFEB;
+    /* Anel de foco: azul, para nao se confundir com a tinta dos botoes. 5,2:1 sobre o branco. */
+    --foco: #3E63DD;
 
-    --texto: #1F2933;
-    /* 5,9:1 sobre o branco e 5,4:1 sobre o fundo. */
-    --secundario: #5B6670;
-    --linha: #E4E9E8;
-    --fundo: #F2F5F4;
+    --cor-hoje: #3E63DD;
+    --cor-calendario: #B7790B;
+    --cor-lancar: #7C4DDB;
+    --cor-resumo: #0E8FB0;
+    --cor-metas: #D23F8A;
+    --cor-simulador: #E0612F;
+    --cor-ajustes: #6E7179;
+    --secao: var(--cor-hoje);
+
+    --texto: #1A1C21;
+    /* 6,2:1 sobre o branco e 5,7:1 sobre o fundo. */
+    --secundario: #5E6168;
+    --linha: #E6E5E0;
+    /* Fio que divide titulo de bloco, um pouco mais marcado que o de dentro do cartao. */
+    --linha-forte: #D6D5CF;
+    --fundo: #F6F6F3;
     --superficie: #FFFFFF;
-    --superficie-suave: #F6F8F8;
+    --superficie-suave: #F8F8F6;
 
     /*
         Contorno de campo de formulario e componente de interface, nao enfeite: a WCAG pede
         3:1 contra o fundo. A linha decorativa continua clara de proposito.
-        #868E9B da 3,30:1 sobre o branco; --linha daria 1,2:1.
+        #878A91 da 3,46:1 sobre o branco; --linha daria 1,2:1.
     */
-    --borda-campo: #868E9B;
+    --borda-campo: #878A91;
 
-    /* #6B7280 sobre #E5E7EB da 3,90:1 e reprova. Este da 6,5:1 sobre o fundo neutro. */
-    --pilula-neutra-texto: #4B5563;
-    --pilula-neutra-fundo: #EDF0F0;
+    /* Texto de pilula sobre o cinza dela: 8,0:1. */
+    --pilula-neutra-texto: #45474D;
+    --pilula-neutra-fundo: #EFEFEB;
 
-    /* Sobre o cabecalho petroleo. Branco da 9,5:1; o secundario, 6,4:1. */
+    /* Sobre a tinta. Branco da 17,8:1; o secundario, mais de 10:1. */
     --sobre-escuro: #FFFFFF;
-    --sobre-escuro-2: rgba(255, 255, 255, 0.76);
-    --linha-escuro: rgba(255, 255, 255, 0.18);
-    --superficie-escuro: rgba(255, 255, 255, 0.10);
+    --sobre-escuro-2: rgba(255, 255, 255, 0.72);
+    --linha-escuro: rgba(255, 255, 255, 0.14);
+    --superficie-escuro: rgba(255, 255, 255, 0.08);
+    --aneis-escuro: rgba(255, 255, 255, 0.06);
     --negativo-sobre-escuro: #FCA5A5;
     --atencao-sobre-escuro: #FCD34D;
 
@@ -42,6 +61,7 @@
     --ok-fundo: #DCFCE7;
     --ok-texto: #166534;
 
+    --atencao-forte: #D97706;
     --atencao-fundo: #FEF3C7;
     --atencao-texto: #92400E;
 
@@ -64,12 +84,10 @@
     --valor-saida: #B91C1C;
     --diario-registrado: #1E40AF;
 
-    --hoje-fundo: #EDF7F1;
-    --hoje-marca: #1F9D55;
-    --sabado-texto: #1D4ED8;
-    --sabado-fundo: #F1F5FE;
-    --domingo-texto: #B91C1C;
-    --domingo-fundo: #FDF2F2;
+    /* Fim de semana fica mais apagado, sem cor propria: vermelho e de saida e azul e de
+       diario registrado, e o domingo vermelho ao lado de uma saida lia como dia ruim. */
+    --sabado-texto: var(--secundario);
+    --domingo-texto: var(--secundario);
 
     /* ---------- Tipografia ---------- */
     /* Pilha do sistema: SF Pro no iPhone, Segoe no Windows. Sem fonte baixada (ver CLAUDE.md). */
@@ -92,11 +110,12 @@
     --margem: 16px;
 
     /* ---------- Forma ---------- */
-    --raio-p: 10px;
-    --raio: 14px;
-    --raio-g: 20px;
+    /* Cantos mais justos que antes: com fio em volta, raio grande deixa o cartao mole. */
+    --raio-p: 8px;
+    --raio: 12px;
+    --raio-g: 16px;
     --raio-total: 999px;
-    --sombra-flutuante: 0 1px 2px rgba(15, 64, 61, 0.06), 0 8px 24px rgba(15, 64, 61, 0.10);
+    --sombra-flutuante: 0 1px 2px rgba(17, 19, 23, 0.05), 0 8px 24px rgba(17, 19, 23, 0.08);
 
     --altura-nav: 64px;
 
@@ -105,6 +124,26 @@
 
     /* Alvo de toque minimo (44pt no iOS, 48dp no Android). */
     --alvo-toque: 44px;
+}
+
+/*
+    Cor de cada secao. A pagina recebe a dela pela classe no <main> (MainLayout), o item do menu
+    e o atalho da tela Hoje pela classe propria. --secao-clara e a versao para fundo em tinta.
+*/
+.secao-hoje, .nav-hoje { --secao: var(--cor-hoje); }
+.secao-calendario, .nav-calendario { --secao: var(--cor-calendario); }
+.secao-lancar, .nav-lancar { --secao: var(--cor-lancar); }
+.secao-resumo, .nav-resumo { --secao: var(--cor-resumo); }
+.secao-metas, .nav-metas, .cor-metas { --secao: var(--cor-metas); }
+.secao-simulador, .nav-simulador, .cor-simulador { --secao: var(--cor-simulador); }
+.secao-ajustes, .nav-ajustes, .cor-ajustes { --secao: var(--cor-ajustes); }
+
+:root,
+.conteudo,
+.nav a,
+.acao-rapida {
+    --secao-clara: color-mix(in srgb, var(--secao) 62%, #FFFFFF);
+    --secao-suave: color-mix(in srgb, var(--secao) 9%, #FFFFFF);
 }
 
 /*
@@ -169,8 +208,14 @@ p {
     margin: 0;
 }
 
-a {
-    color: var(--acento);
+/* Link em tinta, sublinhado na cor da secao: o detalhe colorido e o fio, nao o texto. */
+a,
+.btn.texto {
+    color: var(--texto);
+    text-decoration: underline;
+    text-decoration-color: var(--secao);
+    text-decoration-thickness: 2px;
+    text-underline-offset: 4px;
 }
 
 button {
@@ -211,7 +256,7 @@ summary:focus-visible,
 .campo:focus-visible,
 .clicavel:focus-visible,
 [role="switch"]:focus-visible {
-    outline: 2px solid var(--acento);
+    outline: 2px solid var(--foco);
     outline-offset: 2px;
 }
 
@@ -238,7 +283,7 @@ summary:focus-visible,
     left: 0;
     right: 0;
     height: env(safe-area-inset-top);
-    background: var(--petroleo);
+    background: var(--tinta);
     z-index: 35;
 }
 
@@ -315,13 +360,32 @@ html.teclado-aberto .nav {
 }
 
 .nav a.active {
-    color: var(--petroleo);
+    color: var(--tinta);
     font-weight: 700;
 }
 
 .nav a.active .nav-icone {
-    background: var(--acento-suave);
-    color: var(--acento);
+    background: var(--secao-suave);
+    color: var(--secao);
+}
+
+/* No celular, a aba aberta ganha um fio da cor dela na borda de cima da barra. */
+@media (max-width: 899px) {
+    .nav a {
+        position: relative;
+    }
+
+    .nav a.active::before {
+        content: "";
+        position: absolute;
+        top: -7px;
+        left: 50%;
+        width: 24px;
+        height: 2px;
+        border-radius: 0 0 2px 2px;
+        background: var(--secao);
+        transform: translateX(-50%);
+    }
 }
 
 /* ---------- Cabecalho de pagina ---------- */
@@ -329,9 +393,24 @@ html.teclado-aberto .nav {
 .cabecalho {
     margin: 0 calc(-1 * var(--margem)) var(--esp-2);
     padding: calc(env(safe-area-inset-top) + var(--esp-3)) var(--margem) var(--esp-5);
-    background: var(--petroleo);
+    position: relative;
+    isolation: isolate;
+    background: var(--tinta);
     color: var(--sobre-escuro);
     border-radius: 0 0 24px 24px;
+}
+
+/* Aneis do radar saindo do canto de cima, apagando para a esquerda. So textura, atras de tudo. */
+.cabecalho::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    background: repeating-radial-gradient(circle at 100% 0, transparent 0 47px, var(--aneis-escuro) 47px 48px);
+    -webkit-mask-image: linear-gradient(to left, #000 10%, transparent 75%);
+    mask-image: linear-gradient(to left, #000 10%, transparent 75%);
+    pointer-events: none;
 }
 
 .cabecalho.destaque {
@@ -403,6 +482,19 @@ html.teclado-aberto .nav {
     font-size: var(--t-base);
     font-weight: 500;
     color: var(--sobre-escuro-2);
+}
+
+/* O ponto no radar: a cor da secao marca o numero principal da pagina. */
+.hero-rotulo .rotulo-texto::before {
+    content: "";
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    margin-right: 10px;
+    border-radius: 50%;
+    vertical-align: 2px;
+    background: var(--secao-clara);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--secao-clara) 22%, transparent);
 }
 
 /* Painel que explica os numeros do cabecalho: termo em negrito, explicacao embaixo. */
@@ -579,9 +671,10 @@ html.teclado-aberto .nav {
 
 .abas a[aria-current="page"] {
     background: var(--superficie);
-    color: var(--petroleo);
+    color: var(--tinta);
     font-weight: 700;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.14);
+    /* Fio da cor da secao embaixo da aba aberta. */
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.14), inset 0 -2px 0 var(--secao);
 }
 
 /* ---------- Acoes rapidas: sobem por cima da borda do cabecalho ---------- */
@@ -594,6 +687,7 @@ html.teclado-aberto .nav {
     margin: calc(-1 * (var(--esp-8) + var(--esp-2))) 0 0;
     padding: var(--esp-2);
     background: var(--superficie);
+    border: 1px solid var(--linha);
     border-radius: var(--raio-g);
     box-shadow: var(--sombra-flutuante);
 }
@@ -625,8 +719,9 @@ html.teclado-aberto .nav {
     width: 40px;
     height: 40px;
     border-radius: 50%;
-    background: var(--acento-suave);
-    color: var(--acento);
+    border: 1px solid var(--linha);
+    background: var(--superficie-suave);
+    color: var(--secao);
 }
 
 /* ---------- Grupos: titulo fora, conteudo numa superficie branca ---------- */
@@ -650,15 +745,39 @@ html.teclado-aberto .nav {
     padding-left: var(--esp-1);
 }
 
+/*
+    Titulo de bloco: marca quadrada na cor da secao, o texto e um fio que corre ate as acoes.
+    E o detalhe que amarra a pagina a cor dela sem pintar nada grande.
+*/
 .grupo-cabecalho h2 {
+    flex: 1;
     display: flex;
     align-items: center;
     gap: var(--esp-2);
     min-width: 0;
 }
 
+.grupo-cabecalho h2::before {
+    content: "";
+    flex-shrink: 0;
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+    background: var(--secao);
+}
+
+.grupo-cabecalho h2::after {
+    content: "";
+    flex: 1;
+    min-width: var(--esp-4);
+    height: 1px;
+    margin-left: var(--esp-1);
+    background: var(--linha-forte);
+}
+
 .grupo-corpo {
     background: var(--superficie);
+    border: 1px solid var(--linha);
     border-radius: var(--raio-g);
     overflow: hidden;
 }
@@ -854,17 +973,19 @@ a.item:active {
     place-items: center;
     width: 40px;
     height: 40px;
-    border-radius: 12px;
-    background: var(--acento-suave);
-    color: var(--acento);
+    border-radius: 10px;
+    border: 1px solid var(--linha);
+    background: var(--superficie-suave);
+    color: var(--texto);
 }
 
-.icone-tipo.entrada { background: var(--entrada-fundo); color: var(--entrada-texto); }
-.icone-tipo.saida { background: var(--saida-fundo); color: var(--saida-texto); }
-.icone-tipo.cartao { background: var(--cartaotipo-fundo); color: var(--cartaotipo-texto); }
-.icone-tipo.economia { background: var(--economia-fundo); color: var(--economia-texto); }
-.icone-tipo.diario { background: var(--diario-fundo); color: var(--diario-texto); }
-.icone-tipo.neutro { background: var(--pilula-neutra-fundo); color: var(--pilula-neutra-texto); }
+/* Quadrado neutro com fio; so o desenho leva a cor do tipo. */
+.icone-tipo.entrada { color: var(--entrada-texto); }
+.icone-tipo.saida { color: var(--saida-texto); }
+.icone-tipo.cartao { color: var(--cartaotipo-texto); }
+.icone-tipo.economia { color: var(--economia-texto); }
+.icone-tipo.diario { color: var(--diario-texto); }
+.icone-tipo.neutro { color: var(--pilula-neutra-texto); }
 
 /* ---------- Valores ---------- */
 
@@ -913,31 +1034,56 @@ td .valor {
     vertical-align: middle;
 }
 
-.pilula.entrada { background: var(--entrada-fundo); color: var(--entrada-texto); }
-.pilula.saida { background: var(--saida-fundo); color: var(--saida-texto); }
-.pilula.cartao { background: var(--cartaotipo-fundo); color: var(--cartaotipo-texto); }
-.pilula.economia { background: var(--economia-fundo); color: var(--economia-texto); }
-.pilula.diario { background: var(--diario-fundo); color: var(--diario-texto); }
-.pilula.neutra { background: var(--pilula-neutra-fundo); color: var(--pilula-neutra-texto); }
+/*
+    Pilula e farol sao cinza com um ponto da cor; o fundo pintado ficou so para o que precisa
+    gritar (negativo). O texto continua escrito, entao a cor nunca e a unica pista.
+    Texto neutro sobre o cinza: 8,0:1. Vermelho e ambar escuros sobre ele: 5,6:1 e 6,2:1.
+*/
+.pilula,
+.farol {
+    background: var(--pilula-neutra-fundo);
+    color: var(--pilula-neutra-texto);
+}
+
+.pilula::before,
+.farol::before {
+    content: "";
+    flex-shrink: 0;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--ponto, transparent);
+}
+
+.pilula.neutra::before,
+.pilula.sobre-escuro::before {
+    display: none;
+}
+
+.pilula.entrada { --ponto: var(--valor-entrada); }
+.pilula.saida { --ponto: var(--valor-saida); }
+.pilula.cartao { --ponto: var(--cartaotipo-texto); }
+.pilula.economia { --ponto: var(--economia-texto); }
+.pilula.diario { --ponto: var(--atencao-forte); }
 .pilula.sobre-escuro { background: var(--superficie-escuro); color: var(--sobre-escuro); }
 
-.farol.ok { background: var(--ok-fundo); color: var(--ok-texto); }
-.farol.atencao { background: var(--atencao-fundo); color: var(--atencao-texto); }
-.farol.negativo { background: var(--negativo-fundo); color: var(--negativo-texto); }
+.farol.ok { --ponto: var(--ok-forte); }
+.farol.atencao { --ponto: var(--atencao-forte); color: var(--atencao-texto); }
+.farol.negativo { --ponto: var(--negativo-texto); background: var(--negativo-fundo); color: var(--negativo-texto); }
 
 /*
-    Paleta das tags. Nomes fixos, nao cor livre: cada par foi medido e fica entre 6,3:1 e 8,0:1,
-    e a cor do texto serve tambem de preenchimento da barra do Resumo (>= 7:1 sobre o branco).
+    Paleta das tags. Nomes fixos, nao cor livre: cada cor e o ponto da pilula e o preenchimento
+    da barra do Resumo (>= 7:1 sobre o branco).
     O nome da tag continua escrito dentro da pilula, entao a cor nunca e a unica pista.
 */
-.pilula.tag-rosa     { background: #FCE7F3; color: #9D174D; }
-.pilula.tag-laranja  { background: #FFEDD5; color: #9A3412; }
-.pilula.tag-ambar    { background: #FEF3C7; color: #92400E; }
-.pilula.tag-verde    { background: #DCFCE7; color: #166534; }
-.pilula.tag-turquesa { background: #CCFBF1; color: #115E59; }
-.pilula.tag-azul     { background: #DBEAFE; color: #1E40AF; }
-.pilula.tag-indigo   { background: #E0E7FF; color: #3730A3; }
-.pilula.tag-roxo     { background: #EDE9FE; color: #5B21B6; }
+.pilula.tag-rosa     { --ponto: #9D174D; }
+.pilula.tag-laranja  { --ponto: #9A3412; }
+.pilula.tag-ambar    { --ponto: #92400E; }
+.pilula.tag-verde    { --ponto: #166534; }
+.pilula.tag-turquesa { --ponto: #115E59; }
+.pilula.tag-azul     { --ponto: #1E40AF; }
+.pilula.tag-indigo   { --ponto: #3730A3; }
+.pilula.tag-roxo     { --ponto: #5B21B6; }
 
 .barra > span.tag-rosa     { background: #9D174D; }
 .barra > span.tag-laranja  { background: #9A3412; }
@@ -983,7 +1129,7 @@ td .valor {
 }
 
 .cores input:focus-visible + label {
-    outline: 2px solid var(--acento);
+    outline: 2px solid var(--foco);
     outline-offset: 2px;
 }
 
@@ -998,7 +1144,7 @@ td .valor {
     padding: 0 var(--esp-4);
     border: 1px solid transparent;
     border-radius: var(--raio);
-    background: var(--acento);
+    background: var(--tinta);
     color: #fff;
     font-family: inherit;
     font-size: var(--t-base);
@@ -1020,19 +1166,19 @@ td .valor {
 
 /* Tonal: segunda acao do bloco, sem competir com a principal. */
 .btn.secundario {
-    background: var(--acento-suave);
-    color: var(--acento-forte);
+    background: var(--pilula-neutra-fundo);
+    color: var(--texto);
 }
 
 .btn.contorno {
     background: var(--superficie);
     color: var(--texto);
-    border-color: var(--linha);
+    border-color: var(--linha-forte);
 }
 
+/* O sublinhado na cor da secao vem da regra do link, la em cima. */
 .btn.texto {
     background: transparent;
-    color: var(--acento);
     padding: 0 var(--esp-2);
 }
 
@@ -1151,7 +1297,7 @@ td .valor {
 }
 
 .botao-ajuda[aria-expanded="true"] {
-    color: var(--acento);
+    color: var(--texto);
 }
 
 .cabecalho .botao-ajuda {
@@ -1206,7 +1352,7 @@ textarea.campo {
 
 select.campo {
     padding-right: 40px;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%235B6670' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%235E6168' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: right 14px center;
 }
@@ -1232,16 +1378,16 @@ input[type="file"].campo::file-selector-button {
     padding: 0 var(--esp-3);
     border: 0;
     border-radius: var(--raio-p);
-    background: var(--acento-suave);
-    color: var(--acento-forte);
+    background: var(--pilula-neutra-fundo);
+    color: var(--texto);
     font: inherit;
     font-weight: 600;
     cursor: pointer;
 }
 
 .campo:focus {
-    border-color: var(--acento);
-    box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.18);
+    border-color: var(--foco);
+    box-shadow: 0 0 0 3px rgba(62, 99, 221, 0.2);
 }
 
 .campo.erro,
@@ -1341,11 +1487,11 @@ input[type="file"].campo::file-selector-button {
     background: var(--superficie);
     color: var(--texto);
     font-weight: 700;
-    box-shadow: 0 1px 3px rgba(15, 64, 61, 0.16);
+    box-shadow: 0 1px 3px rgba(17, 19, 23, 0.14);
 }
 
 .segmentado input:focus-visible + label {
-    outline: 2px solid var(--acento);
+    outline: 2px solid var(--foco);
     outline-offset: 1px;
 }
 
@@ -1376,7 +1522,7 @@ input[type="file"].campo::file-selector-button {
 }
 
 .interruptor input:checked {
-    background-color: var(--acento);
+    background-color: var(--tinta);
     background-image: radial-gradient(circle at 35px 50%, #fff 11px, transparent 11.5px);
 }
 
@@ -1392,7 +1538,7 @@ input[type="file"].campo::file-selector-button {
     justify-content: space-between;
     gap: var(--esp-2);
     min-height: var(--alvo-toque);
-    color: var(--acento);
+    color: var(--texto);
     font-weight: 600;
     cursor: pointer;
     list-style: none;
@@ -1468,8 +1614,8 @@ input[type="file"].campo::file-selector-button {
 }
 
 .filtro[aria-pressed="true"] {
-    background: var(--petroleo);
-    border-color: var(--petroleo);
+    background: var(--tinta);
+    border-color: var(--tinta);
     color: var(--sobre-escuro);
 }
 
@@ -1477,7 +1623,7 @@ select.filtro-select {
     appearance: none;
     padding-right: 34px;
     border-color: var(--borda-campo);
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%235B6670' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%235E6168' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: right 12px center;
 }
@@ -1522,10 +1668,37 @@ select.filtro-select {
     margin-top: var(--esp-3);
 }
 
-.aviso.info { background: var(--superficie); color: var(--texto); }
-.aviso.atencao { background: var(--atencao-fundo); color: var(--atencao-texto); }
-.aviso.ruim { background: var(--negativo-fundo); color: var(--negativo-texto); }
-.aviso.bom { background: var(--ok-fundo); color: var(--ok-texto); }
+/*
+    Aviso e um cartao branco com fio e uma barra da cor na esquerda; o icone e o trecho em
+    negrito levam a cor, o resto do texto fica em tinta e le melhor.
+*/
+.aviso {
+    --tom: var(--secundario);
+    --tom-texto: var(--texto);
+    position: relative;
+    overflow: hidden;
+    background: var(--superficie);
+    color: var(--texto);
+    border: 1px solid var(--linha);
+}
+
+/* Barra reta, cortada pelo canto do cartao. Sombra interna curvaria junto com o raio. */
+.aviso::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 3px;
+    background: var(--tom);
+}
+
+.aviso > .icone-svg { color: var(--tom-texto); }
+.aviso strong { color: var(--tom-texto); }
+
+.aviso.atencao { --tom: var(--atencao-forte); --tom-texto: var(--atencao-texto); }
+.aviso.ruim { --tom: var(--negativo-texto); --tom-texto: var(--negativo-texto); }
+.aviso.bom { --tom: var(--ok-forte); --tom-texto: var(--ok-texto); }
 
 .aviso + .aviso {
     margin-top: var(--esp-2);
@@ -1558,7 +1731,7 @@ select.filtro-select {
 }
 
 .vazio > .icone-svg {
-    color: var(--acento);
+    color: var(--secao);
 }
 
 .carregando {
@@ -1570,7 +1743,7 @@ select.filtro-select {
 /* ---------- Progresso ---------- */
 
 .barra {
-    height: 8px;
+    height: 6px;
     border-radius: var(--raio-total);
     background: var(--linha);
     overflow: hidden;
@@ -1580,7 +1753,7 @@ select.filtro-select {
     display: block;
     height: 100%;
     border-radius: inherit;
-    background: var(--acento);
+    background: var(--secao);
 }
 
 .barra.cheia > span { background: var(--ok-forte); }
@@ -1728,16 +1901,17 @@ select.filtro-select {
     color: var(--secundario);
 }
 
-.dia.sabado .dia-data { background: var(--sabado-fundo); }
+/* Fim de semana so apaga o numero; a coluna da data fica no cinza de sempre. */
+.dia.sabado .dia-data,
+.dia.domingo .dia-data { background: var(--superficie-suave); }
 .dia.sabado .dia-numero,
 .dia.sabado .dia-semana { color: var(--sabado-texto); }
-.dia.domingo .dia-data { background: var(--domingo-fundo); }
 .dia.domingo .dia-numero,
 .dia.domingo .dia-semana { color: var(--domingo-texto); }
 
 .dia.hoje {
-    background: var(--hoje-fundo);
-    box-shadow: inset 4px 0 0 var(--hoje-marca);
+    background: var(--secao-suave);
+    box-shadow: inset 3px 0 0 var(--secao);
 }
 
 .dia.hoje .dia-data {
@@ -1747,9 +1921,9 @@ select.filtro-select {
 .selo-hoje {
     margin-top: 4px;
     padding: 0 6px;
-    border-radius: 6px;
-    background: var(--ok-fundo);
-    color: var(--ok-texto);
+    border-radius: 4px;
+    background: var(--tinta);
+    color: var(--sobre-escuro);
     font-size: var(--t-xs);
     font-weight: 700;
     line-height: 1.6;
@@ -1830,7 +2004,7 @@ select.filtro-select {
     display: flex;
     align-items: flex-end;
     justify-content: center;
-    background: rgba(17, 33, 32, 0.45);
+    background: rgba(17, 19, 23, 0.5);
 }
 
 .modal {
@@ -1899,14 +2073,14 @@ html.teclado-aberto .modal-rodape {
 
 .grafico .linha-saldo {
     fill: none;
-    stroke: var(--acento);
+    stroke: var(--secao);
     stroke-width: 2.5;
     stroke-linejoin: round;
 }
 
 .grafico .area-saldo {
-    fill: var(--acento-suave);
-    opacity: 0.7;
+    fill: var(--secao);
+    opacity: 0.08;
 }
 
 .grafico .linha-simulada {
@@ -1933,7 +2107,7 @@ html.teclado-aberto .modal-rodape {
 }
 
 .grafico .ponto:hover {
-    fill: var(--acento);
+    fill: var(--secao);
 }
 
 .grafico .ponto.ponto-simulado:hover {
@@ -1964,7 +2138,7 @@ html.teclado-aberto .modal-rodape {
     display: none;
 }
 
-.legenda .s-saldo { color: var(--acento); }
+.legenda .s-saldo { color: var(--secao); }
 .legenda .s-conforto { color: var(--atencao-texto); }
 .legenda .s-compra { color: var(--negativo-texto); }
 
@@ -2017,6 +2191,7 @@ html.teclado-aberto .modal-rodape {
    herdavam este respiro e saiam deslocadas e cortadas. */
 .cartao-meta {
     background: var(--superficie);
+    border: 1px solid var(--linha);
     border-radius: var(--raio-g);
     padding: var(--esp-4);
 }
@@ -2108,10 +2283,9 @@ html.teclado-aberto .modal-rodape {
     :root {
         --margem: 32px;
         --largura-lateral: 248px;
-        /* Petroleo mais fundo que o do cabecalho, para o cartao do numero principal nao se
-           perder ao lado da coluna. O verde-agua e o do anel do icone do app. */
-        --lateral-fundo: #0F3E3B;
-        --radar: #5EEAD4;
+        /* Tinta mais funda que a do cartao do numero principal, para ele nao se perder ao lado
+           da coluna. */
+        --lateral-fundo: #0E1013;
     }
 
     html.lateral-recolhida {
@@ -2123,8 +2297,9 @@ html.teclado-aberto .modal-rodape {
     }
 
     /*
-        Coluna em petroleo fundo, com os aneis do radar do icone ao fundo. No PC ela faz o papel
-        que o cabecalho petroleo faz no celular, e a pagina aberta e o ponto no radar.
+        Coluna em tinta funda, com os aneis do radar do icone ao fundo. No PC ela faz o papel
+        que o cabecalho em tinta faz no celular, e a pagina aberta e o ponto no radar, na cor
+        da secao dela.
     */
     .nav {
         top: 0;
@@ -2150,7 +2325,7 @@ html.teclado-aberto .modal-rodape {
         left: 0;
         z-index: -1;
         height: 420px;
-        background: repeating-radial-gradient(circle at 0 100%, transparent 0 47px, rgba(255, 255, 255, 0.07) 47px 48px);
+        background: repeating-radial-gradient(circle at 0 100%, transparent 0 47px, var(--aneis-escuro) 47px 48px);
         -webkit-mask-image: linear-gradient(to top, #000 15%, transparent);
         mask-image: linear-gradient(to top, #000 15%, transparent);
         pointer-events: none;
@@ -2199,8 +2374,8 @@ html.teclado-aberto .modal-rodape {
         letter-spacing: 0.08em;
         text-transform: uppercase;
         white-space: nowrap;
-        /* 60% de branco sobre o petroleo fundo da 5,3:1. */
-        color: rgba(255, 255, 255, 0.6);
+        /* 55% de branco sobre a tinta funda da mais de 7:1. */
+        color: rgba(255, 255, 255, 0.55);
     }
 
     .nav-rodape {
@@ -2258,30 +2433,46 @@ html.teclado-aberto .modal-rodape {
     }
 
     .nav a.active {
-        background: rgba(255, 255, 255, 0.12);
+        background: var(--superficie-escuro);
         color: var(--sobre-escuro);
         font-weight: 650;
     }
 
-    .nav a.active .nav-icone {
-        background: none;
-        color: var(--radar);
+    /* Fio da cor da secao na borda da coluna, na altura do item aberto. */
+    .nav a.active::before {
+        content: "";
+        position: absolute;
+        top: 10px;
+        bottom: 10px;
+        left: calc(-1 * var(--esp-3));
+        width: 3px;
+        border-radius: 0 3px 3px 0;
+        background: var(--secao-clara);
     }
 
-    /* A pagina aberta e o ponto no radar. */
+    .nav a.active .nav-icone {
+        background: none;
+        color: var(--secao-clara);
+    }
+
+    .nav a:hover .nav-icone {
+        color: var(--secao-clara);
+    }
+
+    /* A pagina aberta e o ponto no radar, na cor da secao. */
     .nav a.active::after {
         content: "";
         width: 6px;
         height: 6px;
         margin-left: auto;
         border-radius: 50%;
-        background: var(--radar);
-        box-shadow: 0 0 0 4px rgba(94, 234, 212, 0.18);
+        background: var(--secao-clara);
+        box-shadow: 0 0 0 4px color-mix(in srgb, var(--secao-clara) 20%, transparent);
     }
 
     .nav a:focus-visible,
     .nav-recolher:focus-visible {
-        outline-color: var(--radar);
+        outline-color: var(--sobre-escuro);
     }
 
     .quando-recolhida {
@@ -2384,8 +2575,8 @@ html.teclado-aberto .modal-rodape {
     }
 
     /*
-        Com a coluna lateral o cabecalho deixa de ser o bloco petroleo: titulo grande sobre o
-        fundo, como no painel da pousada, e o petroleo fica no cartao do numero principal. O que
+        Com a coluna lateral o cabecalho deixa de ser o bloco em tinta: titulo grande sobre o
+        fundo, como no painel da pousada, e a tinta fica no cartao do numero principal. O que
         pedia o fundo escuro era a barra de status do iPhone, que no PC nao existe. Sem a coluna
         (primeiro acesso) o cabecalho continua o do celular.
     */
@@ -2394,6 +2585,10 @@ html.teclado-aberto .modal-rodape {
         border-radius: 0;
         background: none;
         color: var(--texto);
+    }
+
+    .com-lateral .cabecalho::before {
+        display: none;
     }
 
     .com-lateral .cabecalho-topo {
@@ -2415,10 +2610,10 @@ html.teclado-aberto .modal-rodape {
         color: var(--texto);
     }
 
-    /* O anel de foco branco era para o petroleo; no fundo claro ele sumia. */
+    /* O anel de foco branco era para a tinta; no fundo claro ele sumia. */
     .com-lateral .cabecalho a:focus-visible,
     .com-lateral .cabecalho button:focus-visible {
-        outline-color: var(--acento);
+        outline-color: var(--foco);
     }
 
     .com-lateral .cabecalho .hero button:focus-visible {
@@ -2447,7 +2642,7 @@ html.teclado-aberto .modal-rodape {
     }
 
     .com-lateral .cabecalho .abas a[aria-current="page"] {
-        color: var(--petroleo);
+        color: var(--tinta);
     }
 
     .com-lateral .cabecalho .texto-ajuda {
@@ -2455,13 +2650,28 @@ html.teclado-aberto .modal-rodape {
         background: var(--superficie);
     }
 
-    /* O numero principal num cartao petroleo; os indicadores num cartao branco. */
+    /* O numero principal num cartao em tinta; os indicadores num cartao branco. */
     .com-lateral .cabecalho > .hero {
+        position: relative;
+        isolation: isolate;
         margin-top: var(--esp-4);
         padding: var(--esp-5) var(--esp-6) var(--esp-6);
         border-radius: var(--raio-g);
-        background: var(--petroleo);
+        background: var(--tinta);
         color: var(--sobre-escuro);
+    }
+
+    /* Os aneis do cabecalho do celular vem para o cartao do numero. */
+    .com-lateral .cabecalho > .hero::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        z-index: -1;
+        border-radius: inherit;
+        background: repeating-radial-gradient(circle at 100% 100%, transparent 0 47px, var(--aneis-escuro) 47px 48px);
+        -webkit-mask-image: linear-gradient(to left, #000 10%, transparent 80%);
+        mask-image: linear-gradient(to left, #000 10%, transparent 80%);
+        pointer-events: none;
     }
 
     .valor-hero {
@@ -2496,7 +2706,7 @@ html.teclado-aberto .modal-rodape {
         letter-spacing: -0.01em;
     }
 
-    /* Fora do petroleo, as cores de alerta voltam as da superficie clara. */
+    /* Fora da tinta, as cores de alerta voltam as da superficie clara. */
     .com-lateral .cabecalho .hero-indicadores .valor-negativo {
         color: var(--negativo-texto);
     }
@@ -2531,11 +2741,20 @@ html.teclado-aberto .modal-rodape {
         margin-top: 0;
     }
 
-    .colunas {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-        gap: 0 var(--esp-6);
-        align-items: start;
+    /* As duas colunas dependem da largura que sobra para o conteudo, nao da janela: em 900px
+       com a lateral aberta cada coluna ficava com 280px e cortava nome de conta e carteira.
+       Com a lateral recolhida o mesmo conteudo ganha espaco e abre antes. */
+    main {
+        container: conteudo / inline-size;
+    }
+
+    @container conteudo (min-width: 760px) {
+        .colunas {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+            gap: 0 var(--esp-6);
+            align-items: start;
+        }
     }
 
     .so-celular {
@@ -2588,11 +2807,17 @@ html.teclado-aberto .modal-rodape {
     }
 
     .dia.hoje:hover {
-        background: var(--hoje-fundo);
+        background: var(--secao-suave);
     }
 
     .btn:hover:not(:disabled) {
         filter: brightness(1.06);
+    }
+
+    /* Clarear a tinta quase preta nao aparece; o principal ganha um cinza de verdade. */
+    .btn:not(.secundario, .contorno, .texto, .perigo, .perigo-cheio, .sobre-escuro):hover:not(:disabled) {
+        background: #2B2E35;
+        filter: none;
     }
 
     .acoes > .btn,

@@ -35,6 +35,10 @@ public class FormatoTests
     [InlineData("abc")]
     [InlineData(null)]
     [InlineData("12.345.678.901,00")] // zero a mais: passa de R$ 9.999.999.999,99
+    [InlineData("0,005")]              // tres casas depois de zero nao e milhar: virava R$ 5,00
+    [InlineData("1,2,3")]              // virava R$ 12,30
+    [InlineData("12.34.567")]          // grupo de milhar com dois digitos
+    [InlineData("1.234.567.89")]       // mesmo separador no milhar e nos centavos
     public void Recusa_o_que_nao_e_numero(string? texto)
     {
         Assert.False(Formato.TentarDinheiro(texto, out _));

@@ -337,20 +337,50 @@ public sealed class PlanejamentoService(IDbContextFactory<FinancasDbContext> fab
     /// As contas do periodo que importa para marcar pago: 45 dias para tras, que cobrem o mes
     /// passado inteiro em qualquer dia do mes sem virar historico, e para a frente ate o fim do
     /// mes corrente, para a conta do mes aparecer antes de vencer.
+    ///
+    /// Cada carteira usa a propria ancora: uma conta do VA que venceu antes do saldo inicial do
+    /// VA e que pede confirmacao, nao a que venceu antes do saldo da conta corrente.
+    ///
+    /// Compra no cartao cujo ciclo ja tem fatura cadastrada fica de fora: quem sai da conta e a
+    /// fatura (R14), e marcar a compra como paga nao mudaria nada na previsao.
     /// </summary>
     public List<Pendencia> ListarPendencias(DadosPlanejamento dados, DateOnly hoje)
     {
-        var fimDoMes = new DateOnly(hoje.Year, hoje.Month, DateTime.DaysInMonth(hoje.Year, hoje.Month));
+        var fimDoMes = Calendario.UltimoDiaDoMes(hoje);
+        var cartoes = dados.Cartoes.ToDictionary(c => c.Id);
+        var ciclosComFatura = dados.Faturas.Select(f => Faturas.Chave(f, cartoes)).ToHashSet();
+        var lista = new List<Pendencia>();
 
-        return Pendencias.Listar(
-            dados.Lancamentos,
-            dados.Cartoes.ToDictionary(c => c.Id),
-            dados.Situacoes,
-            hoje.AddDays(-45),
-            fimDoMes,
-            hoje,
-            dados.Configuracao.DataAncora);
+        foreach (var carteira in Carteiras.Resolver(dados.Carteiras, dados.Configuracao))
+        {
+            var daCarteira = dados.Lancamentos.Where(l => Carteiras.Da(l.CarteiraId) == carteira.Id).ToList();
+
+            if (daCarteira.Count == 0)
+            {
+                continue;
+            }
+
+            var pendencias = Pendencias.Listar(
+                daCarteira, cartoes, dados.Situacoes, hoje.AddDays(-45), fimDoMes, hoje, carteira.DataAncora);
+
+            if (carteira.Id == Carteiras.IdPrincipal && ciclosComFatura.Count > 0)
+            {
+                var porId = daCarteira.ToDictionary(l => l.Id);
+                pendencias.RemoveAll(p =>
+                    p.Tipo == TipoLancamento.Cartao &&
+                    porId[p.LancamentoId].CartaoId is int cartaoId &&
+                    ciclosComFatura.Contains((cartaoId, p.DataPrevista)));
+            }
+
+            lista.AddRange(pendencias);
+        }
+
+        return [.. lista.OrderBy(p => p.DataPrevista).ThenBy(p => p.Descricao)];
     }
+
+    /// <summary>A carteira de cada lancamento, para a tela separar o que sai da conta corrente.</summary>
+    public static bool DaContaCorrente(DadosPlanejamento dados, int lancamentoId) =>
+        dados.Lancamentos.FirstOrDefault(l => l.Id == lancamentoId) is { CarteiraId: null };
 
     // ---------- Diario ----------
 

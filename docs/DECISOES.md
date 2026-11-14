@@ -542,3 +542,23 @@ Antes disso o `financas.db` era a única cópia do histórico.
 Situação, diário, fatura e carteira do lançamento passaram a ter chave estrangeira; antes a
 integridade dependia só do código. A migração limpa órfãos antes (que o app nunca cria) e deixa
 fatura de cartão apagado como está, porque apagá-la tiraria uma dívida da previsão.
+
+## 24. Grafite e papel: a cor sai do fundo e vira detalhe
+
+Em 14/11/2026 o dono pediu para tirar o tom verde e deixar o app mais sóbrio, com pouca cor e
+mais detalhe. A paleta da seção 8 do CONTEXTO foi trocada; motor, banco e telas não mudaram.
+
+- **Tinta no lugar do petróleo.** Cabeçalho, cartão do número principal, coluna do PC e botão
+  principal passaram a `#16181D` (a coluna, `#0E1013`). O fundo é papel `#F6F6F3` e todo cartão
+  branco tem fio, no celular também.
+- **Uma cor por seção, pequena.** Cada página tem a sua (`--secao`), a mesma do item no menu:
+  aparece no ponto ao lado do número principal, no quadrado e no fio do título de cada bloco, na
+  linha do gráfico, nas barras, no sublinhado dos links e no fio da aba aberta. É o que dá
+  identidade sem pintar nada grande. O nome vem da rota, no `MainLayout`.
+- **Menos fundo pintado.** Ícone de tipo é quadrado neutro com o desenho colorido; pílula e farol
+  são cinza com um ponto; aviso é cartão branco com barra colorida. Só o farol negativo continua
+  com fundo vermelho, porque é o único que precisa gritar.
+- **Os anéis do radar ficaram** como textura em fio branco de 6% sobre a tinta. O ícone do app foi
+  redesenhado em tinta, com o ponto em cobalto.
+- **Verde e vermelho continuam para dinheiro** (entrou, saiu). Trocá-los por cor de marca tiraria
+  a leitura rápida que a planilha já ensinava.

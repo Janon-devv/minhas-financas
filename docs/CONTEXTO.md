@@ -429,10 +429,11 @@ não existe. Ele responde outra pergunta, a do R8: quanto este mês rendeu.
 6. **Simulador**: formulário + resultado + veredito colorido. Mostrar a curva com e sem a compra.
 7. **Configurações**: âncora e conferência com banco (Recalibrar), diário previsto e o liga/desliga da contagem dele, conforto, toggle de entradas incertas, já guardado, cartões (com os juros do rotativo), carteiras, tags, horizonte, exportar/importar dados.
 
-### Identidade visual (herdada da planilha, minimalista)
-- Faixa/topo: verde-petróleo `#134E4A`; acento `#0F766E`; texto `#1F2933`; secundário `#6B7280`; linhas `#E5E7EB`; fundo de cartão `#F8FAFC`.
-- Tipos (pílulas): Entrada `#DCFCE7/#166534` · Saída `#FEE2E2/#991B1B` · Cartão `#EDE9FE/#5B21B6` · Economia `#DBEAFE/#1E40AF` · Diário `#FEF3C7/#92400E`.
-- Farol: ok verde `#15803D`, atenção âmbar `#FEF3C7/#92400E`, negativo vermelho `#FEE2E2/#B91C1C`. Hoje destacado em `#D1FAE5`.
+### Identidade visual: grafite e papel (minimalista)
+- Base quase sem cor: tinta `#16181D` (cabeçalho, número principal, botão principal; coluna do PC em `#0E1013`), papel `#F6F6F3` de fundo, cartões brancos com fio `#E6E5E0`, texto `#1A1C21`, secundário `#5E6168`. Textura: os anéis do radar do ícone, em fio branco de 6%, nas superfícies em tinta.
+- **Cor de seção**, sempre pequena (ponto, fio, marca do título do bloco, linha do gráfico, sublinhado de link): Hoje cobalto `#3E63DD` · Calendário âmbar `#B7790B` · Lançar violeta `#7C4DDB` · Resumo ciano `#0E8FB0` · Metas magenta `#D23F8A` · Simular laranja `#E0612F` · Ajustes grafite `#6E7179`. A mesma cor marca o item no menu e a página aberta.
+- Tipos: ícone em quadrado neutro com fio, só o desenho colorido (Entrada `#166534` · Saída `#991B1B` · Cartão `#5B21B6` · Economia `#1E40AF` · Diário `#92400E`). Pílulas são cinza com um ponto da cor.
+- Farol: ok ponto verde `#15803D`, atenção ponto âmbar com texto `#92400E`, negativo é o único com fundo pintado (`#FEE2E2/#B91C1C`). Avisos são cartão branco com barra da cor à esquerda. Hoje, no calendário, leva o tom suave da cor da seção.
 - Textos de interface em pt-BR informal e direto. **Não usar travessão (—)** em nenhum texto da interface.
 - Formatação: `R$ 1.234,56`, datas `dd/mm/aaaa`, meses por extenso em português.
 
